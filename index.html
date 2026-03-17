@@ -89,34 +89,37 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 #app{display:none;flex-direction:column;height:100vh}
 
 /* HEADER */
-.hdr{height:48px;background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;z-index:100;overflow:hidden}
-.hlogo{width:28px;height:28px;background:var(--ac);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.hdr{height:48px;background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;z-index:100}
+.hlogo{width:26px;height:26px;background:var(--ac);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
 .hname{font-size:14px;font-weight:700;white-space:nowrap;flex-shrink:0}
-.tabs{display:flex;gap:2px;margin-left:6px;overflow:hidden}
-.tbtn{background:none;border:none;padding:5px 10px;border-radius:var(--r);color:var(--tx3);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;flex-shrink:0}
+.tabs{display:flex;gap:2px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tbtn{background:none;border:none;padding:5px 9px;border-radius:var(--r);color:var(--tx3);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;flex-shrink:0}
 .tbtn:hover{background:var(--surf2);color:var(--tx)}
 .tbtn.on{background:var(--surf2);color:var(--ac);font-weight:600}
-.hsp{flex:1}
+.hsp{flex:0 0 4px}
 .htime{font-size:11px;color:var(--tx3);white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0}
 .saveind{width:6px;height:6px;border-radius:50%;background:var(--gn);opacity:0;transition:opacity .3s;flex-shrink:0}
 .saveind.on{opacity:1}
-.lockbtn{background:none;border:1px solid var(--bdr);border-radius:var(--r);padding:4px 10px;color:var(--tx3);font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.lockbtn{background:none;border:1px solid var(--bdr);border-radius:var(--r);padding:4px 8px;color:var(--tx3);font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .lockbtn:hover{border-color:var(--tx3);color:var(--tx)}
-.hghbtn{background:var(--gn);border:none;border-radius:var(--r);padding:4px 11px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;position:relative}
+.hghbtn{background:var(--gn);border:none;border-radius:var(--r);padding:4px 9px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
 .hghbtn:hover{opacity:.82}
 .hghbtn:disabled{opacity:.45;cursor:not-allowed}
 .hghpull{background:var(--pu)}
-/* 헤더 GitHub 상태 표시줄 */
+/* GitHub 작업 알림 (하단 왼쪽 compact) */
 .ghstatbar{
-  position:fixed;top:48px;left:0;right:0;height:28px;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  font-size:12px;font-weight:600;z-index:9998;
-  transform:translateY(-100%);transition:transform .2s;pointer-events:none;
+  position:fixed;bottom:20px;left:20px;max-width:380px;
+  padding:9px 14px;border-radius:var(--r);
+  font-size:12px;font-weight:600;z-index:9999;
+  opacity:0;transform:translateY(8px);
+  transition:opacity .2s,transform .2s;pointer-events:none;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);
 }
-.ghstatbar.show{transform:translateY(0)}
-.ghstatbar.ok{background:rgba(63,185,80,.92);color:#fff}
-.ghstatbar.err{background:rgba(248,81,73,.92);color:#fff}
-.ghstatbar.ing{background:rgba(56,139,253,.92);color:#fff}
+.ghstatbar.show{opacity:1;transform:translateY(0)}
+.ghstatbar.ok{background:rgba(40,167,69,.95);color:#fff}
+.ghstatbar.err{background:rgba(220,53,69,.95);color:#fff}
+.ghstatbar.ing{background:rgba(56,139,253,.95);color:#fff}
 
 /* APP BODY */
 .abody{flex:1;overflow:hidden}
@@ -671,44 +674,68 @@ const S={
 //  STORAGE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _st;
+let _loaded=false;
+let _userEdited=false; // 사용자가 실제로 수정했을 때만 true — 시작 시 자동 저장 방지
+
 function save(){
+  if(!_loaded)return;
   try{
     localStorage.setItem('mb_n',JSON.stringify(S.notes));
     localStorage.setItem('mb_c',JSON.stringify(S.clients));
     localStorage.setItem('mb_s',JSON.stringify(S.scheds));
     localStorage.setItem('mb_w',JSON.stringify(S.work));
     const si=document.getElementById('saveind');
-    si.classList.add('on');clearTimeout(save._t);save._t=setTimeout(()=>si.classList.remove('on'),900);
-    // 변경 있을 때마다 30초 후 GitHub 자동저장 예약
-    if(typeof scheduleAutoGhPush==='function')scheduleAutoGhPush();
-  }catch(e){}
+    if(si){si.classList.add('on');clearTimeout(save._t);save._t=setTimeout(()=>si.classList.remove('on'),900);}
+  }catch(e){console.error('save() 오류:',e);}
 }
-function dsave(){clearTimeout(_st);_st=setTimeout(save,400);}
+// 사용자 편집에 의한 저장 — GitHub 자동저장도 예약
+function dsave(){
+  _userEdited=true;
+  clearTimeout(_st);
+  _st=setTimeout(()=>{
+    save();
+    scheduleAutoGhPush();
+  },400);
+}
+// 시스템 내부 저장 (스냅샷 등) — GitHub 자동저장 예약 안 함
+function ssave(){
+  clearTimeout(_st);_st=setTimeout(save,400);
+}
 function load(){
+  _loaded=false;
   const clone=o=>JSON.parse(JSON.stringify(o));
-  try{
-    S.notes=JSON.parse(localStorage.getItem('mb_n')||'null')||makeDefNotes();
-    S.clients=JSON.parse(localStorage.getItem('mb_c')||'null')||clone(DEF_CLIENTS);
-    S.scheds=JSON.parse(localStorage.getItem('mb_s')||'null')||{};
-    S.work=JSON.parse(localStorage.getItem('mb_w')||'null')||makeDefWork();
-    // migrate old flat work array
-    if(S.work.length&&!('t' in S.work[0])){
+  // 키별 개별 파싱 — 하나 실패해도 나머지는 살아있음
+  const safeGet=(key,fallback)=>{
+    try{const v=localStorage.getItem(key);return v?JSON.parse(v):null;}
+    catch(e){console.warn('localStorage 파싱 오류 ['+key+']:', e);return null;}
+  };
+  S.notes  = safeGet('mb_n') || makeDefNotes();
+  S.clients= safeGet('mb_c') || clone(DEF_CLIENTS);
+  S.scheds = safeGet('mb_s') || {};
+  S.work   = safeGet('mb_w') || makeDefWork();
+  // 구버전 flat work 배열 마이그레이션
+  if(Array.isArray(S.work)&&S.work.length>0&&!('t' in S.work[0])){
+    try{
       const old=S.work;S.work=makeDefWork();
       old.forEach((s,i)=>{S.work.push({id:uid(),t:'D',n:s.name||s.n||'문서',p:null,o:100+i,icon:s.icon||'📝',content:s.content||''});});
-    }
-  }catch(e){
-    S.notes=makeDefNotes();S.clients=JSON.parse(JSON.stringify(DEF_CLIENTS));S.scheds={};S.work=makeDefWork();
+    }catch(e){S.work=makeDefWork();}
   }
+  // 필수 배열 타입 검증
+  if(!Array.isArray(S.notes))S.notes=makeDefNotes();
+  if(!Array.isArray(S.clients))S.clients=clone(DEF_CLIENTS);
+  if(typeof S.scheds!=='object'||Array.isArray(S.scheds))S.scheds={};
+  if(!Array.isArray(S.work))S.work=makeDefWork();
+  _loaded=true; // 여기서부터만 save() 가능
+  console.log('[MBHub] 로드 완료 — 노트:'+S.notes.length+'개, 클라이언트:'+S.clients.length+'개, 업무노트:'+S.work.length+'개');
 }
 
 // ── MONTH CLIENT SNAPSHOT ──
-// Each month stores its own client+quota list so past months aren't affected by future changes.
 function getMonthClients(y,m){
   const k=mkey(y,m);
   if(!S.scheds[k])S.scheds[k]={cells:{}};
   if(!S.scheds[k].snap){
     S.scheds[k].snap=JSON.parse(JSON.stringify(S.clients));
-    save();
+    ssave(); // 시스템 저장 — GitHub 자동저장 예약 안 함
   }
   return S.scheds[k].snap;
 }
@@ -1629,28 +1656,29 @@ function resetAll(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  GITHUB GIST SYNC
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-let _ghAutoT=null;   // 자동저장 타이머
-let _ghDirty=false;  // 미저장 변경사항 있음
-let _ghBusy=false;   // API 요청 중
+let _ghAutoT=null;
+let _ghDirty=false;
+let _ghBusy=false;
 
-// dsave 후킹: 로컬 저장 후 자동 GitHub 저장 예약
-const _origDsave=dsave;
-function dsave(){
-  clearTimeout(_st);_st=setTimeout(()=>{save();scheduleAutoGhPush();},400);
-}
 function scheduleAutoGhPush(){
   const tk=localStorage.getItem('gh_token');
-  if(!tk)return;
+  if(!tk||!_userEdited)return; // 토큰 없거나 사용자 편집 없으면 예약 안 함
   _ghDirty=true;
   clearTimeout(_ghAutoT);
-  _ghAutoT=setTimeout(()=>{if(_ghDirty&&!_ghBusy)ghPush(true);},30000); // 30초 후 자동저장
+  _ghAutoT=setTimeout(()=>{if(_ghDirty&&!_ghBusy)ghPush(true);},30000);
 }
 
-function ghBar(msg,type,ms=2800){
+function ghBar(msg,type,ms=3500){
   const el=document.getElementById('ghstatbar');if(!el)return;
-  el.textContent=msg;el.className='ghstatbar '+type+' show';
+  el.textContent=msg;
+  // 클래스 변경은 한 번에
+  el.className='ghstatbar '+type+' show';
   clearTimeout(ghBar._t);
-  if(ms>0)ghBar._t=setTimeout(()=>el.classList.remove('show'),ms);
+  if(ms>0){
+    ghBar._t=setTimeout(()=>{
+      el.classList.remove('show');
+    },ms);
+  }
 }
 
 function ghSaveConfig(){
@@ -1737,6 +1765,8 @@ async function ghPull(){
     const d=JSON.parse(content);
     if(d.notes)S.notes=d.notes;if(d.clients)S.clients=d.clients;if(d.scheds)S.scheds=d.scheds;if(d.work)S.work=d.work;
     save();renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
+    // 불러오기 직후에는 dirty 초기화 — 바로 자동저장 실행되는 것 방지
+    _ghDirty=false;_userEdited=false;clearTimeout(_ghAutoT);
     const dt=new Date().toLocaleString('ko-KR');
     ghBar('✓ 불러오기 완료 — '+dt,'ok');
     ghLog('✓ '+dt+' 불러오기 완료',true);
