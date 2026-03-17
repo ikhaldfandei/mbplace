@@ -1151,7 +1151,7 @@ function buildWorkTree(wrap,pid,depth){
     item.addEventListener('drop',e=>{
       e.preventDefault();if(!wDragId||wDragId===node.id)return;
       const dn=S.work.find(n=>n.id===wDragId);if(!dn)return;
-      if(dropPos==='inside'&&node.t==='F'){
+      if(wDropPos==='inside'&&node.t==='F'){
         dn.p=node.id;node.open=true;
         const sib=wkids(node.id).filter(n=>n.id!==wDragId);dn.o=sib.length;
       }else{
@@ -1203,7 +1203,7 @@ function addWorkSubFolder(pid){
 }
 function addWorkDoc(){
   const cur=S.wsel;const nd=S.work.find(n=>n.id===cur);
-  addWorkDocTo(nd?.(nd.t==='F'?nd.id:nd.p)||null:null);
+  addWorkDocTo(nd?(nd.t==='F'?nd.id:nd.p)||null:null);
 }
 function addWorkDocTo(pid){
   const par=S.work.find(n=>n.id===pid);if(par)par.open=true;
