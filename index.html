@@ -102,9 +102,21 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .saveind.on{opacity:1}
 .lockbtn{background:none;border:1px solid var(--bdr);border-radius:var(--r);padding:4px 10px;color:var(--tx3);font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .lockbtn:hover{border-color:var(--tx3);color:var(--tx)}
-.hghbtn{background:var(--gn);border:none;border-radius:var(--r);padding:4px 10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:opacity .15s}
+.hghbtn{background:var(--gn);border:none;border-radius:var(--r);padding:4px 11px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;position:relative}
 .hghbtn:hover{opacity:.82}
+.hghbtn:disabled{opacity:.45;cursor:not-allowed}
 .hghpull{background:var(--pu)}
+/* 헤더 GitHub 상태 표시줄 */
+.ghstatbar{
+  position:fixed;top:48px;left:0;right:0;height:28px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:12px;font-weight:600;z-index:9998;
+  transform:translateY(-100%);transition:transform .2s;pointer-events:none;
+}
+.ghstatbar.show{transform:translateY(0)}
+.ghstatbar.ok{background:rgba(63,185,80,.92);color:#fff}
+.ghstatbar.err{background:rgba(248,81,73,.92);color:#fff}
+.ghstatbar.ing{background:rgba(56,139,253,.92);color:#fff}
 
 /* APP BODY */
 .abody{flex:1;overflow:hidden}
@@ -327,11 +339,13 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
     </div>
     <div class="hsp"></div>
     <div class="saveind" id="saveind"></div>
-    <button class="hghbtn" id="hpushbtn" onclick="ghPush()" title="GitHub에 저장">☁️ ↑</button>
-    <button class="hghbtn hghpull" id="hpullbtn" onclick="ghPull()" title="GitHub에서 불러오기">☁️ ↓</button>
+    <button class="hghbtn" id="hpushbtn" onclick="ghPush()" title="GitHub에 저장 (변경 시 30초 후 자동 저장)">☁️ ↑ 저장</button>
+    <button class="hghbtn hghpull" id="hpullbtn" onclick="ghPull()" title="GitHub에서 불러오기">☁️ ↓ 불러오기</button>
     <div class="htime" id="htime"></div>
     <button class="lockbtn" onclick="doLogout()">🔒 잠금</button>
   </div>
+  <!-- GitHub 작업 상태 표시줄 -->
+  <div class="ghstatbar" id="ghstatbar"></div>
 
   <div class="abody">
 
@@ -665,6 +679,8 @@ function save(){
     localStorage.setItem('mb_w',JSON.stringify(S.work));
     const si=document.getElementById('saveind');
     si.classList.add('on');clearTimeout(save._t);save._t=setTimeout(()=>si.classList.remove('on'),900);
+    // 변경 있을 때마다 30초 후 GitHub 자동저장 예약
+    if(typeof scheduleAutoGhPush==='function')scheduleAutoGhPush();
   }catch(e){}
 }
 function dsave(){clearTimeout(_st);_st=setTimeout(save,400);}
@@ -909,7 +925,21 @@ class MBEditor {
     ce.addEventListener('paste',e=>this._paste(e));
     ce.addEventListener('keyup',()=>this._syncBtns());
     ce.addEventListener('mouseup',()=>this._syncBtns());
-    ce.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();document.execCommand('insertHTML',false,'&emsp;');}});
+    ce.addEventListener('keydown',e=>{
+      if(e.key==='Tab'){e.preventDefault();document.execCommand('insertHTML',false,'&emsp;');}
+      // Ctrl+S → GitHub 저장
+      if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();ghPush();}
+      // Ctrl+Z / Ctrl+Y → undo/redo (브라우저 기본 동작 유지, 명시적으로 허용)
+    });
+    // 링크 클릭 → 새 탭으로 열기
+    ce.addEventListener('click',e=>{
+      const a=e.target.closest('a');
+      if(a&&a.href){e.preventDefault();window.open(a.href,'_blank','noopener');}
+    });
+    // Ctrl+클릭도 동일하게 처리
+    ce.addEventListener('auxclick',e=>{
+      if(e.button===1){const a=e.target.closest('a');if(a&&a.href){e.preventDefault();window.open(a.href,'_blank','noopener');}}
+    });
   }
   _buildTb(){
     const tb=this.tb;tb.className='mbtb';const id=this.ce.id;
@@ -1599,6 +1629,30 @@ function resetAll(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  GITHUB GIST SYNC
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _ghAutoT=null;   // 자동저장 타이머
+let _ghDirty=false;  // 미저장 변경사항 있음
+let _ghBusy=false;   // API 요청 중
+
+// dsave 후킹: 로컬 저장 후 자동 GitHub 저장 예약
+const _origDsave=dsave;
+function dsave(){
+  clearTimeout(_st);_st=setTimeout(()=>{save();scheduleAutoGhPush();},400);
+}
+function scheduleAutoGhPush(){
+  const tk=localStorage.getItem('gh_token');
+  if(!tk)return;
+  _ghDirty=true;
+  clearTimeout(_ghAutoT);
+  _ghAutoT=setTimeout(()=>{if(_ghDirty&&!_ghBusy)ghPush(true);},30000); // 30초 후 자동저장
+}
+
+function ghBar(msg,type,ms=2800){
+  const el=document.getElementById('ghstatbar');if(!el)return;
+  el.textContent=msg;el.className='ghstatbar '+type+' show';
+  clearTimeout(ghBar._t);
+  if(ms>0)ghBar._t=setTimeout(()=>el.classList.remove('show'),ms);
+}
+
 function ghSaveConfig(){
   const tk=document.getElementById('gh_token').value.trim();
   if(tk)localStorage.setItem('gh_token',tk);
@@ -1617,7 +1671,6 @@ function ghUpdateUI(){
     else if(gi){st.textContent='✓ 연결됨 (Gist ID: '+gi.slice(0,8)+'...)';st.style.color='var(--gn)';}
     else{st.textContent='토큰 설정됨 — 첫 저장 시 Gist 자동 생성';st.style.color='var(--yw)';}
   }
-  // 헤더 버튼: 토큰 있을 때만 표시
   const pb=document.getElementById('hpushbtn');const lb=document.getElementById('hpullbtn');
   if(pb)pb.style.display=tk?'':'none';
   if(lb)lb.style.display=tk?'':'none';
@@ -1627,47 +1680,69 @@ function ghLog(msg,ok){
   el.style.color=ok===false?'var(--rd)':ok?'var(--gn)':'var(--tx3)';
   el.textContent=msg;
 }
-async function ghPush(){
+
+async function ghPush(auto=false){
   const tk=localStorage.getItem('gh_token');
-  if(!tk){toast('GitHub 토큰을 먼저 설정하세요.');return;}
-  ghLog('⏳ GitHub에 저장 중...');
+  if(!tk){if(!auto)toast('GitHub 토큰을 먼저 설정하세요.');return;}
+  if(_ghBusy){if(!auto)toast('이미 저장 중입니다...');return;}
+  _ghBusy=true;
+  clearTimeout(_ghAutoT);
+  const pb=document.getElementById('hpushbtn');if(pb)pb.disabled=true;
+  if(!auto)ghBar('☁️ GitHub에 저장 중...','ing',0);
+  else ghBar('☁️ 자동 저장 중...','ing',0);
+  ghLog('⏳ '+(auto?'자동 ':'')+'GitHub에 저장 중...');
   const payload=JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,v:3,date:new Date().toISOString()},null,2);
   const gi=localStorage.getItem('gh_gist_id');
   try{
     let resp,data;
     if(gi){
-      // Update existing gist
       resp=await fetch('https://api.github.com/gists/'+gi,{method:'PATCH',headers:{'Authorization':'Bearer '+tk,'Content-Type':'application/json','Accept':'application/vnd.github+json'},body:JSON.stringify({files:{'mb_data.json':{content:payload}}})});
     }else{
-      // Create new gist
       resp=await fetch('https://api.github.com/gists',{method:'POST',headers:{'Authorization':'Bearer '+tk,'Content-Type':'application/json','Accept':'application/vnd.github+json'},body:JSON.stringify({description:'마케팅허브 데이터',public:false,files:{'mb_data.json':{content:payload}}})});
     }
-    if(!resp.ok){const e=await resp.json();ghLog('❌ 오류: '+((e.message)||resp.status),false);return;}
+    if(!resp.ok){const e=await resp.json();const em='❌ 저장 실패: '+(e.message||resp.status);ghBar(em,'err');ghLog(em,false);_ghBusy=false;if(pb)pb.disabled=false;return;}
     data=await resp.json();
     if(!gi){localStorage.setItem('gh_gist_id',data.id);ghUpdateUI();}
-    const d=new Date().toLocaleString('ko-KR');ghLog('✓ '+d+' 저장 완료 — Gist ID: '+data.id.slice(0,8)+'...',true);
-    toast('GitHub Gist에 저장 완료!');
-  }catch(e){ghLog('❌ 네트워크 오류: '+e.message,false);}
+    _ghDirty=false;
+    const d=new Date().toLocaleString('ko-KR');
+    const msg='✓ '+(auto?'자동 저장 완료':'저장 완료')+' — '+d;
+    ghBar(msg,'ok');ghLog(msg,true);
+    if(!auto)toast('GitHub에 저장 완료!');
+  }catch(e){
+    const em='❌ 네트워크 오류: '+e.message;
+    ghBar(em,'err');ghLog(em,false);
+    // 실패 시 60초 후 재시도
+    if(auto){_ghDirty=true;clearTimeout(_ghAutoT);_ghAutoT=setTimeout(()=>{if(_ghDirty&&!_ghBusy)ghPush(true);},60000);}
+  }finally{_ghBusy=false;if(pb)pb.disabled=false;}
 }
+
 async function ghPull(){
   const tk=localStorage.getItem('gh_token');
   const gi=localStorage.getItem('gh_gist_id');
   if(!tk){toast('GitHub 토큰을 먼저 설정하세요.');return;}
   if(!gi){toast('저장된 Gist가 없습니다. 먼저 GitHub에 저장해주세요.');return;}
+  ghBar('☁️ GitHub에서 불러오는 중...','ing',0);
   ghLog('⏳ GitHub에서 불러오는 중...');
+  const lb=document.getElementById('hpullbtn');if(lb)lb.disabled=true;
   try{
     const resp=await fetch('https://api.github.com/gists/'+gi,{headers:{'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json'}});
-    if(!resp.ok){ghLog('❌ 오류: '+(await resp.json()).message||resp.status,false);return;}
+    if(!resp.ok){const em='❌ 불러오기 실패: '+((await resp.json()).message||resp.status);ghBar(em,'err');ghLog(em,false);if(lb)lb.disabled=false;return;}
     const data=await resp.json();
     const content=data.files?.['mb_data.json']?.content;
-    if(!content){ghLog('❌ 데이터 파일을 찾을 수 없습니다.',false);return;}
-    if(!confirm('현재 로컬 데이터를 GitHub 데이터로 덮어씁니다.\n계속하시겠습니까?'))return;
+    if(!content){ghBar('❌ 데이터 파일을 찾을 수 없습니다.','err');if(lb)lb.disabled=false;return;}
+    // 불러오기 전 현재 로컬 데이터 자동 백업
+    const bak=JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,v:3,date:new Date().toISOString()});
+    localStorage.setItem('mb_pull_bak',bak);
+    if(!confirm('GitHub 데이터로 현재 데이터를 덮어씁니다.\n(현재 데이터는 로컬 임시 백업에 자동 저장됩니다)\n계속하시겠습니까?')){if(lb)lb.disabled=false;ghBar('','ok',1);return;}
     const d=JSON.parse(content);
     if(d.notes)S.notes=d.notes;if(d.clients)S.clients=d.clients;if(d.scheds)S.scheds=d.scheds;if(d.work)S.work=d.work;
     save();renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
-    const dt=new Date().toLocaleString('ko-KR');ghLog('✓ '+dt+' 불러오기 완료',true);
+    const dt=new Date().toLocaleString('ko-KR');
+    ghBar('✓ 불러오기 완료 — '+dt,'ok');
+    ghLog('✓ '+dt+' 불러오기 완료',true);
     toast('GitHub에서 데이터를 불러왔습니다!');
-  }catch(e){ghLog('❌ 오류: '+e.message,false);}
+  }catch(e){ghBar('❌ 오류: '+e.message,'err');ghLog('❌ 오류: '+e.message,false);}
+  finally{if(lb)lb.disabled=false;}
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
