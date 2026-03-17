@@ -648,30 +648,64 @@ function makeDefWork(){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  INDEXEDDB (파일 저장용)
+//  INDEXEDDB — 모든 데이터 저장소
+//  (localStorage 한도 없음, 용량 = 디스크 여유 공간의 일부)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const IDB={
   db:null,
   init(){
     return new Promise((res,rej)=>{
-      const r=indexedDB.open('MktHub',2);
-      r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('files'))db.createObjectStore('files',{keyPath:'id'});};
+      const r=indexedDB.open('MktHub',3); // v3: data store 추가
+      r.onupgradeneeded=e=>{
+        const db=e.target.result;
+        // 파일 저장소 (월간 보고서)
+        if(!db.objectStoreNames.contains('files'))
+          db.createObjectStore('files',{keyPath:'id'});
+        // 앱 데이터 저장소 (notes, clients, scheds, work)
+        if(!db.objectStoreNames.contains('appdata'))
+          db.createObjectStore('appdata',{keyPath:'key'});
+      };
       r.onsuccess=e=>{this.db=e.target.result;res();};
-      r.onerror=rej;
+      r.onerror=e=>{console.error('IDB 초기화 실패:',e);rej(e);};
     });
   },
-  _op(mode,fn){
+  _tx(stores,mode,fn){
     return new Promise((res,rej)=>{
-      const tx=this.db.transaction('files',mode);
-      const req=fn(tx.objectStore('files'));
-      req.onsuccess=e=>res(e.target.result);
-      req.onerror=rej;
+      const tx=this.db.transaction(stores,mode);
+      const req=fn(tx);
+      if(req){req.onsuccess=e=>res(e.target.result);req.onerror=rej;}
+      else{tx.oncomplete=()=>res();tx.onerror=rej;}
     });
   },
-  put(obj){return this._op('readwrite',s=>s.put(obj));},
-  get(id){return this._op('readonly',s=>s.get(id));},
-  getAll(){return this._op('readonly',s=>s.getAll());},
-  del(id){return this._op('readwrite',s=>s.delete(id));},
+  // 파일 저장소
+  fput(obj){return this._tx('files','readwrite',tx=>tx.objectStore('files').put(obj));},
+  fget(id){return this._tx('files','readonly',tx=>tx.objectStore('files').get(id));},
+  fgetAll(){return this._tx('files','readonly',tx=>tx.objectStore('files').getAll());},
+  fdel(id){return this._tx('files','readwrite',tx=>tx.objectStore('files').delete(id));},
+  // 앱 데이터 저장소
+  async setData(key,value){
+    return this._tx('appdata','readwrite',tx=>tx.objectStore('appdata').put({key,value,ts:new Date().toISOString()}));
+  },
+  async getData(key){
+    const r=await this._tx('appdata','readonly',tx=>tx.objectStore('appdata').get(key));
+    return r?r.value:null;
+  },
+  async setAll(obj){
+    // 여러 키를 한 트랜잭션으로 저장 (atomic)
+    return new Promise((res,rej)=>{
+      const tx=this.db.transaction('appdata','readwrite');
+      const store=tx.objectStore('appdata');
+      const ts=new Date().toISOString();
+      Object.entries(obj).forEach(([key,value])=>store.put({key,value,ts}));
+      tx.oncomplete=()=>res();
+      tx.onerror=rej;
+    });
+  },
+  async getAll_data(){
+    const all=await this._tx('appdata','readonly',tx=>tx.objectStore('appdata').getAll());
+    const r={};all.forEach(item=>r[item.key]=item.value);
+    return r;
+  },
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -686,76 +720,119 @@ const S={
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  STORAGE
+//  STORAGE (IndexedDB 기반, 용량 제한 없음)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _st;
 let _loaded=false;
-let _userEdited=false; // 사용자가 실제로 수정했을 때만 true — 시작 시 자동 저장 방지
+let _userEdited=false;
 
-function save(){
+async function save(){
   if(!_loaded)return;
   try{
-    const ts = new Date().toISOString();
-    localStorage.setItem('mb_n', JSON.stringify(S.notes));
-    localStorage.setItem('mb_c', JSON.stringify(S.clients));
-    localStorage.setItem('mb_s', JSON.stringify(S.scheds));
-    localStorage.setItem('mb_w', JSON.stringify(S.work));
-    localStorage.setItem('mb_ts', ts); // 저장 타임스탬프
+    await IDB.setAll({
+      notes: S.notes,
+      clients: S.clients,
+      scheds: S.scheds,
+      work: S.work,
+      ts: new Date().toISOString(),
+    });
+    // localStorage에도 타임스탬프만 기록 (GitHub 동기화 판단용)
+    try{localStorage.setItem('mb_ts', new Date().toISOString());}catch(e){}
     const si=document.getElementById('saveind');
     if(si){si.classList.add('on');clearTimeout(save._t);save._t=setTimeout(()=>si.classList.remove('on'),900);}
   }catch(e){
-    // localStorage 저장 실패 — 용량 초과일 가능성 높음
-    console.error('save() 오류:',e);
-    showStorageError(e);
+    console.error('IDB save() 오류:',e);
+    toast('⚠️ 저장 오류: '+e.message, true);
   }
 }
-function showStorageError(e){
-  const isQuota = e && (e.name==='QuotaExceededError'||e.code===22||e.code===1014);
-  const msg = isQuota
-    ? '⚠️ 저장 공간이 부족합니다! 설정 탭에서 저장 공간 현황을 확인하세요.'
-    : '⚠️ 로컬 저장 실패: '+e.message;
-  toast(msg, true); // 에러 토스트
-  ghBar(msg, 'err', 6000);
-}
-// 사용자 편집에 의한 저장 — GitHub 자동저장도 예약
+
+// 사용자 편집 저장 (비동기 딜레이)
 function dsave(){
   _userEdited=true;
   clearTimeout(_st);
-  _st=setTimeout(()=>{
-    save();
-    scheduleAutoGhPush();
-  },400);
+  _st=setTimeout(()=>{save().then(()=>scheduleAutoGhPush());},400);
 }
-// 시스템 내부 저장 (스냅샷 등) — GitHub 자동저장 예약 안 함
+// 시스템 내부 저장 (GitHub 자동저장 예약 안 함)
 function ssave(){
-  clearTimeout(_st);_st=setTimeout(save,400);
+  clearTimeout(_st);_st=setTimeout(()=>save(),400);
 }
-function load(){
+
+async function load(){
   _loaded=false;
+  try{
+    const data=await IDB.getAll_data();
+    const clone=o=>JSON.parse(JSON.stringify(o));
+    S.notes  = data.notes   || makeDefNotes();
+    S.clients= data.clients || clone(DEF_CLIENTS);
+    S.scheds = data.scheds  || {};
+    S.work   = data.work    || makeDefWork();
+    // 구버전 localStorage 데이터 마이그레이션 (최초 1회)
+    if(!data.notes && !data.work){
+      await migrateFromLocalStorage();
+      // 마이그레이션 후 다시 읽기
+      const d2=await IDB.getAll_data();
+      if(d2.notes)S.notes=d2.notes;
+      if(d2.clients)S.clients=d2.clients;
+      if(d2.scheds)S.scheds=d2.scheds;
+      if(d2.work)S.work=d2.work;
+    }
+    // 구버전 flat work 배열 마이그레이션
+    if(Array.isArray(S.work)&&S.work.length>0&&!('t' in S.work[0])){
+      try{
+        const old=S.work;S.work=makeDefWork();
+        old.forEach((s,i)=>{S.work.push({id:uid(),t:'D',n:s.name||s.n||'문서',p:null,o:100+i,icon:s.icon||'📝',content:s.content||''});});
+      }catch(e){S.work=makeDefWork();}
+    }
+    // 타입 검증
+    if(!Array.isArray(S.notes))S.notes=makeDefNotes();
+    if(!Array.isArray(S.clients))S.clients=clone(DEF_CLIENTS);
+    if(typeof S.scheds!=='object'||Array.isArray(S.scheds))S.scheds={};
+    if(!Array.isArray(S.work))S.work=makeDefWork();
+    _loaded=true;
+    console.log('[MBHub] IDB 로드 완료 — 노트:'+S.notes.length+', 클라이언트:'+S.clients.length+', 업무노트:'+S.work.length);
+  }catch(e){
+    console.error('[MBHub] IDB load() 오류:',e);
+    // IDB 실패 시 localStorage 폴백
+    loadFromLocalStorage();
+  }
+}
+
+// localStorage → IndexedDB 최초 마이그레이션
+async function migrateFromLocalStorage(){
+  try{
+    const safeGet=(key)=>{try{const v=localStorage.getItem(key);return v?JSON.parse(v):null;}catch(e){return null;}};
+    const notes=safeGet('mb_n');
+    const clients=safeGet('mb_c');
+    const scheds=safeGet('mb_s');
+    const work=safeGet('mb_w');
+    if(notes||clients||scheds||work){
+      console.log('[MBHub] localStorage → IndexedDB 마이그레이션 실행');
+      const obj={};
+      if(notes)obj.notes=notes;
+      if(clients)obj.clients=clients;
+      if(scheds)obj.scheds=scheds;
+      if(work)obj.work=work;
+      obj.ts=new Date().toISOString();
+      await IDB.setAll(obj);
+      console.log('[MBHub] 마이그레이션 완료');
+    }
+  }catch(e){console.warn('[MBHub] 마이그레이션 실패:',e);}
+}
+
+// localStorage 폴백 (IDB 완전 실패 시)
+function loadFromLocalStorage(){
+  const safeGet=(key)=>{try{const v=localStorage.getItem(key);return v?JSON.parse(v):null;}catch(e){return null;}};
   const clone=o=>JSON.parse(JSON.stringify(o));
-  // 키별 개별 파싱 — 하나 실패해도 나머지는 살아있음
-  const safeGet=(key,fallback)=>{
-    try{const v=localStorage.getItem(key);return v?JSON.parse(v):null;}
-    catch(e){console.warn('localStorage 파싱 오류 ['+key+']:', e);return null;}
-  };
   S.notes  = safeGet('mb_n') || makeDefNotes();
   S.clients= safeGet('mb_c') || clone(DEF_CLIENTS);
   S.scheds = safeGet('mb_s') || {};
   S.work   = safeGet('mb_w') || makeDefWork();
-  // 구버전 flat work 배열 마이그레이션
-  if(Array.isArray(S.work)&&S.work.length>0&&!('t' in S.work[0])){
-    try{
-      const old=S.work;S.work=makeDefWork();
-      old.forEach((s,i)=>{S.work.push({id:uid(),t:'D',n:s.name||s.n||'문서',p:null,o:100+i,icon:s.icon||'📝',content:s.content||''});});
-    }catch(e){S.work=makeDefWork();}
-  }
-  // 필수 배열 타입 검증
   if(!Array.isArray(S.notes))S.notes=makeDefNotes();
   if(!Array.isArray(S.clients))S.clients=clone(DEF_CLIENTS);
   if(typeof S.scheds!=='object'||Array.isArray(S.scheds))S.scheds={};
   if(!Array.isArray(S.work))S.work=makeDefWork();
-  _loaded=true; // 여기서부터만 save() 가능
-  console.log('[MBHub] 로드 완료 — 노트:'+S.notes.length+'개, 클라이언트:'+S.clients.length+'개, 업무노트:'+S.work.length+'개');
+  _loaded=true;
+  console.warn('[MBHub] localStorage 폴백 사용 중 (IDB 실패)');
 }
 
 // ── MONTH CLIENT SNAPSHOT ──
@@ -764,7 +841,7 @@ function getMonthClients(y,m){
   if(!S.scheds[k])S.scheds[k]={cells:{}};
   if(!S.scheds[k].snap){
     S.scheds[k].snap=JSON.parse(JSON.stringify(S.clients));
-    ssave(); // 시스템 저장 — GitHub 자동저장 예약 안 함
+    ssave();
   }
   return S.scheds[k].snap;
 }
@@ -790,17 +867,20 @@ async function doLogin(){
   else if(h===stored){enterApp();}
   else{const e=document.getElementById('lerr');e.className='lerr';e.textContent='비밀번호가 올바르지 않습니다.';document.getElementById('pwinput').value='';document.getElementById('pwinput').focus();}
 }
-function enterApp(){
+async function enterApp(){
   document.getElementById('lscreen').style.display='none';
   document.getElementById('app').style.display='flex';
   document.getElementById('lerr').textContent='';
-  load();renderNoteTree();renderWorkBar();renderSched();renderFmClients();renderClients();startClock();initResize();ghUpdateUI();initEditors();
+  await load(); // IDB 비동기 로드 완료 후 렌더링
+  renderNoteTree();renderWorkBar();renderSched();renderFmClients();renderClients();startClock();initResize();ghUpdateUI();initEditors();
   const yr=document.getElementById('fmyear');yr.innerHTML='';
   for(let y=2024;y<=2029;y++){const o=document.createElement('option');o.value=y;o.textContent=y+'년';if(y===S.sy)o.selected=true;yr.appendChild(o);}
-  // 로그인 후 GitHub 자동 복원 (백그라운드)
   setTimeout(autoGhSync, 800);
 }
 function doLogout(){
+  // 로그아웃 시 세션 복원 플래그 초기화 → 다음 로그인 때 GitHub에서 다시 복원
+  sessionStorage.removeItem('gh_synced_this_session');
+  _loaded=false;_userEdited=false;_ghDirty=false;clearTimeout(_ghAutoT);clearTimeout(_st);
   document.getElementById('app').style.display='none';
   document.getElementById('lscreen').style.display='flex';
   document.getElementById('pwinput').value='';document.getElementById('pwinput').focus();
@@ -1582,7 +1662,7 @@ async function renderFiles(){
   const yr=parseInt(document.getElementById('fmyear').value);
   const mo=parseInt(document.getElementById('fmmonth').value);
   let files=[];
-  try{files=await IDB.getAll();}catch(e){files=[];}
+  try{files=await IDB.fgetAll();}catch(e){files=[];}
   files=files.filter(f=>f.clientId===S.fmCl&&f.year===yr&&(mo===0||f.month===mo));
   files.sort((a,b)=>a.month-b.month||a.uploadDate.localeCompare(b.uploadDate));
   if(!files.length){
@@ -1608,17 +1688,17 @@ function uploadFile(){
     const file=e.target.files[0];if(!file)return;
     const ab=await file.arrayBuffer();
     try{
-      await IDB.put({id:uid(),name:file.name,type:file.type||'',data:ab,clientId:S.fmCl,year:yr,month:mo,uploadDate:new Date().toISOString(),size:file.size});
+      await IDB.fput({id:uid(),name:file.name,type:file.type||'',data:ab,clientId:S.fmCl,year:yr,month:mo,uploadDate:new Date().toISOString(),size:file.size});
       toast(`"${file.name}" 업로드 완료`);renderFiles();
     }catch(err){toast('업로드 실패: 파일이 너무 클 수 있습니다.');}
   };inp.click();
 }
 async function dlFile(id){
-  const f=await IDB.get(id);if(!f)return;
+  const f=await IDB.fget(id);if(!f)return;
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([f.data],{type:f.type}));a.download=f.name;a.click();
 }
 async function previewPdf(id){
-  const f=await IDB.get(id);if(!f)return;
+  const f=await IDB.fget(id);if(!f)return;
   const url=URL.createObjectURL(new Blob([f.data],{type:'application/pdf'}));
   const bg=document.createElement('div');bg.className='modal-bg';
   bg.innerHTML=`<div class="modal-box"><div class="modal-hdr"><span class="modal-title">📕 ${f.name}</span><button class="modal-close" onclick="this.closest('.modal-bg').remove()">✕</button></div><div class="modal-body"><embed src="${url}" type="application/pdf"></div></div>`;
@@ -1627,7 +1707,7 @@ async function previewPdf(id){
 }
 async function rmFile(id){
   if(!confirm('파일을 삭제하시겠습니까?'))return;
-  await IDB.del(id);toast('삭제되었습니다.');renderFiles();
+  await IDB.fdel(id);toast('삭제되었습니다.');renderFiles();
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1670,109 +1750,118 @@ function importData(){
   const inp=document.createElement('input');inp.type='file';inp.accept='.json';
   inp.onchange=e=>{
     const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();r.onload=ev=>{
+    const r=new FileReader();r.onload=async ev=>{
       try{
         const d=JSON.parse(ev.target.result);
         if(!confirm('기존 데이터를 덮어씁니다. 계속하시겠습니까?'))return;
         if(d.notes)S.notes=d.notes;if(d.clients)S.clients=d.clients;if(d.scheds)S.scheds=d.scheds;if(d.work)S.work=d.work;
-        save();renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();toast('데이터를 불러왔습니다.');
+        await save();
+        _ghDirty=false;_userEdited=false;clearTimeout(_ghAutoT);
+        renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
+        toast('데이터를 불러왔습니다.');
       }catch(e){alert('파일 형식이 올바르지 않습니다.');}
     };r.readAsText(f);
   };inp.click();
 }
-function resetAll(){
+async function resetAll(){
   if(!confirm('⚠️ 모든 데이터가 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.'))return;
-  ['mb_n','mb_c','mb_s','mb_w'].forEach(k=>localStorage.removeItem(k));
   S.notes=makeDefNotes();S.clients=JSON.parse(JSON.stringify(DEF_CLIENTS));S.scheds={};S.work=makeDefWork();
   S.p1=null;S.p2=null;S.wsel=null;S.fmCl=null;
+  await save();
   renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
   setPane(1,null);setPane(2,null);selectWork(null);toast('초기화 완료.');
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  자동 GitHub 복원 (로그인 시 실행)
+//  자동 GitHub 복원 (로그인마다 실행)
+//  GitHub = 진짜 데이터베이스
+//  localStorage = 임시 캐시 (언제든 날아갈 수 있음)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function autoGhSync(){
   const tk=localStorage.getItem('gh_token');
   const gi=localStorage.getItem('gh_gist_id');
-  if(!tk||!gi)return;
-
-  // 로컬 데이터가 비어있는지 확인 (저장 기록이 없으면 비어있는 것으로 판단)
-  const localTs=localStorage.getItem('mb_ts')||'';
-  const localEmpty=!localTs||!localStorage.getItem('mb_n');
-
+  if(!tk||!gi){
+    // GitHub 미연결 상태 — 로컬만 사용
+    console.log('[MBHub] GitHub 미연결. 로컬 데이터 사용.');
+    return;
+  }
+  // 이번 세션에 이미 복원했으면 중복 실행 안 함
+  if(sessionStorage.getItem('gh_synced_this_session')==='1'){
+    console.log('[MBHub] 이번 세션에 이미 GitHub 복원 완료. 스킵.');
+    return;
+  }
+  ghBar('☁️ GitHub에서 최신 데이터 복원 중...','ing',0);
+  console.log('[MBHub] GitHub 자동 복원 시작...');
   try{
     const resp=await fetch('https://api.github.com/gists/'+gi,{
-      headers:{'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json'}
+      headers:{'Authorization':'Bearer '+tk,'Accept':'application/vnd.github+json','Cache-Control':'no-cache'}
     });
-    if(!resp.ok)return;
+    if(!resp.ok){
+      console.warn('[MBHub] GitHub 복원 실패:',resp.status);
+      ghBar('','ok',1);
+      return;
+    }
     const data=await resp.json();
     const content=data.files?.['mb_data.json']?.content;
-    if(!content)return;
-
-    const ghData=JSON.parse(content);
-    const ghTs=ghData.date||'';
-
-    // GitHub가 더 최신이거나 로컬이 비어있으면 자동 복원
-    if(localEmpty||(ghTs&&localTs&&ghTs>localTs)){
-      const reason=localEmpty?'로컬 데이터 없음':'GitHub 데이터가 더 최신';
-      console.log('[MBHub] 자동 복원 실행 —',reason,'/ 로컬:',localTs,'/ GitHub:',ghTs);
-      if(ghData.notes)S.notes=ghData.notes;
-      if(ghData.clients)S.clients=ghData.clients;
-      if(ghData.scheds)S.scheds=ghData.scheds;
-      if(ghData.work)S.work=ghData.work;
-      _loaded=true;
-      save();
-      _ghDirty=false;_userEdited=false;clearTimeout(_ghAutoT);
-      renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
-      ghBar('✓ GitHub 최신 데이터 자동 복원 완료 ('+new Date().toLocaleTimeString('ko-KR')+')','ok');
-      ghLog('✓ 자동 복원 완료 — '+new Date().toLocaleString('ko-KR'),true);
-      updateStorageInfo();
-    }else{
-      // 로컬이 최신 — 정상 상태
-      console.log('[MBHub] 로컬 데이터가 최신. 자동 복원 불필요. 로컬:',localTs,'/ GitHub:',ghTs);
+    if(!content){
+      console.log('[MBHub] GitHub에 데이터 없음. 로컬 데이터 유지.');
+      ghBar('','ok',1);
+      return;
     }
+    const ghData=JSON.parse(content);
+    const ghTs=ghData.date||'(날짜 없음)';
+    const localTs=localStorage.getItem('mb_ts')||'';
+
+    // GitHub 데이터로 메모리 업데이트
+    if(ghData.notes)S.notes=ghData.notes;
+    if(ghData.clients)S.clients=ghData.clients;
+    if(ghData.scheds)S.scheds=ghData.scheds;
+    if(ghData.work)S.work=ghData.work;
+    _loaded=true;
+    await save();
+    _ghDirty=false;_userEdited=false;clearTimeout(_ghAutoT);
+    // 이번 세션 복원 완료 표시
+    sessionStorage.setItem('gh_synced_this_session','1');
+    // 화면 갱신
+    renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
+    const t=new Date().toLocaleTimeString('ko-KR');
+    ghBar('✓ GitHub 데이터 복원 완료 ('+t+')','ok');
+    ghLog('✓ 자동 복원 완료 — GitHub 저장 시각: '+ghTs,true);
+    console.log('[MBHub] 복원 완료. GitHub 저장 시각:',ghTs,'/ 이전 로컬 시각:',localTs);
+    updateStorageInfo();
   }catch(e){
-    console.warn('[MBHub] 자동 복원 실패:',e.message);
+    console.warn('[MBHub] autoGhSync 오류:',e.message);
+    ghBar('⚠️ GitHub 연결 실패. 로컬 데이터 사용 중.','err',4000);
   }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  저장 공간 모니터
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function getStorageInfo(){
-  try{
-    let total=0;
-    const keys=['mb_n','mb_c','mb_s','mb_w','mb_ts'];
-    const details={};
-    keys.forEach(k=>{
-      const v=localStorage.getItem(k)||'';
-      const kb=Math.round(v.length*2/1024);
-      details[k]=kb;total+=kb;
-    });
-    return{total,details,limit:5120}; // 5MB 기준
-  }catch(e){return{total:0,details:{},limit:5120};}
-}
-function updateStorageInfo(){
+async function updateStorageInfo(){
   const el=document.getElementById('storage-info');if(!el)return;
-  const{total,details,limit}=getStorageInfo();
-  const pct=Math.round(total/limit*100);
-  const color=pct>80?'var(--rd)':pct>60?'var(--yw)':'var(--gn)';
-  el.innerHTML=`
-    <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">
-      총 사용량: <b style="color:${color}">${total}KB / ~${limit}KB</b> (${pct}%)
-    </div>
-    <div style="height:6px;background:var(--surf3);border-radius:3px;margin-bottom:8px">
-      <div style="height:6px;background:${color};border-radius:3px;width:${Math.min(pct,100)}%;transition:width .3s"></div>
-    </div>
-    <div style="font-size:10px;color:var(--tx3);line-height:1.8">
-      ${Object.entries(details).map(([k,v])=>`<span>${k}: ${v}KB</span>`).join(' &nbsp;|&nbsp; ')}
-    </div>
-    ${pct>80?`<div style="margin-top:8px;padding:8px;background:rgba(248,81,73,.1);border-radius:4px;font-size:11px;color:var(--rd)">
-      ⚠️ 저장 공간이 ${pct}% 찼습니다. 에디터에 삽입한 이미지(Base64)가 큰 원인입니다.<br>
-      이미지 대신 링크를 사용하거나, JSON 백업 후 일부 데이터를 정리하세요.
-    </div>`:''}
-  `;
+  try{
+    const data=await IDB.getAll_data();
+    const sizes={};let total=0;
+    Object.entries(data).forEach(([k,v])=>{
+      const kb=Math.round(JSON.stringify(v).length*2/1024);
+      sizes[k]=kb;total+=kb;
+    });
+    el.innerHTML=`
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">
+        저장 용량: <b style="color:var(--gn)">${total}KB</b>
+        <span style="color:var(--tx3);font-size:11px"> — IndexedDB (용량 제한 없음 ✓)</span>
+      </div>
+      <div style="font-size:10px;color:var(--tx3);line-height:1.8">
+        ${Object.entries(sizes).map(([k,v])=>`<span>${k}: ${v}KB</span>`).join(' &nbsp;|&nbsp; ')}
+      </div>
+      <div style="margin-top:8px;padding:8px;background:rgba(63,185,80,.08);border-radius:4px;font-size:11px;color:var(--gn)">
+        ✓ IndexedDB 방식 — 이미지를 얼마나 넣어도 저장 공간 부족 오류가 발생하지 않습니다.
+      </div>
+    `;
+  }catch(e){
+    el.innerHTML='<span style="font-size:11px;color:var(--tx3)">저장 공간 정보를 불러올 수 없습니다.</span>';
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1886,8 +1975,8 @@ async function ghPull(){
     if(!confirm('GitHub 데이터로 현재 데이터를 덮어씁니다.\n(현재 데이터는 로컬 임시 백업에 자동 저장됩니다)\n계속하시겠습니까?')){if(lb)lb.disabled=false;ghBar('','ok',1);return;}
     const d=JSON.parse(content);
     if(d.notes)S.notes=d.notes;if(d.clients)S.clients=d.clients;if(d.scheds)S.scheds=d.scheds;if(d.work)S.work=d.work;
-    save();renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
-    // 불러오기 직후에는 dirty 초기화 — 바로 자동저장 실행되는 것 방지
+    await save();
+    renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
     _ghDirty=false;_userEdited=false;clearTimeout(_ghAutoT);
     const dt=new Date().toLocaleString('ko-KR');
     ghBar('✓ 불러오기 완료 — '+dt,'ok');
@@ -1917,7 +2006,12 @@ function loadTheme(){applyTheme(localStorage.getItem('mb_theme')||'dark');}
 //  INIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 (async()=>{
-  try{await IDB.init();}catch(e){console.warn('IndexedDB 초기화 실패, 파일 업로드 기능을 사용할 수 없습니다.',e);}
+  try{
+    await IDB.init();
+    console.log('[MBHub] IndexedDB 초기화 완료 (용량 제한 없음)');
+  }catch(e){
+    console.error('[MBHub] IndexedDB 초기화 실패. 로컬 저장이 불안정할 수 있습니다.',e);
+  }
   loadTheme();
   const pi=document.getElementById('pwinput');
   pi.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
