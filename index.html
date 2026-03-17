@@ -102,6 +102,9 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .saveind.on{opacity:1}
 .lockbtn{background:none;border:1px solid var(--bdr);border-radius:var(--r);padding:4px 10px;color:var(--tx3);font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .lockbtn:hover{border-color:var(--tx3);color:var(--tx)}
+.hghbtn{background:var(--gn);border:none;border-radius:var(--r);padding:4px 10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:opacity .15s}
+.hghbtn:hover{opacity:.82}
+.hghpull{background:var(--pu)}
 
 /* APP BODY */
 .abody{flex:1;overflow:hidden}
@@ -315,7 +318,6 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 <div id="app">
   <div class="hdr">
     <div class="hlogo">MB</div>
-    <div class="hname">마케팅 허브</div>
     <div class="tabs">
       <button class="tbtn on" id="tb-notes" onclick="switchTab('notes')">📝 클라이언트 노트</button>
       <button class="tbtn" id="tb-work" onclick="switchTab('work')">🗂 업무 노트</button>
@@ -325,6 +327,8 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
     </div>
     <div class="hsp"></div>
     <div class="saveind" id="saveind"></div>
+    <button class="hghbtn" id="hpushbtn" onclick="ghPush()" title="GitHub에 저장">☁️ ↑</button>
+    <button class="hghbtn hghpull" id="hpullbtn" onclick="ghPull()" title="GitHub에서 불러오기">☁️ ↓</button>
     <div class="htime" id="htime"></div>
     <button class="lockbtn" onclick="doLogout()">🔒 잠금</button>
   </div>
@@ -1613,6 +1617,10 @@ function ghUpdateUI(){
     else if(gi){st.textContent='✓ 연결됨 (Gist ID: '+gi.slice(0,8)+'...)';st.style.color='var(--gn)';}
     else{st.textContent='토큰 설정됨 — 첫 저장 시 Gist 자동 생성';st.style.color='var(--yw)';}
   }
+  // 헤더 버튼: 토큰 있을 때만 표시
+  const pb=document.getElementById('hpushbtn');const lb=document.getElementById('hpullbtn');
+  if(pb)pb.style.display=tk?'':'none';
+  if(lb)lb.style.display=tk?'':'none';
 }
 function ghLog(msg,ok){
   const el=document.getElementById('gh_log');if(!el)return;
