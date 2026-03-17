@@ -16,6 +16,57 @@ html,body{height:100%;overflow:hidden;-webkit-font-smoothing:antialiased}
   --r:6px;
   font-family:'Apple SD Gothic Neo','Malgun Gothic','Nanum Gothic',-apple-system,'Segoe UI',sans-serif;
 }
+/* ── LIGHT THEME ── */
+body.th-light{
+  --bg:#f5f5f5;--surf:#ffffff;--surf2:#f0f0f0;--surf3:#e8e8e8;
+  --bdr:#d0d0d0;--bdr2:#e0e0e0;
+  --tx:#1a1a1a;--tx2:#444444;--tx3:#888888;
+  --ac:#1a6ef5;--ac2:#0d5ce0;
+}
+body.th-light .mbedit{background:#ffffff;color:#1a1a1a}
+body.th-light .scell{background:#ffffff;color:#1a1a1a}
+body.th-light .scell:focus{background:#f0f7ff}
+body.th-light .ql-editor{background:#ffffff;color:#1a1a1a}
+
+/* ── GRAY THEME ── */
+body.th-gray{
+  --bg:#e8e9eb;--surf:#f2f3f5;--surf2:#e0e2e5;--surf3:#d5d7db;
+  --bdr:#b8bcc4;--bdr2:#ced1d7;
+  --tx:#1e2128;--tx2:#40454f;--tx3:#72788a;
+  --ac:#2563eb;--ac2:#1d4ed8;
+}
+body.th-gray .mbedit{background:#f2f3f5;color:#1e2128}
+body.th-gray .scell{background:#f2f3f5;color:#1e2128}
+body.th-gray .scell:focus{background:#e8f0fe}
+
+/* ── WARM WHITE THEME ── */
+body.th-warm{
+  --bg:#fdf6ee;--surf:#ffffff;--surf2:#f5ede0;--surf3:#ede0ce;
+  --bdr:#d9c8b0;--bdr2:#e8dac8;
+  --tx:#2c1f0e;--tx2:#5c4a30;--tx3:#9c8060;
+  --ac:#b85c00;--ac2:#a04e00;
+}
+body.th-warm .mbedit{background:#fffdf8;color:#2c1f0e}
+body.th-warm .scell{background:#fffdf8;color:#2c1f0e}
+body.th-warm .scell:focus{background:#fff5e6}
+
+/* ── NAVY THEME ── */
+body.th-navy{
+  --bg:#0a1628;--surf:#0f2040;--surf2:#162a52;--surf3:#1c3464;
+  --bdr:#2a4a8a;--bdr2:#1e3870;
+  --tx:#dce8ff;--tx2:#a0bcee;--tx3:#607ab8;
+  --ac:#5b8ff9;--ac2:#4070e0;
+}
+body.th-navy .mbedit{background:#0f2040;color:#dce8ff}
+body.th-navy .scell{background:#0a1628;color:#dce8ff}
+
+/* theme switcher UI */
+.theme-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.theme-opt{width:80px;cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s;text-align:center}
+.theme-opt:hover{border-color:var(--tx3)}
+.theme-opt.sel{border-color:var(--ac)}
+.theme-swatch{height:44px;display:flex;flex-direction:column;gap:3px;padding:6px 8px}
+.theme-label{font-size:10px;padding:3px 0 4px;background:var(--surf2);color:var(--tx3);font-weight:600}
 body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -402,6 +453,51 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
     <!-- ── SETTINGS ── -->
     <div class="panel" id="psettings">
       <div class="ssec">
+        <div class="sstitle">🎨 테마 (화면 색상)</div>
+        <div class="theme-grid" id="theme-grid">
+          <div class="theme-opt" id="th-opt-dark" onclick="applyTheme('dark')" title="다크 (기본)">
+            <div class="theme-swatch" style="background:#0d1117">
+              <div style="height:8px;border-radius:2px;background:#161b22"></div>
+              <div style="height:5px;border-radius:2px;background:#388bfd;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#30363d"></div>
+            </div>
+            <div class="theme-label">🌑 다크</div>
+          </div>
+          <div class="theme-opt" id="th-opt-light" onclick="applyTheme('light')" title="화이트">
+            <div class="theme-swatch" style="background:#f5f5f5">
+              <div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #d0d0d0"></div>
+              <div style="height:5px;border-radius:2px;background:#1a6ef5;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#d0d0d0"></div>
+            </div>
+            <div class="theme-label" style="background:#e8e8e8;color:#888">☀️ 화이트</div>
+          </div>
+          <div class="theme-opt" id="th-opt-gray" onclick="applyTheme('gray')" title="회색">
+            <div class="theme-swatch" style="background:#e8e9eb">
+              <div style="height:8px;border-radius:2px;background:#f2f3f5;border:1px solid #b8bcc4"></div>
+              <div style="height:5px;border-radius:2px;background:#2563eb;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#b8bcc4"></div>
+            </div>
+            <div class="theme-label" style="background:#d5d7db;color:#72788a">🩶 그레이</div>
+          </div>
+          <div class="theme-opt" id="th-opt-warm" onclick="applyTheme('warm')" title="따뜻한 화이트">
+            <div class="theme-swatch" style="background:#fdf6ee">
+              <div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #d9c8b0"></div>
+              <div style="height:5px;border-radius:2px;background:#b85c00;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#d9c8b0"></div>
+            </div>
+            <div class="theme-label" style="background:#ede0ce;color:#9c8060">🟡 웜화이트</div>
+          </div>
+          <div class="theme-opt" id="th-opt-navy" onclick="applyTheme('navy')" title="네이비">
+            <div class="theme-swatch" style="background:#0a1628">
+              <div style="height:8px;border-radius:2px;background:#0f2040"></div>
+              <div style="height:5px;border-radius:2px;background:#5b8ff9;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#2a4a8a"></div>
+            </div>
+            <div class="theme-label" style="background:#162a52;color:#607ab8">🔵 네이비</div>
+          </div>
+        </div>
+      </div>
+      <div class="ssec">
         <div class="sstitle">🔒 비밀번호 변경</div>
         <div class="srow"><span class="slabel">현재 비밀번호</span><input type="password" class="sinput" id="cpw" placeholder="현재 비밀번호"></div>
         <div class="srow"><span class="slabel">새 비밀번호</span><input type="password" class="sinput" id="npw" placeholder="새 비밀번호 (4자 이상)"></div>
@@ -670,7 +766,7 @@ function switchTab(t){
     document.getElementById('p'+x).classList.toggle('on',x===t);
     document.getElementById('tb-'+x).classList.toggle('on',x===t);
   });
-  if(t==='settings')renderClients();
+  if(t==='settings'){renderClients();loadTheme();}
   if(t==='sched')updateTracker();
   if(t==='report'){renderFmClients();renderFiles();}
 }
@@ -1567,10 +1663,27 @@ async function ghPull(){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  THEME
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const THEMES=['dark','light','gray','warm','navy'];
+function applyTheme(t){
+  if(!THEMES.includes(t))t='dark';
+  document.body.className=t==='dark'?'':'th-'+t;
+  localStorage.setItem('mb_theme',t);
+  // update selector UI
+  THEMES.forEach(x=>{
+    const el=document.getElementById('th-opt-'+x);
+    if(el)el.classList.toggle('sel',x===t);
+  });
+}
+function loadTheme(){applyTheme(localStorage.getItem('mb_theme')||'dark');}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  INIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 (async()=>{
   try{await IDB.init();}catch(e){console.warn('IndexedDB 초기화 실패, 파일 업로드 기능을 사용할 수 없습니다.',e);}
+  loadTheme();
   const pi=document.getElementById('pwinput');
   pi.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   pi.addEventListener('input',()=>{document.getElementById('lerr').textContent='';});
