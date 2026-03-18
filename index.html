@@ -385,25 +385,6 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 .srch-item-title{font-weight:600;color:var(--tx)}
 .srch-item-preview{color:var(--tx3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px}
 .srch-hl{color:var(--ac);font-weight:700}
-
-/* 회의록 툴바 팝오버 */
-.mtg-pop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
-  background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;
-  box-shadow:0 -4px 16px rgba(0,0,0,.35);z-index:1000;white-space:nowrap;min-width:160px}
-.mtg-pop-arrow{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
-  width:10px;height:6px;overflow:hidden}
-.mtg-pop-arrow::before{content:'';position:absolute;top:-4px;left:50%;transform:translateX(-50%);
-  width:10px;height:10px;background:var(--surf);border:1px solid var(--bdr);transform-origin:center;transform:translateX(-50%) rotate(45deg)}
-.mtg-tool-wrap{position:relative;display:inline-flex}
-
-
-/* 내보내기 드롭다운 */
-.export-wrap{position:relative;display:inline-block}
-.export-menu{position:absolute;right:0;top:110%;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);min-width:130px;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.3);display:none}
-.export-menu.open{display:block}
-.export-item{padding:8px 14px;font-size:12px;color:var(--tx2);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
-.export-item:hover{background:var(--surf2);color:var(--tx)}
-
 /* ── 퇴근 알림 ── */
 .clk-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-60px);z-index:9999;background:var(--surf);border:2px solid var(--ac);border-radius:12px;padding:20px 32px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.4);opacity:0;transition:all .3s;pointer-events:none}
 .clk-popup.show{opacity:1;transform:translate(-50%,-50%)}
@@ -453,12 +434,8 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
   /* 하단 탭바 */
   .mob-tabbar{display:flex!important}
   /* 앱 높이 - 하단 탭바 공간 */
-  .abody{padding-bottom:0}
-  /* 에디터: overflow:hidden인 epane 안에서 하단 공간 확보 */
-  .equill-wrap{position:relative}
+  .abody{padding-bottom:60px}
   .mbedit{padding-bottom:80px!important}
-  /* 스케줄 하단 여백 */
-  .schedmain{padding-bottom:70px}
   /* 사이드바 → 드로어 */
   .sidebar{position:fixed!important;left:0;top:48px;bottom:60px;z-index:500;transform:translateX(-100%);transition:transform .22s;box-shadow:4px 0 20px rgba(0,0,0,.4);width:260px!important;min-width:0!important}
   .sidebar.mob-open{transform:translateX(0)}
@@ -474,15 +451,14 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
   .mbtb::-webkit-scrollbar{display:none}
   /* 폰트 크기 */
   .mbedit{font-size:15px!important;padding:14px 16px!important;line-height:1.9!important}
-  /* 트래커 모바일 - 접기/펼치기 */
-  /* 트래커 모바일 - 세로 배치 */
-  .rhandle{width:100%!important;height:6px!important;cursor:ns-resize!important;background:var(--bdr)}
+  /* 트래커 모바일 배치 */
+  .rhandle{width:100%!important;height:6px!important;cursor:ns-resize!important;order:2}
   .rhandle:hover,.rhandle.ra{background:var(--ac)!important}
-  .tracker{width:100%!important;max-width:none!important;border-left:none!important;border-top:none;max-height:220px;overflow-y:auto;flex-shrink:0;order:2}
+  .tracker{width:100%!important;max-width:none!important;border-left:none!important;border-top:none;max-height:220px;overflow-y:auto;flex-shrink:0;order:3}
   .tracker.mob-collapsed{max-height:40px;overflow:hidden}
-  .schedbody{flex-direction:column;overflow:hidden}
-  .schedmain{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;order:1}
+  .schedmain{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;order:1;padding-bottom:10px}
   .schedtb{flex-shrink:0}
+  .schedbody{flex-direction:column;overflow:hidden}
   /* 설정 */
   .ssec{max-width:100%!important}
   /* 시계 대신 현재 탭명 */
@@ -502,8 +478,6 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 .mob-tab.on{color:var(--ac)}
 .mob-tab-ico{font-size:20px;line-height:1}
 /* 모바일 사이드바 버튼 */
-.mob-only{display:none}
-@media(max-width:768px){.mob-only{display:inline}}
 .mob-sidebar-btn{display:none;background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0}
 /* 모바일 탭명 */
 .mob-curtab{display:none}
@@ -528,6 +502,20 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 .draw-pen-btn.on{border-color:var(--ac);box-shadow:0 0 0 3px rgba(56,139,253,.3)}
 .resize-handle-v{position:absolute;bottom:0;left:0;right:0;height:6px;cursor:ns-resize;background:var(--bdr);z-index:10;opacity:0;transition:opacity .2s}
 .resize-handle-v:hover,.resize-handle-v.active{opacity:1;background:var(--ac)}
+
+
+/* 회의록 툴 버튼 */
+.mtool{background:none;border:1px solid transparent;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:14px;color:var(--tx2);font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.mtool:hover{background:var(--surf3);border-color:var(--bdr)}
+.mtool.on{background:rgba(56,139,253,.18);border-color:var(--ac);color:var(--ac)}
+
+
+/* 내보내기 드롭다운 */
+.export-wrap{position:relative;display:inline-block}
+.export-menu{position:absolute;right:0;top:110%;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);min-width:130px;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.3);display:none}
+.export-menu.open{display:block}
+.export-item{padding:8px 14px;font-size:12px;color:var(--tx2);cursor:pointer;white-space:nowrap}
+.export-item:hover{background:var(--surf2);color:var(--tx)}
 
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
@@ -615,11 +603,11 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
             <span id="readonly-badge1" class="readonly-badge">읽기전용</span>
             <button class="splitbtn" id="rdonly-btn1" onclick="toggleReadonly(1)" title="읽기 전용 잠금" style="display:none">🔓</button>
             <div class="export-wrap" id="export-wrap" style="display:none">
-              <button class="splitbtn" onclick="toggleExportMenu()" title="내보내기">⬇ 내보내기</button>
+              <button class="splitbtn" onclick="toggleExportMenu('export-menu')">⬇ 내보내기</button>
               <div class="export-menu" id="export-menu">
                 <div class="export-item" onclick="exportDoc('word')">📝 Word (.docx)</div>
                 <div class="export-item" onclick="exportDoc('pdf')">📄 PDF</div>
-                <div class="export-item" onclick="exportDoc('png')">🖼 PNG 이미지</div>
+                <div class="export-item" onclick="exportDoc('png')">🖼 PNG</div>
               </div>
             </div>
             <button class="splitbtn" id="splitbtn" onclick="toggleSplit()">분할 보기</button>
@@ -666,7 +654,7 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
           <div class="etbar">
             <span class="etitle empty" id="wet">← 문서를 선택하세요</span>
             <div class="export-wrap" id="export-wrap-work" style="display:none">
-              <button class="splitbtn" onclick="toggleExportMenuWork()" title="내보내기">⬇ 내보내기</button>
+              <button class="splitbtn" onclick="toggleExportMenu('export-menu-work')">⬇ 내보내기</button>
               <div class="export-menu" id="export-menu-work">
                 <div class="export-item" onclick="exportDoc('word')">📝 Word (.docx)</div>
                 <div class="export-item" onclick="exportDoc('pdf')">📄 PDF</div>
@@ -696,11 +684,11 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
         <div class="schedmain" id="schedmain"></div>
         <div class="rhandle" id="rhandle"></div>
         <div class="tracker" id="tracker">
-          <div class="trktitle" onclick="mobToggleTracker()" style="cursor:pointer">
-            📊 잔여 횟수 트래커 <span id="tracker-arrow" class="mob-only" style="font-size:10px;color:var(--tx3)">▼</span>
-            <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+          <div class="trktitle">
+            📊 잔여 횟수 트래커
+            <div style="display:flex;gap:4px">
               <button class="icobtn" id="trkedbtn" onclick="toggleTrkEdit()" title="이번 달 할당량 수정">✏️</button>
-              <button class="icobtn" onclick="syncMonthSnap(S.sy,S.sm)" title="클라이언트 목록 동기화">🔄</button>
+              <button class="icobtn" onclick="syncMonthSnap(S.sy,S.sm)" title="설정의 클라이언트 목록을 이번 달에 동기화">🔄</button>
             </div>
           </div>
           <div id="trkbody"></div>
@@ -1331,25 +1319,11 @@ function switchTab(t){
 //  TREE (클라이언트 노트)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let dragId=null,dropPos=null;
-let _isDragging=false;
 
 function renderNoteTree(){
   const w=document.getElementById('ntreewrap');w.innerHTML='';
   const selId=S.p1||S.p2;
   buildTree(w,null,0,selId);
-  // 빈 공간에 drop 허용 (최상위 레벨로 이동)
-  w.ondragover=e=>e.preventDefault();
-  w.ondrop=e=>{
-    e.preventDefault();
-    if(!dragId)return;
-    const dn=S.notes.find(n=>n.id===dragId);if(!dn)return;
-    if(e.target===w||e.target.id==='ntreewrap'){
-      dn.p=null;
-      const roots=S.notes.filter(n=>!n.p&&n.id!==dragId);
-      dn.o=roots.length;
-      dragId=null;save();renderNoteTree();
-    }
-  };
 }
 
 function buildTree(wrap,pid,depth,selId){
@@ -1367,10 +1341,10 @@ function buildTree(wrap,pid,depth,selId){
     item.append(arr,ico,lbl);
 
     // Drag & Drop
-    item.addEventListener('dragstart',e=>{dragId=node.id;e.dataTransfer.setData('text/plain',node.id);e.dataTransfer.effectAllowed='move';_isDragging=true;setTimeout(()=>item.classList.add('dragging'),0);});
-    item.addEventListener('dragend',()=>{dragId=null;dropPos=null;item.classList.remove('dragging');clearDC(wrap);setTimeout(()=>{_isDragging=false;},50);});
+    item.addEventListener('dragstart',e=>{dragId=node.id;e.dataTransfer.setData('text/plain',node.id);e.dataTransfer.effectAllowed='move';setTimeout(()=>item.classList.add('dragging'),0);});
+    item.addEventListener('dragend',()=>{dragId=null;dropPos=null;item.classList.remove('dragging');clearDC(wrap);});
     item.addEventListener('dragover',e=>{
-      e.preventDefault();if(!dragId||dragId===node.id)return;
+      e.preventDefault();e.stopPropagation();if(!dragId||dragId===node.id)return;
       const rect=item.getBoundingClientRect();const y=e.clientY-rect.top;const h=rect.height;
       clearDC(wrap);
       if(isF&&y>h*0.25&&y<h*0.75){dropPos='inside';item.classList.add('drop-inside');}
@@ -1379,7 +1353,7 @@ function buildTree(wrap,pid,depth,selId){
     });
     item.addEventListener('dragleave',e=>{if(!item.contains(e.relatedTarget))item.classList.remove('drop-before','drop-after','drop-inside');});
     item.addEventListener('drop',e=>{
-      e.preventDefault();if(!dragId||dragId===node.id)return;
+      e.preventDefault();e.stopPropagation();if(!dragId||dragId===node.id)return;
       const dn=S.notes.find(n=>n.id===dragId);if(!dn||isDesc(dragId,node.id))return;
       if(dropPos==='inside'&&node.t==='F'){
         dn.p=node.id;node.open=true;
@@ -1395,7 +1369,7 @@ function buildTree(wrap,pid,depth,selId){
     });
 
     // Click & double click
-    item.addEventListener('click',e=>{e.stopPropagation();if(_isDragging)return;if(isF){node.open=!node.open;save();renderNoteTree();}else openDoc(node.id);});
+    item.addEventListener('click',e=>{e.stopPropagation();if(isF){node.open=!node.open;save();renderNoteTree();}else openDoc(node.id);});
     item.addEventListener('dblclick',e=>{e.stopPropagation();startRename(item,node);});
     item.addEventListener('contextmenu',e=>{
       const menu=[];
@@ -2045,20 +2019,16 @@ function openDoc(id){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  회의록 (Meeting Note) — 캔버스 드로잉
+//  회의록 — 벡터 드로잉 + 하단 툴바
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-
 const MTG_TOOLS={
-  pen:   {color:'rgba(20,20,20,1)',     lw:2.5, comp:'source-over'},
-  pen_t: {color:'rgba(20,20,20,1)',     lw:5,   comp:'source-over'},
-  pen_th:{color:'rgba(20,20,20,1)',     lw:10,  comp:'source-over'},
-  hl_y:  {color:'rgba(255,220,0,0.28)',lw:16,  comp:'source-over'},
-  hl_p:  {color:'rgba(255,80,160,0.22)',lw:16,  comp:'source-over'},
-  erase: {color:'',                    lw:20,  comp:'destination-out'},
-  erase_l:{color:'',                   lw:40,  comp:'destination-out'},
+  pen:  {color:'rgba(20,20,20,1)',     lw:3,  comp:'source-over'},
+  hl_y: {color:'rgba(255,220,0,0.22)', lw:16, comp:'source-over'},
+  hl_p: {color:'rgba(255,80,160,0.18)',lw:16, comp:'source-over'},
+  erase:{color:'',                     lw:20, comp:'destination-out'},
 };
 let _mtg={canvas:null,ctx:null,tool:'pen',drawing:false,paths:[],curPath:null,nodeId:null,ro:null};
+
 function addMeetingDoc(){
   const sel=S.notes.find(n=>n.id===S.p1);
   const pid=sel?(S.notes.find(p=>p.id===sel.p&&p.t==='F')?sel.p:null):null;
@@ -2086,61 +2056,14 @@ function openMeetingDoc(id){
   const eq1tb=document.getElementById('eq1toolbar');
   const eq1=document.getElementById('eq1');
   et.textContent='📋 '+nd.n; et.className='etitle';
-  ee.style.display='none';
-  ew.classList.remove('hidden');
+  ee.style.display='none'; ew.classList.remove('hidden');
   if(eq1tb)eq1tb.style.display='none';
   if(eq1)eq1.style.display='none';
   let outer=ew.querySelector('#mtg-outer');
   if(!outer){outer=document.createElement('div');outer.id='mtg-outer';outer.style.cssText='display:flex;flex-direction:column;flex:1;overflow:hidden;';ew.appendChild(outer);}
   outer.style.display='flex';
-  outer.innerHTML=`
-    <div style="flex:1;position:relative;overflow:hidden;background:var(--surf);touch-action:pan-y" id="mtg-cvwrap">
-      <canvas id="mtg-canvas" style="position:absolute;top:0;left:0;touch-action:none;display:block;cursor:crosshair"></canvas>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surf2);border-top:1px solid var(--bdr);flex-shrink:0;position:relative;overflow:visible">
-      <div class="mtg-tool-wrap">
-        <button class="mtool on" id="mtg-t-pen" onclick="mtgTool('pen');mtgTogglePop('pen-pop')" style="min-width:32px;font-size:13px" title="펜">✒️</button>
-        <div id="mtg-pop-pen-pop" class="mtg-pop" style="display:none">
-          <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">펜 두께</div>
-          <input type="range" min="1" max="20" value="3" style="width:120px;accent-color:var(--ac)" oninput="mtgSetCurSize(parseInt(this.value))" id="mtg-slider-pen">
-          <span id="mtg-sz-pen" style="font-size:10px;color:var(--tx3);margin-left:4px">3</span>
-        </div>
-      </div>
-      <div class="mtg-tool-wrap">
-        <button class="mtool" id="mtg-t-hl" onclick="mtgTool('hl_y');mtgTogglePop('hl-pop')" style="min-width:32px" title="형광펜"><span id="mtg-hl-dot" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#ffe600;border:1px solid rgba(0,0,0,.15)"></span></button>
-        <div id="mtg-pop-hl-pop" class="mtg-pop" style="display:none">
-          <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">색상</div>
-          <div style="display:flex;gap:6px;margin-bottom:8px">
-            <button onclick="mtgHlColor('#ffe600')" id="mtg-hl-btn-y" style="width:22px;height:22px;border-radius:50%;background:#ffe600;border:2px solid transparent;cursor:pointer"></button>
-            <button onclick="mtgHlColor('#ff80d0')" id="mtg-hl-btn-p" style="width:22px;height:22px;border-radius:50%;background:#ff80d0;border:2px solid transparent;cursor:pointer"></button>
-            <button onclick="mtgHlColor('#80e0ff')" id="mtg-hl-btn-b" style="width:22px;height:22px;border-radius:50%;background:#80e0ff;border:2px solid transparent;cursor:pointer"></button>
-            <button onclick="mtgHlColor('#a0ff80')" id="mtg-hl-btn-g" style="width:22px;height:22px;border-radius:50%;background:#a0ff80;border:2px solid transparent;cursor:pointer"></button>
-          </div>
-          <div style="font-size:10px;color:var(--tx3);margin-bottom:3px">두께</div>
-          <input type="range" min="8" max="28" value="16" style="width:120px;accent-color:var(--ac)" oninput="mtgSetCurSize(parseInt(this.value))" id="mtg-slider-hl">
-          <span id="mtg-sz-hl" style="font-size:10px;color:var(--tx3);margin-left:4px">16</span>
-          <div style="font-size:10px;color:var(--tx3);margin:6px 0 3px">불투명도</div>
-          <input type="range" min="5" max="50" value="20" style="width:120px;accent-color:var(--ac)" oninput="mtgSetHlOpacity(parseInt(this.value))" id="mtg-slider-op">
-          <span id="mtg-sz-op" style="font-size:10px;color:var(--tx3);margin-left:4px">20%</span>
-        </div>
-      </div>
-      <div class="mtg-tool-wrap">
-        <button class="mtool" id="mtg-t-erase" onclick="mtgTool('erase');mtgTogglePop('erase-pop')" style="min-width:32px" title="지우개">◻</button>
-        <div id="mtg-pop-erase-pop" class="mtg-pop" style="display:none">
-          <div style="font-size:10px;color:var(--tx3);margin-bottom:4px">지우개 크기</div>
-          <input type="range" min="5" max="60" value="20" style="width:120px;accent-color:var(--ac)" oninput="mtgSetCurSize(parseInt(this.value))" id="mtg-slider-erase">
-          <span id="mtg-sz-erase" style="font-size:10px;color:var(--tx3);margin-left:4px">20</span>
-        </div>
-      </div>
-      <div style="width:1px;height:18px;background:var(--bdr);margin:0 1px;flex-shrink:0"></div>
-      <button class="mtool" id="mtg-t-text" onclick="mtgTool('text');mtgCloseAllPop()" title="텍스트">⌨️</button>
-      <span style="flex:1"></span>
-      <button class="mtool" onclick="mtgUndo()" title="취소">↩</button>
-      <button class="mtool" onclick="mtgClearAll()" style="color:var(--rd)" title="전체 지우기">🗑</button>
-    </div>
-    <div style="flex:1;position:relative;overflow:hidden;background:var(--surf);touch-action:pan-y" id="mtg-cvwrap">
-      <canvas id="mtg-canvas" style="position:absolute;top:0;left:0;touch-action:none;display:block;cursor:crosshair"></canvas>
-    </div>`;
+  // 툴바를 하단에 배치: [캔버스영역(flex:1)] [하단툴바(고정높이)]
+  outer.innerHTML=`<div style="flex:1;position:relative;overflow:hidden;background:var(--surf);touch-action:pan-y" id="mtg-cvwrap"><canvas id="mtg-canvas" style="position:absolute;top:0;left:0;touch-action:none;display:block;cursor:crosshair"></canvas></div><div id="mtg-tb" style="flex-shrink:0;height:52px;display:flex;align-items:center;justify-content:center;gap:10px;padding:0 16px;background:var(--surf2);border-top:1px solid var(--bdr)"><button class="mtool on" id="mtg-t-pen" onclick="mtgTool('pen')" title="펜" style="font-size:18px;width:36px;height:36px;border-radius:50%">✒️</button><button class="draw-pen-btn" id="mtg-t-hl_y" onclick="mtgTool('hl_y')" style="background:#ffe600;width:32px;height:32px;border-radius:50%;border:2px solid transparent;cursor:pointer" title="형광펜 노랑"></button><button class="draw-pen-btn" id="mtg-t-hl_p" onclick="mtgTool('hl_p')" style="background:#ff80d0;width:32px;height:32px;border-radius:50%;border:2px solid transparent;cursor:pointer;opacity:.85" title="형광펜 핑크"></button><button class="mtool" id="mtg-t-erase" onclick="mtgTool('erase')" title="지우개" style="font-size:16px;width:36px;height:36px;border-radius:50%">◻</button><button class="mtool" id="mtg-t-text" onclick="mtgTool('text')" title="텍스트" style="font-size:16px;width:36px;height:36px;border-radius:50%">⌨️</button><div style="width:1px;height:24px;background:var(--bdr);margin:0 4px"></div><span style="font-size:10px;color:var(--tx3)">두께</span><input type="range" id="mtg-lw" min="1" max="30" value="3" style="width:80px;accent-color:var(--ac)" oninput="mtgSetLw(parseInt(this.value))" title="두께 조절"><span id="mtg-lw-val" style="font-size:10px;color:var(--tx3);min-width:18px;text-align:center">3</span><div style="width:1px;height:24px;background:var(--bdr);margin:0 4px"></div><button class="mtool" onclick="mtgUndo()" title="취소" style="width:32px;height:32px">↩</button><button class="mtool" onclick="mtgClearAll()" title="전체 지우기" style="color:var(--rd);width:32px;height:32px">🗑</button></div>`;
   _mtg.nodeId=id;
   _mtg.paths=(nd.paths&&Array.isArray(nd.paths))?JSON.parse(JSON.stringify(nd.paths)):[];
   _mtg.tool='pen';
@@ -2148,15 +2071,17 @@ function openMeetingDoc(id){
     _mtg.canvas=document.getElementById('mtg-canvas');
     if(!_mtg.canvas)return;
     _mtg.ctx=_mtg.canvas.getContext('2d');
-    mtgFitCanvas();mtgRedraw();mtgBindEvents();
+    mtgFit();mtgRedraw();mtgBind();
     if(_mtg.ro)_mtg.ro.disconnect();
-    _mtg.ro=new ResizeObserver(()=>{mtgFitCanvas();mtgRedraw();});
+    _mtg.ro=new ResizeObserver(()=>{mtgFit();mtgRedraw();});
     _mtg.ro.observe(document.getElementById('mtg-cvwrap'));
   });
   mtgSyncUI();
   const rdBtn=document.getElementById('rdonly-btn1');if(rdBtn)rdBtn.style.display='none';
+  const expw=document.getElementById('export-wrap');if(expw)expw.style.display='none';
   renderNoteTree();
 }
+
 function hideMeetingCanvas(){
   const eq1tb=document.getElementById('eq1toolbar');if(eq1tb)eq1tb.style.display='';
   const eq1=document.getElementById('eq1');if(eq1)eq1.style.display='';
@@ -2164,17 +2089,19 @@ function hideMeetingCanvas(){
   if(_mtg.ro){_mtg.ro.disconnect();_mtg.ro=null;}
   _mtg.nodeId=null;_mtg.paths=[];_mtg.canvas=null;_mtg.ctx=null;
 }
-function mtgFitCanvas(){
+
+function mtgFit(){
   const wrap=document.getElementById('mtg-cvwrap');
   if(!wrap||!_mtg.canvas)return;
-  const w=wrap.offsetWidth;const h=wrap.offsetHeight;
+  const w=wrap.offsetWidth,h=wrap.offsetHeight;
   if(!w||!h)return;
   _mtg.canvas.width=w;_mtg.canvas.height=h;
   _mtg.canvas.style.width=w+'px';_mtg.canvas.style.height=h+'px';
   _mtg.ctx=_mtg.canvas.getContext('2d');
 }
+
 function mtgRedraw(){
-  const ctx=_mtg.ctx;const cv=_mtg.canvas;if(!ctx||!cv||!cv.width)return;
+  const ctx=_mtg.ctx,cv=_mtg.canvas;if(!ctx||!cv||!cv.width)return;
   ctx.clearRect(0,0,cv.width,cv.height);
   (_mtg.paths||[]).forEach(p=>{
     if(p.tool==='text'){
@@ -2194,80 +2121,71 @@ function mtgRedraw(){
     ctx.stroke();ctx.restore();
   });
 }
+
 function mtgTool(t){
   _mtg.tool=t;
   const wrap=document.getElementById('mtg-cvwrap');
   if(wrap)wrap.style.cursor=t==='text'?'text':'crosshair';
+  // 슬라이더 값 동기화
+  const cfg=MTG_TOOLS[t];
+  if(cfg&&t!=='text'){
+    const lw=document.getElementById('mtg-lw');const lv=document.getElementById('mtg-lw-val');
+    if(lw){lw.value=cfg.lw;if(lv)lv.textContent=cfg.lw;}
+  }
   mtgSyncUI();
 }
+function mtgSetLw(v){
+  const cfg=MTG_TOOLS[_mtg.tool];if(cfg)cfg.lw=v;
+  const lv=document.getElementById('mtg-lw-val');if(lv)lv.textContent=v;
+}
 function mtgSyncUI(){
-  // 펜 그룹
-  const isPen=['pen','pen_t','pen_th'].includes(_mtg.tool);
-  const pb=document.getElementById('mtg-t-pen');if(pb)pb.classList.toggle('on',isPen);
-  // 형광펜 그룹
-  const isHl=['hl_y','hl_p'].includes(_mtg.tool);
-  const hb=document.getElementById('mtg-t-hl');if(hb)hb.classList.toggle('on',isHl);
-  // 지우개 그룹
-  const isEr=['erase','erase_l'].includes(_mtg.tool);
-  const eb=document.getElementById('mtg-t-erase');if(eb)eb.classList.toggle('on',isEr);
-  // 텍스트
-  const tb=document.getElementById('mtg-t-text');if(tb)tb.classList.toggle('on',_mtg.tool==='text');
+  ['pen','hl_y','hl_p','erase','text'].forEach(t=>{
+    const b=document.getElementById('mtg-t-'+t);if(b)b.classList.toggle('on',t===_mtg.tool);
+  });
 }
 
-
-function mtgBindEvents(){
+function mtgBind(){
   const canvas=_mtg.canvas;if(!canvas||canvas._mtgBound)return;
   canvas._mtgBound=true;
-  const getPos=e=>{const r=canvas.getBoundingClientRect();const sx=canvas.width/(r.width||1);const sy=canvas.height/(r.height||1);return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};};
+  const getPos=e=>{const r=canvas.getBoundingClientRect();const sx=canvas.width/(r.width||1),sy=canvas.height/(r.height||1);return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};};
   canvas.addEventListener('pointerdown',e=>{
-    // 손가락 터치: 텍스트 모드면 입력창, 그 외 스크롤
-    if(e.pointerType==='touch'){
-      if(_mtg.tool==='text'){e.preventDefault();mtgPlaceText(getPos(e));}
-      return;
-    }
+    if(e.pointerType==='touch'){if(_mtg.tool==='text'){e.preventDefault();mtgPlaceText(getPos(e));}return;}
     if(_mtg.tool==='text'){mtgPlaceText(getPos(e));return;}
-    e.preventDefault();
-    try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+    e.preventDefault();try{canvas.setPointerCapture(e.pointerId);}catch(err){}
     const p=getPos(e);
-    const cfg=typeof mtgGetCfg!=='undefined'?mtgGetCfg(_mtg.tool):(MTG_TOOLS[_mtg.tool]||MTG_TOOLS.pen);
+    const cfg=MTG_TOOLS[_mtg.tool]||MTG_TOOLS.pen;
     _mtg.curPath={tool:_mtg.tool,color:cfg.color,lw:cfg.lw,pts:[{x:p.x,y:p.y}]};
     _mtg.drawing=true;
     const ctx=_mtg.ctx;ctx.save();
-    ctx.globalCompositeOperation=cfg.comp;
-    ctx.strokeStyle=cfg.color||'rgba(20,20,20,1)';ctx.lineWidth=cfg.lw||3;
-    ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.globalCompositeOperation=cfg.comp;ctx.strokeStyle=cfg.color||'rgba(20,20,20,1)';
+    ctx.lineWidth=cfg.lw;ctx.lineCap='round';ctx.lineJoin='round';
     ctx.beginPath();ctx.moveTo(p.x,p.y);
   },{passive:false});
   canvas.addEventListener('pointermove',e=>{
     if(!_mtg.drawing||!_mtg.curPath||e.pointerType==='touch')return;
     e.preventDefault();
-    const p=getPos(e);
-    _mtg.curPath.pts.push({x:p.x,y:p.y});
+    const p=getPos(e);_mtg.curPath.pts.push({x:p.x,y:p.y});
     _mtg.ctx.lineTo(p.x,p.y);_mtg.ctx.stroke();
   },{passive:false});
   const endDraw=()=>{
     if(!_mtg.drawing)return;_mtg.drawing=false;
     try{_mtg.ctx.restore();}catch(e){}
     if(_mtg.curPath&&_mtg.curPath.pts.length>1)_mtg.paths.push(JSON.parse(JSON.stringify(_mtg.curPath)));
-    _mtg.curPath=null;mtgAutoSave();
+    _mtg.curPath=null;mtgSave();
   };
-  canvas.addEventListener('pointerup',endDraw);
-  canvas.addEventListener('pointercancel',endDraw);
+  canvas.addEventListener('pointerup',endDraw);canvas.addEventListener('pointercancel',endDraw);
 }
+
 function mtgPlaceText(pos){
   const wrap=document.getElementById('mtg-cvwrap');if(!wrap)return;
-  // 기존 텍스트 입력창 있으면 먼저 닫기
-  const existing=wrap.querySelector('.mtg-text-inp');if(existing)existing.remove();
-  const inp=document.createElement('input');
-  inp.className='mtg-text-inp';
+  const existing=wrap.querySelector('.mtg-inp');if(existing)existing.remove();
+  const inp=document.createElement('input');inp.className='mtg-inp';
   inp.style.cssText='position:absolute;left:'+pos.x+'px;top:'+Math.max(0,pos.y-16)+'px;background:var(--surf);border:1px solid var(--ac);border-radius:3px;outline:none;color:var(--tx);font-size:15px;font-family:inherit;min-width:140px;padding:3px 8px;z-index:30;box-shadow:0 2px 8px rgba(0,0,0,.3)';
   inp.placeholder='텍스트 입력 후 Enter';
-  wrap.appendChild(inp);
-  // 모바일/PC 모두 포커스
-  setTimeout(()=>{inp.focus();if(inp.focus)inp.focus();},50);
+  wrap.appendChild(inp);setTimeout(()=>inp.focus(),50);
   const commit=()=>{
     const val=inp.value.trim();
-    if(val){_mtg.paths.push({tool:'text',x:pos.x,y:pos.y,text:val});mtgRedraw();mtgAutoSave();}
+    if(val){_mtg.paths.push({tool:'text',x:pos.x,y:pos.y,text:val});mtgRedraw();mtgSave();}
     if(inp.parentNode)inp.remove();
   };
   inp.addEventListener('blur',()=>setTimeout(commit,100),{once:true});
@@ -2276,101 +2194,12 @@ function mtgPlaceText(pos){
     if(e.key==='Enter'){e.preventDefault();inp.removeEventListener('blur',commit);commit();}
     if(e.key==='Escape'){inp.removeEventListener('blur',commit);if(inp.parentNode)inp.remove();}
   });
-  // 모바일: 터치 이벤트도 처리
   inp.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
 }
-function mtgUndo(){if(!_mtg.paths.length)return;_mtg.paths.pop();mtgRedraw();mtgAutoSave();}
-function mtgClearAll(){if(!confirm('회의록을 모두 지우시겠습니까?'))return;_mtg.paths=[];mtgRedraw();mtgAutoSave();}
-function mtgAutoSave(){const nd=S.notes.find(n=>n.id===_mtg.nodeId);if(!nd)return;nd.paths=JSON.parse(JSON.stringify(_mtg.paths));dsave();}
 
-// 현재 형광펜 색상 (RGBA)
-let _mtgHlColor='rgba(255,220,0,0.2)';
-let _mtgHlLw=16;
-
-// MTG_TOOLS 업데이트 (형광펜 색상/두께 동적)
-function mtgGetCfg(tool){
-  if(tool==='pen'||tool==='pen_t'||tool==='pen_th') return MTG_TOOLS[tool]||MTG_TOOLS.pen;
-  if(tool==='hl_y'||tool==='hl_p') return {color:_mtgHlColor,lw:_mtgHlLw,comp:'source-over'};
-  if(tool==='erase'||tool==='erase_l') return MTG_TOOLS[tool]||MTG_TOOLS.erase;
-  return MTG_TOOLS[tool]||MTG_TOOLS.pen;
-}
-
-function mtgTogglePop(pid){
-  // 다른 팝업 닫기
-  document.querySelectorAll('.mtg-pop').forEach(p=>{
-    if(p.id!=='mtg-pop-'+pid)p.style.display='none';
-  });
-  const pop=document.getElementById('mtg-pop-'+pid);
-  if(pop)pop.style.display=pop.style.display==='none'?'block':'none';
-  // 외부 클릭 닫기
-  setTimeout(()=>{
-    const h=e=>{
-      if(!document.getElementById('mtg-pop-'+pid)?.contains(e.target)&&
-         !e.target.id?.startsWith('mtg-t-')){
-        mtgCloseAllPop();
-        document.removeEventListener('click',h);
-      }
-    };
-    document.addEventListener('click',h);
-  },100);
-}
-function mtgCloseAllPop(){
-  document.querySelectorAll('.mtg-pop').forEach(p=>p.style.display='none');
-}
-
-function mtgSetCurSize(v){
-  const tool=_mtg.tool;
-  // 슬라이더 값 표시 업데이트
-  const toolMap={pen:'pen',hl_y:'hl',hl_p:'hl',erase:'erase',erase_l:'erase'};
-  const key=toolMap[tool]||tool;
-  const szEl=document.getElementById('mtg-sz-'+key);if(szEl)szEl.textContent=v;
-  // 실제 크기 적용
-  if(tool==='pen'||tool==='pen_t'||tool==='pen_th'){
-    MTG_TOOLS.pen.lw=v;MTG_TOOLS.pen_t.lw=v;MTG_TOOLS.pen_th.lw=v;
-  } else if(tool==='hl_y'||tool==='hl_p'){
-    _mtgHlLw=v;
-  } else if(tool==='erase'||tool==='erase_l'){
-    MTG_TOOLS.erase.lw=v;MTG_TOOLS.erase_l.lw=v;
-  }
-}
-
-function mtgHlColor(hex){
-  // hex → rgba with current opacity
-  const r=parseInt(hex.slice(1,3),16);const g=parseInt(hex.slice(3,5),16);const b=parseInt(hex.slice(5,7),16);
-  const op=document.getElementById('mtg-slider-op');
-  const opacity=(op?parseInt(op.value):20)/100;
-  _mtgHlColor='rgba('+r+','+g+','+b+','+opacity+')';
-  // 닷 색상 업데이트
-  const dot=document.getElementById('mtg-hl-dot');if(dot)dot.style.background=hex;
-  // 선택 테두리
-  ['y','p','b','g'].forEach(k=>{const btn=document.getElementById('mtg-hl-btn-'+k);if(btn)btn.style.border='2px solid transparent';});
-  const keyMap={'#ffe600':'y','#ff80d0':'p','#80e0ff':'b','#a0ff80':'g'};
-  const selBtn=document.getElementById('mtg-hl-btn-'+(keyMap[hex]||'y'));
-  if(selBtn)selBtn.style.border='2px solid var(--ac)';
-  // 도구 활성화
-  _mtg.tool='hl_y';mtgSyncUI();
-}
-
-function mtgSetHlOpacity(v){
-  const op=v/100;
-  const dot=document.getElementById('mtg-hl-dot');
-  // 현재 색상에서 투명도만 변경
-  const m=_mtgHlColor.match(/rgba\((\d+),(\d+),(\d+)/);
-  if(m)_mtgHlColor='rgba('+m[1]+','+m[2]+','+m[3]+','+op+')';
-  const szEl=document.getElementById('mtg-sz-op');if(szEl)szEl.textContent=v+'%';
-}
-
-
-
-
-
-
-
-
-
-
-
-
+function mtgUndo(){if(!_mtg.paths.length)return;_mtg.paths.pop();mtgRedraw();mtgSave();}
+function mtgClearAll(){if(!confirm('회의록을 모두 지우시겠습니까?'))return;_mtg.paths=[];mtgRedraw();mtgSave();}
+function mtgSave(){const nd=S.notes.find(n=>n.id===_mtg.nodeId);if(!nd)return;nd.paths=JSON.parse(JSON.stringify(_mtg.paths));dsave();}
 
 function setPane(p,id){
   const t=document.getElementById('et'+p);
@@ -2394,7 +2223,7 @@ function setPane(p,id){
   }
   if(p===1){
     const btn=document.getElementById('rdonly-btn1');if(btn)btn.style.display='';
-    const ew=document.getElementById('export-wrap');if(ew)ew.style.display='';
+    const expw=document.getElementById('export-wrap');if(expw)expw.style.display='';
   }
   renderNoteTree();
 }
@@ -2429,8 +2258,8 @@ function buildWorkTree(wrap,pid,depth){
     item.append(arr,ico,lbl);
 
     // Drag
-    item.addEventListener('dragstart',e=>{wDragId=node.id;e.dataTransfer.setData('text/plain',node.id);e.dataTransfer.effectAllowed='move';_isDragging=true;setTimeout(()=>item.classList.add('dragging'),0);});
-    item.addEventListener('dragend',()=>{wDragId=null;wDropPos=null;item.classList.remove('dragging');clearDCW(wrap);setTimeout(()=>{_isDragging=false;},50);});
+    item.addEventListener('dragstart',e=>{wDragId=node.id;e.dataTransfer.setData('text/plain',node.id);e.dataTransfer.effectAllowed='move';setTimeout(()=>item.classList.add('dragging'),0);});
+    item.addEventListener('dragend',()=>{wDragId=null;wDropPos=null;item.classList.remove('dragging');clearDCW(wrap);});
     item.addEventListener('dragover',e=>{
       e.preventDefault();if(!wDragId||wDragId===node.id)return;
       const rect=item.getBoundingClientRect();const y=e.clientY-rect.top;clearDCW(wrap);
@@ -2455,7 +2284,7 @@ function buildWorkTree(wrap,pid,depth){
       wDragId=null;wDropPos=null;save();renderWorkBar();
     });
 
-    item.addEventListener('click',e=>{e.stopPropagation();if(_isDragging)return;if(isF){node.open=!node.open;save();renderWorkBar();}else selectWork(node.id);});
+    item.addEventListener('click',e=>{e.stopPropagation();if(isF){node.open=!node.open;save();renderWorkBar();}else selectWork(node.id);});
     item.addEventListener('dblclick',e=>{e.stopPropagation();startWorkRename(item,node);});
     item.addEventListener('contextmenu',e=>{
       const menu=[];
@@ -2477,8 +2306,7 @@ function selectWork(id){
   t.textContent=(node.icon||'📄')+' '+node.n;t.className='etitle';
   ew.classList.remove('hidden');e.style.display='none';
   if(EDITORS.we)EDITORS.we.html=node.content||'';
-  // 내보내기 버튼 표시
-  const expw=document.getElementById('export-wrap-work');if(expw)expw.style.display='';
+  const expww=document.getElementById('export-wrap-work');if(expww)expww.style.display='';
   renderWorkBar();
 }
 function onWorkEdit(){const node=S.work.find(n=>n.id===S.wsel);if(!node)return;node.content=EDITORS.we?.html||'';dsave();}
@@ -2669,23 +2497,17 @@ function initResize(){
   const h=document.getElementById('rhandle');const tk=document.getElementById('tracker');
   if(!h||!tk)return;
   let sx,sw,on=false;
-  // 마우스
   h.addEventListener('mousedown',e=>{e.preventDefault();on=true;sx=e.clientX;sw=tk.offsetWidth;h.classList.add('ra');document.body.style.cursor='col-resize';document.body.style.userSelect='none';});
   document.addEventListener('mousemove',e=>{if(!on)return;const nw=Math.max(180,Math.min(520,sw+(sx-e.clientX)));tk.style.width=nw+'px';});
   document.addEventListener('mouseup',()=>{if(!on)return;on=false;h.classList.remove('ra');document.body.style.cursor='';document.body.style.userSelect='';});
-  // 터치 (모바일에서 트래커 높이 조절 - 세로 방향)
+  // 모바일: 세로 드래그로 트래커 높이 조절
   h.addEventListener('touchstart',e=>{e.preventDefault();on=true;sx=e.touches[0].clientY;sw=tk.offsetHeight||200;h.classList.add('ra');},{passive:false});
   h.addEventListener('touchmove',e=>{
     if(!on)return;e.preventDefault();
-    if(window.innerWidth<=768){
-      // 모바일: 높이 조절
-      const nh=Math.max(80,Math.min(500,sw+(e.touches[0].clientY-sx)));
-      tk.style.maxHeight=nh+'px';
-    } else {
-      const nw=Math.max(180,Math.min(520,sw+(sx-e.touches[0].clientX)));tk.style.width=nw+'px';
-    }
+    const nh=Math.max(60,Math.min(500,sw+(e.touches[0].clientY-sx)));
+    tk.style.maxHeight=nh+'px';
   },{passive:false});
-  h.addEventListener('touchend',()=>{on=false;h.classList.remove('ra');});
+  h.addEventListener('touchend',()=>{if(!on)return;on=false;h.classList.remove('ra');});
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3180,89 +3002,63 @@ function toggleReadonly(p){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _clkShown='';
 
-function mobToggleTracker(){
-  if(window.innerWidth>768)return;
-  const t=document.getElementById('tracker');
-  const arrow=document.getElementById('tracker-arrow');
-  if(!t)return;
-  const collapsed=t.classList.toggle('mob-collapsed');
-  if(arrow)arrow.textContent=collapsed?'▶':'▼';
-}
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  내보내기 (Word / PDF / PNG)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-function toggleExportMenuWork(){
-  const m=document.getElementById('export-menu-work');if(!m)return;
+function toggleExportMenu(menuId){
+  const all=document.querySelectorAll('.export-menu');
+  all.forEach(m=>{if(m.id!==menuId)m.classList.remove('open');});
+  const m=document.getElementById(menuId);if(!m)return;
   m.classList.toggle('open');
   if(m.classList.contains('open')){
     setTimeout(()=>document.addEventListener('click',function h(e){
-      if(!document.getElementById('export-wrap-work')?.contains(e.target)){
-        m.classList.remove('open');document.removeEventListener('click',h);
-      }
+      if(!e.target.closest('.export-wrap')){m.classList.remove('open');document.removeEventListener('click',h);}
     }),100);
   }
 }
-function toggleExportMenu(){
-  const m=document.getElementById('export-menu');if(!m)return;
-  m.classList.toggle('open');
-  if(m.classList.contains('open')){
-    setTimeout(()=>document.addEventListener('click',function h(e){
-      if(!document.getElementById('export-wrap')?.contains(e.target)){
-        m.classList.remove('open');document.removeEventListener('click',h);
-      }
-    }),100);
-  }
-}
-
 function getActiveEditorContent(){
-  // 현재 탭에서 활성화된 에디터와 제목 반환
   const tab=document.querySelector('.tbtn.on')?.id?.replace('tb-','');
-  if(tab==='notes'){
-    const nd=S.notes.find(n=>n.id===S.p1);
-    return {html:EDITORS.e1?.html||'', title:nd?.n||'문서', el:document.getElementById('eq1')};
-  } else if(tab==='work'){
+  if(tab==='work'){
     const nd=S.work.find(n=>n.id===S.wsel);
-    return {html:EDITORS.we?.html||'', title:nd?.n||'문서', el:document.getElementById('weq')};
+    return{html:EDITORS.we?.html||'',title:nd?.n||'문서',el:document.getElementById('weq')};
   }
-  return {html:'', title:'문서', el:null};
+  const nd=S.notes.find(n=>n.id===S.p1);
+  return{html:EDITORS.e1?.html||'',title:nd?.n||'문서',el:document.getElementById('eq1')};
 }
-
 function exportDoc(type){
-  document.getElementById('export-menu')?.classList.remove('open');
   document.querySelectorAll('.export-menu').forEach(m=>m.classList.remove('open'));
-  const {html, title, el}=getActiveEditorContent();
+  const{html,title,el}=getActiveEditorContent();
   if(!html){toast('내보낼 내용이 없습니다.',true);return;}
   if(type==='word'){
-    // Word XML 방식 (.docx 호환 mhtml)
-    const docHtml='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><title>'+title+'</title><style>@page{margin:2cm}body{font-family:"맑은 고딕",sans-serif;font-size:11pt;line-height:1.8}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 10px}img{max-width:100%}</style></head><body>'+html+'</body></html>';
-    const blob=new Blob(['﻿'+docHtml],{type:'application/vnd.ms-word;charset=utf-8'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.docx';a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    toast('Word 파일 저장 중...');
-  } else if(type==='pdf'){
-    // PDF: 인쇄 다이얼로그 (PDF 저장 선택)
+    // html-docx-js 라이브러리로 실제 docx 생성
+    const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+    const doWord=()=>{
+      try{
+        const docHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:"맑은 고딕",sans-serif;font-size:11pt;line-height:1.8}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px}img{max-width:100%}</style></head><body>'+html+'</body></html>';
+        const blob=window.htmlDocx.asBlob(docHtml,{orientation:'portrait',margins:{top:720,right:720,bottom:720,left:720}});
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.docx';a.click();
+        setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Word 파일 저장 완료!');
+      }catch(e){toast('Word 변환 실패: '+e.message,true);}
+    };
+    if(window.htmlDocx)doWord();
+    else loadScript('https://cdnjs.cloudflare.com/ajax/libs/html-docx-js/0.3.1/html-docx.js').then(doWord).catch(()=>toast('라이브러리 로드 실패. 오프라인 상태를 확인하세요.',true));
+  }else if(type==='pdf'){
     const win=window.open('','_blank','width=800,height=600');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title><style>@page{margin:20mm}body{font-family:'맑은 고딕',sans-serif;font-size:11pt;line-height:1.8;margin:0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 8px}img{max-width:100%}@media print{body{-webkit-print-color-adjust:exact}}</style></head><body>${html}</body></html>`);
-    win.document.close();
-    setTimeout(()=>{win.print();win.close();},500);
-    toast('인쇄 다이얼로그에서 "PDF로 저장"을 선택하세요.');
-  } else if(type==='png'){
-    // PNG: html2canvas 동적 로드
+    if(!win){toast('팝업이 차단됐습니다. 팝업을 허용해주세요.',true);return;}
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title><style>@page{margin:20mm}body{font-family:"맑은 고딕",sans-serif;font-size:11pt;line-height:1.8}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 8px}img{max-width:100%}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>'+html+'</body></html>');
+    win.document.close();setTimeout(()=>{win.focus();win.print();},600);
+    toast('인쇄 창에서 "PDF로 저장"을 선택하세요.');
+  }else if(type==='png'){
     toast('PNG 변환 중...');
     const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
-    const convert=()=>{
-      const el=document.getElementById('eq1');if(!el){toast('에디터를 찾을 수 없습니다.',true);return;}
-      window.html2canvas(el,{backgroundColor:null,scale:2,useCORS:true,logging:false}).then(canvas=>{
-        canvas.toBlob(blob=>{
-          const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.png';a.click();
-          URL.revokeObjectURL(a.href);toast('PNG 저장 완료!');
-        });
+    const doImg=()=>{
+      if(!el){toast('에디터를 찾을 수 없습니다.',true);return;}
+      window.html2canvas(el,{backgroundColor:'#ffffff',scale:2,useCORS:true,logging:false}).then(canvas=>{
+        canvas.toBlob(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('PNG 저장 완료!');});
       }).catch(e=>toast('PNG 변환 실패: '+e.message,true));
     };
-    if(window.html2canvas){convert();}
-    else{loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js').then(convert).catch(()=>toast('라이브러리 로드 실패',true));}
+    if(window.html2canvas)doImg();
+    else loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js').then(doImg).catch(()=>toast('라이브러리 로드 실패',true));
   }
 }
 
@@ -3308,7 +3104,6 @@ function mobSwitchTab(t){
   mobCloseSidebar();
 }
 function mobToggleSidebar(){
-  // 현재 활성화된 패널의 사이드바 찾기
   const activePanel=document.querySelector('.panel.on');
   const sb=activePanel?activePanel.querySelector('.sidebar'):null;
   if(!sb)return;
@@ -3322,7 +3117,7 @@ function mobCloseSidebar(){
   const ov=document.getElementById('mob-overlay');if(ov)ov.classList.remove('on');
 }
 // 패널 전환 시 사이드바 참조 업데이트
-// switchTab 모바일 동기화 — 원본에 직접 통합됨
+// switchTab 모바일 동기화 — 원본에 통합됨
 // 초기화
 function initMobile(){
   const isMobile=window.innerWidth<=768;
