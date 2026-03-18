@@ -372,8 +372,8 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 
 
 /* ── 전체 검색 ── */
-.srchbar{position:fixed;top:48px;left:0;right:0;z-index:5000;background:var(--surf);border-bottom:2px solid var(--ac);box-shadow:0 4px 24px rgba(0,0,0,.3);transform:translateY(-100%);transition:transform .18s;padding:8px 16px;display:flex;flex-direction:column;gap:6px}
-.srchbar.open{transform:translateY(0)}
+.srchbar{background:var(--surf);border-bottom:2px solid var(--ac);box-shadow:0 4px 16px rgba(0,0,0,.2);padding:8px 16px;display:none;flex-direction:column;gap:6px;flex-shrink:0;z-index:200}
+.srchbar.open{display:flex}
 .srchbar-row{display:flex;align-items:center;gap:8px}
 .srch-input{flex:1;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:7px 12px;color:var(--tx);font-size:13px;font-family:inherit;outline:none}
 .srch-input:focus{border-color:var(--ac)}
