@@ -402,6 +402,14 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 .mb-resizable img,.mb-resizable video,.mb-resizable iframe{display:block;max-width:100%;border-radius:4px}
 .mb-rhandle{position:absolute;width:12px;height:12px;background:var(--ac);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;z-index:10;bottom:-6px;right:-6px;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .mb-resizable.selected{outline:2px solid var(--ac);outline-offset:1px}
+
+/* ── 표 열/행 리사이즈 ── */
+.mb-table td, .mb-table th {position:relative;}
+.mb-col-resize{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:10;background:transparent;}
+.mb-col-resize:hover, .mb-col-resize.active{background:var(--ac);opacity:.5;}
+.mb-row-resize{position:absolute;bottom:-3px;left:0;width:100%;height:6px;cursor:row-resize;z-index:10;background:transparent;}
+.mb-row-resize:hover, .mb-row-resize.active{background:var(--ac);opacity:.5;}
+
 /* ── 표 컨텍스트 메뉴 ── */
 .tbl-ctx{position:fixed;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:4px 0;z-index:9000;box-shadow:0 4px 20px rgba(0,0,0,.35);min-width:140px}
 .tbl-ctx-item{padding:7px 14px;font-size:12px;color:var(--tx2);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
@@ -751,6 +759,70 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
         </div>
         <div style="margin-top:10px;font-size:11px;color:var(--tx3)">⚠ 월간 보고서 파일은 백업에 포함되지 않습니다.</div>
       </div>
+
+      <!-- 앱 통계 -->
+      <div class="ssec">
+        <div class="sstitle">📊 내 업무 통계</div>
+        <div id="app-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
+          <div style="font-size:11px;color:var(--tx3)">로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- 에디터 기본 설정 -->
+      <div class="ssec">
+        <div class="sstitle">✏️ 에디터 기본 설정</div>
+        <div class="srow">
+          <span class="slabel">기본 글꼴</span>
+          <select class="sinput" id="def-font" style="max-width:200px" onchange="saveEditorDefaults()">
+            <option value="Malgun Gothic">맑은 고딕</option>
+            <option value="NanumGothic">나눔고딕</option>
+            <option value="NanumMyeongjo">나눔명조</option>
+            <option value="Dotum">돋움</option>
+            <option value="Arial">Arial</option>
+          </select>
+        </div>
+        <div class="srow">
+          <span class="slabel">기본 크기</span>
+          <select class="sinput" id="def-size" style="max-width:100px" onchange="saveEditorDefaults()">
+            <option value="13">13pt</option>
+            <option value="14">14pt</option>
+            <option value="15">15pt</option>
+            <option value="16">16pt</option>
+          </select>
+        </div>
+        <div class="srow">
+          <span class="slabel">자동저장 딜레이</span>
+          <select class="sinput" id="def-autosave" style="max-width:120px" onchange="saveEditorDefaults()">
+            <option value="400">0.4초 (즉시)</option>
+            <option value="800">0.8초</option>
+            <option value="1500">1.5초</option>
+            <option value="3000">3초</option>
+          </select>
+          <span style="font-size:11px;color:var(--tx3);margin-left:6px">입력 후 자동 저장 간격</span>
+        </div>
+      </div>
+
+      <!-- 퇴근 알림 시간 설정 -->
+      <div class="ssec">
+        <div class="sstitle">🕕 퇴근 알림 설정</div>
+        <div class="srow">
+          <span class="slabel">알림 시각</span>
+          <input type="time" class="sinput" id="clockout-time" value="18:00" style="max-width:120px" onchange="saveClockoutTime()">
+          <span style="font-size:11px;color:var(--tx3);margin-left:6px">평일에만 알림</span>
+        </div>
+        <div class="srow">
+          <span class="slabel">알림 켜기</span>
+          <input type="checkbox" id="clockout-on" onchange="saveClockoutTime()" style="cursor:pointer">
+          <label for="clockout-on" style="font-size:12px;color:var(--tx2);cursor:pointer;margin-left:6px">퇴근 알림 사용</label>
+        </div>
+      </div>
+
+      <!-- 단축키 모음 -->
+      <div class="ssec">
+        <div class="sstitle">⌨️ 단축키 모음</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;font-size:12px" id="shortcut-grid"></div>
+      </div>
+
     </div>
 
   </div>
@@ -1074,7 +1146,7 @@ function isDesc(anc,id){// is 'anc' a descendant of 'id'? (prevent circular DnD)
 function startClock(){
   const tick=()=>{const n=new Date();document.getElementById('htime').textContent=n.toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'})+' '+n.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});};
   tick();setInterval(tick,5000);
-  setInterval(checkClockout,30000); // 퇴근 알림 체크
+  setInterval(checkClockout,10000); // 퇴근 알림 체크 (10초마다)
 }
 let _tt;
 function toast(msg, isErr=false){
@@ -1106,7 +1178,7 @@ function switchTab(t){
     document.getElementById('p'+x).classList.toggle('on',x===t);
     document.getElementById('tb-'+x).classList.toggle('on',x===t);
   });
-  if(t==='settings'){renderClients();loadTheme();updateStorageInfo();gdRefreshUI();}
+  if(t==='settings'){renderClients();loadTheme();updateStorageInfo();gdRefreshUI();renderAppStats();loadEditorDefaults();loadClockoutSettings();}
   if(t==='sched')updateTracker();
   if(t==='report'){renderFmClients();renderFiles();}
 }
@@ -1270,7 +1342,13 @@ class MBEditor {
       if(tbl){e.preventDefault();e.stopPropagation();_self._showTblCtx(e,tbl,e.target.closest('td,th'));}
     });
     // DOM 변경 감지 → 새로 삽입된 이미지/표에 자동 초기화
-    const _mo=new MutationObserver(()=>{this._initResize(ce);this._initTableResize(ce);});
+    const _mo=new MutationObserver(()=>{
+      this._wrapExistingImages();
+      this._initResize(ce);
+      this._initTableResize(ce);
+      // 새 셀에도 핸들 추가
+      ce.querySelectorAll('table.mb-table').forEach(t=>this._addTableHandles(t));
+    });
     _mo.observe(ce,{childList:true,subtree:true});
   }
   _buildTb(){
@@ -1431,15 +1509,51 @@ class MBEditor {
     ce.addEventListener('click',e=>{if(!e.target.closest('.mb-resizable'))ce.querySelectorAll('.mb-resizable').forEach(w=>w.classList.remove('selected'));},{capture:true});
   }
 
-  // ── 표 열 너비 드래그 + 컨텍스트 메뉴 ──
+  // ── 표 열/행 드래그 리사이즈 ──
   _initTableResize(ce){
     ce.querySelectorAll('table.mb-table').forEach(tbl=>{
-      if(tbl.dataset.tInit)return;tbl.dataset.tInit='1';
+      if(tbl.dataset.tInit)return; tbl.dataset.tInit='1';
       // 우클릭 컨텍스트 메뉴
       tbl.addEventListener('contextmenu',e=>{
         e.preventDefault();e.stopPropagation();
         this._showTblCtx(e,tbl,e.target.closest('td,th'));
       });
+      // 모든 셀에 리사이즈 핸들 추가
+      this._addTableHandles(tbl);
+    });
+  }
+  _addTableHandles(tbl){
+    tbl.querySelectorAll('td,th').forEach(cell=>{
+      if(cell.querySelector('.mb-col-resize'))return;
+      // 열 너비 핸들
+      const colH=document.createElement('div');colH.className='mb-col-resize';
+      colH.addEventListener('mousedown',e=>{
+        e.preventDefault();e.stopPropagation();
+        colH.classList.add('active');
+        const startX=e.clientX;const startW=cell.offsetWidth;
+        const onMove=e2=>{
+          const nw=Math.max(40,startW+(e2.clientX-startX));
+          cell.style.width=nw+'px';cell.style.minWidth=nw+'px';
+        };
+        const onUp=()=>{colH.classList.remove('active');document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);this._change();};
+        document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+      });
+      cell.appendChild(colH);
+      // 행 높이 핸들 (마지막 셀만)
+      const rowH=document.createElement('div');rowH.className='mb-row-resize';
+      rowH.addEventListener('mousedown',e=>{
+        e.preventDefault();e.stopPropagation();
+        rowH.classList.add('active');
+        const row=cell.parentElement;
+        const startY=e.clientY;const startH=row.offsetHeight;
+        const onMove=e2=>{
+          const nh=Math.max(28,startH+(e2.clientY-startY));
+          Array.from(row.cells).forEach(c=>c.style.minHeight=nh+'px');
+        };
+        const onUp=()=>{rowH.classList.remove('active');document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);this._change();};
+        document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+      });
+      cell.appendChild(rowH);
     });
   }
   _showTblCtx(e,tbl,cell){
@@ -1730,7 +1844,23 @@ class MBEditor {
   }
   _change(){clearTimeout(this._st);this._st=setTimeout(()=>this.cb(this.ce.innerHTML),400);}
   get html(){return this.ce.innerHTML;}
-  set html(v){this.ce.innerHTML=v||'';this._syncBtns();}
+  set html(v){
+    this.ce.innerHTML=v||'';
+    this._syncBtns();
+    // 기존 이미지 래퍼 없으면 자동 추가
+    this._wrapExistingImages();
+    this._initResize(this.ce);
+    this._initTableResize(this.ce);
+  }
+  _wrapExistingImages(){
+    // 이미 래핑된 것 제외하고 plain img 태그 감싸기
+    this.ce.querySelectorAll('img:not(.mb-resizable img)').forEach(img=>{
+      const wrap=document.createElement('span');
+      wrap.className='mb-resizable';wrap.contentEditable='false';
+      const handle=document.createElement('span');handle.className='mb-rhandle';
+      img.replaceWith(wrap);wrap.appendChild(img);wrap.appendChild(handle);
+    });
+  }
 }
 
 // Editor instances
@@ -2541,11 +2671,13 @@ function toggleReadonly(p){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _clkShown='';
 function checkClockout(){
-  const now=new Date();
-  const dow=now.getDay();
+  const cfg=JSON.parse(localStorage.getItem('mb_clockout')||'{"time":"18:00","on":true}');
+  if(cfg.on===false)return;
+  const now=new Date();const dow=now.getDay();
   if(dow===0||dow===6)return;
-  const key=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-  if(now.getHours()===18&&now.getMinutes()===0&&_clkShown!==key){
+  const [h,m]=(cfg.time||'18:00').split(':').map(Number);
+  const key=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${h}-${m}`;
+  if(now.getHours()===h&&now.getMinutes()===m&&_clkShown!==key){
     _clkShown=key;
     const popup=document.getElementById('clk-popup');if(!popup)return;
     popup.classList.add('show');
@@ -2582,6 +2714,71 @@ function scheduleAutoGhPush(){ gdScheduleAuto(); }
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  저장 공간 현황
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  설정 탭 — 앱 통계 / 에디터 설정
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderAppStats(){
+  const el=document.getElementById('app-stats');if(!el)return;
+  const noteCount=S.notes.filter(n=>n.t==='D').length;
+  const folderCount=S.notes.filter(n=>n.t==='F').length;
+  const workCount=S.work.filter(n=>n.t==='D').length;
+  const clientCount=S.clients.length;
+  const schedMonths=Object.keys(S.scheds).length;
+  const totalCells=Object.values(S.scheds).reduce((sum,m)=>sum+Object.values(m.cells||{}).filter(v=>v&&v.trim()).length,0);
+  const stats=[
+    {icon:'📝',label:'클라이언트 문서',val:noteCount+'개'},
+    {icon:'📁',label:'클라이언트 폴더',val:folderCount+'개'},
+    {icon:'🗂',label:'통합문서',val:workCount+'개'},
+    {icon:'🏥',label:'클라이언트',val:clientCount+'개'},
+    {icon:'📅',label:'기록된 월',val:schedMonths+'개월'},
+    {icon:'✏️',label:'스케줄 입력 셀',val:totalCells+'개'},
+  ];
+  el.innerHTML=stats.map(s=>`
+    <div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">${s.icon}</span>
+      <div><div style="font-size:18px;font-weight:700;color:var(--ac)">${s.val}</div><div style="font-size:11px;color:var(--tx3)">${s.label}</div></div>
+    </div>`).join('');
+  // 단축키 그리드
+  const sg=document.getElementById('shortcut-grid');if(sg&&!sg.innerHTML){
+    const shortcuts=[
+      ['Ctrl+K','전체 검색'],['Ctrl+S','Drive에 저장'],['Ctrl+B','굵게'],['Ctrl+I','기울임'],
+      ['Ctrl+U','밑줄'],['Ctrl+Z','실행 취소'],['Ctrl+Y','다시 실행'],['Tab','들여쓰기'],
+      ['Esc','검색창 닫기'],['Ctrl+클릭','링크 새 탭'],
+    ];
+    sg.innerHTML=shortcuts.map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bdr2)"><code style="background:var(--surf2);padding:1px 6px;border-radius:3px;font-size:11px;color:var(--ac)">${k}</code><span style="color:var(--tx2)">${v}</span></div>`).join('');
+  }
+}
+
+function saveEditorDefaults(){
+  const font=document.getElementById('def-font')?.value;
+  const size=document.getElementById('def-size')?.value;
+  const autosave=document.getElementById('def-autosave')?.value;
+  const cfg=JSON.parse(localStorage.getItem('mb_editor_cfg')||'{}');
+  if(font)cfg.font=font;if(size)cfg.size=size;if(autosave)cfg.autosave=parseInt(autosave);
+  localStorage.setItem('mb_editor_cfg',JSON.stringify(cfg));
+  toast('에디터 기본값 저장됨');
+}
+function loadEditorDefaults(){
+  const cfg=JSON.parse(localStorage.getItem('mb_editor_cfg')||'{}');
+  const f=document.getElementById('def-font');const s=document.getElementById('def-size');const a=document.getElementById('def-autosave');
+  if(f&&cfg.font)f.value=cfg.font;
+  if(s&&cfg.size)s.value=cfg.size;
+  if(a&&cfg.autosave)a.value=String(cfg.autosave);
+}
+
+function saveClockoutTime(){
+  const t=document.getElementById('clockout-time')?.value||'18:00';
+  const on=document.getElementById('clockout-on')?.checked??true;
+  localStorage.setItem('mb_clockout',JSON.stringify({time:t,on}));
+  toast(on?`퇴근 알림 ${t}으로 설정됨`:'퇴근 알림 꺼짐');
+}
+function loadClockoutSettings(){
+  const cfg=JSON.parse(localStorage.getItem('mb_clockout')||'{"time":"18:00","on":true}');
+  const el=document.getElementById('clockout-time');const ck=document.getElementById('clockout-on');
+  if(el)el.value=cfg.time||'18:00';if(ck)ck.checked=cfg.on!==false;
+}
+// checkClockout에서 설정 반영 — 원본 함수에 직접 통합됨 (아래 checkClockout 참조)
+
 async function updateStorageInfo(){
   const el=document.getElementById('storage-info');if(!el)return;
   try{
