@@ -387,9 +387,9 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 .srch-hl{color:var(--ac);font-weight:700}
 
 /* 회의록 툴바 팝오버 */
-.mtg-pop{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+.mtg-pop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
   background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;
-  box-shadow:0 4px 16px rgba(0,0,0,.35);z-index:100;white-space:nowrap;min-width:160px}
+  box-shadow:0 -4px 16px rgba(0,0,0,.35);z-index:1000;white-space:nowrap;min-width:160px}
 .mtg-pop-arrow{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
   width:10px;height:6px;overflow:hidden}
 .mtg-pop-arrow::before{content:'';position:absolute;top:-4px;left:50%;transform:translateX(-50%);
@@ -454,9 +454,11 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
   .mob-tabbar{display:flex!important}
   /* 앱 높이 - 하단 탭바 공간 */
   .abody{padding-bottom:0}
-  .panel.on{padding-bottom:60px}
-  .mbedit{padding-bottom:70px!important}
-  .scell{padding-bottom:0!important}
+  /* 에디터: overflow:hidden인 epane 안에서 하단 공간 확보 */
+  .equill-wrap{position:relative}
+  .mbedit{padding-bottom:80px!important}
+  /* 스케줄 하단 여백 */
+  .schedmain{padding-bottom:70px}
   /* 사이드바 → 드로어 */
   .sidebar{position:fixed!important;left:0;top:48px;bottom:60px;z-index:500;transform:translateX(-100%);transition:transform .22s;box-shadow:4px 0 20px rgba(0,0,0,.4);width:260px!important;min-width:0!important}
   .sidebar.mob-open{transform:translateX(0)}
@@ -663,6 +665,14 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
         <div class="epane">
           <div class="etbar">
             <span class="etitle empty" id="wet">← 문서를 선택하세요</span>
+            <div class="export-wrap" id="export-wrap-work" style="display:none">
+              <button class="splitbtn" onclick="toggleExportMenuWork()" title="내보내기">⬇ 내보내기</button>
+              <div class="export-menu" id="export-menu-work">
+                <div class="export-item" onclick="exportDoc('word')">📝 Word (.docx)</div>
+                <div class="export-item" onclick="exportDoc('pdf')">📄 PDF</div>
+                <div class="export-item" onclick="exportDoc('png')">🖼 PNG</div>
+              </div>
+            </div>
           </div>
           <div class="eempty" id="wee"><span style="font-size:28px">🗂</span>왼쪽에서 문서를 선택하세요<br><span style="font-size:11px;color:var(--tx3)">개인전략, 프롬프트, 매뉴얼 등을 관리하세요</span></div>
           <div class="equill-wrap hidden" id="wew">
@@ -1321,6 +1331,7 @@ function switchTab(t){
 //  TREE (클라이언트 노트)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let dragId=null,dropPos=null;
+let _isDragging=false;
 
 function renderNoteTree(){
   const w=document.getElementById('ntreewrap');w.innerHTML='';
@@ -1356,8 +1367,8 @@ function buildTree(wrap,pid,depth,selId){
     item.append(arr,ico,lbl);
 
     // Drag & Drop
-    item.addEventListener('dragstart',e=>{dragId=node.id;e.dataTransfer.setData('text/plain',node.id);e.dataTransfer.effectAllowed='move';setTimeout(()=>item.classList.add('dragging'),0);});
-    item.addEventListener('dragend',()=>{dragId=null;dropPos=null;item.classList.remove('dragging');clearDC(wrap);});
+    item.addEventListener('dragstart',e=>{dragId=node.id;e.dataTransfer.setData('text/plain',node.id);e.dataTransfer.effectAllowed='move';_isDragging=true;setTimeout(()=>item.classList.add('dragging'),0);});
+    item.addEventListener('dragend',()=>{dragId=null;dropPos=null;item.classList.remove('dragging');clearDC(wrap);setTimeout(()=>{_isDragging=false;},50);});
     item.addEventListener('dragover',e=>{
       e.preventDefault();if(!dragId||dragId===node.id)return;
       const rect=item.getBoundingClientRect();const y=e.clientY-rect.top;const h=rect.height;
@@ -1384,7 +1395,7 @@ function buildTree(wrap,pid,depth,selId){
     });
 
     // Click & double click
-    item.addEventListener('click',e=>{e.stopPropagation();if(isF){node.open=!node.open;save();renderNoteTree();}else openDoc(node.id);});
+    item.addEventListener('click',e=>{e.stopPropagation();if(_isDragging)return;if(isF){node.open=!node.open;save();renderNoteTree();}else openDoc(node.id);});
     item.addEventListener('dblclick',e=>{e.stopPropagation();startRename(item,node);});
     item.addEventListener('contextmenu',e=>{
       const menu=[];
@@ -2083,7 +2094,10 @@ function openMeetingDoc(id){
   if(!outer){outer=document.createElement('div');outer.id='mtg-outer';outer.style.cssText='display:flex;flex-direction:column;flex:1;overflow:hidden;';ew.appendChild(outer);}
   outer.style.display='flex';
   outer.innerHTML=`
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surf2);border-bottom:1px solid var(--bdr);flex-shrink:0;position:relative;overflow:visible">
+    <div style="flex:1;position:relative;overflow:hidden;background:var(--surf);touch-action:pan-y" id="mtg-cvwrap">
+      <canvas id="mtg-canvas" style="position:absolute;top:0;left:0;touch-action:none;display:block;cursor:crosshair"></canvas>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surf2);border-top:1px solid var(--bdr);flex-shrink:0;position:relative;overflow:visible">
       <div class="mtg-tool-wrap">
         <button class="mtool on" id="mtg-t-pen" onclick="mtgTool('pen');mtgTogglePop('pen-pop')" style="min-width:32px;font-size:13px" title="펜">✒️</button>
         <div id="mtg-pop-pen-pop" class="mtg-pop" style="display:none">
@@ -2415,8 +2429,8 @@ function buildWorkTree(wrap,pid,depth){
     item.append(arr,ico,lbl);
 
     // Drag
-    item.addEventListener('dragstart',e=>{wDragId=node.id;e.dataTransfer.setData('text/plain',node.id);e.dataTransfer.effectAllowed='move';setTimeout(()=>item.classList.add('dragging'),0);});
-    item.addEventListener('dragend',()=>{wDragId=null;wDropPos=null;item.classList.remove('dragging');clearDCW(wrap);});
+    item.addEventListener('dragstart',e=>{wDragId=node.id;e.dataTransfer.setData('text/plain',node.id);e.dataTransfer.effectAllowed='move';_isDragging=true;setTimeout(()=>item.classList.add('dragging'),0);});
+    item.addEventListener('dragend',()=>{wDragId=null;wDropPos=null;item.classList.remove('dragging');clearDCW(wrap);setTimeout(()=>{_isDragging=false;},50);});
     item.addEventListener('dragover',e=>{
       e.preventDefault();if(!wDragId||wDragId===node.id)return;
       const rect=item.getBoundingClientRect();const y=e.clientY-rect.top;clearDCW(wrap);
@@ -2441,7 +2455,7 @@ function buildWorkTree(wrap,pid,depth){
       wDragId=null;wDropPos=null;save();renderWorkBar();
     });
 
-    item.addEventListener('click',e=>{e.stopPropagation();if(isF){node.open=!node.open;save();renderWorkBar();}else selectWork(node.id);});
+    item.addEventListener('click',e=>{e.stopPropagation();if(_isDragging)return;if(isF){node.open=!node.open;save();renderWorkBar();}else selectWork(node.id);});
     item.addEventListener('dblclick',e=>{e.stopPropagation();startWorkRename(item,node);});
     item.addEventListener('contextmenu',e=>{
       const menu=[];
@@ -2463,6 +2477,8 @@ function selectWork(id){
   t.textContent=(node.icon||'📄')+' '+node.n;t.className='etitle';
   ew.classList.remove('hidden');e.style.display='none';
   if(EDITORS.we)EDITORS.we.html=node.content||'';
+  // 내보내기 버튼 표시
+  const expw=document.getElementById('export-wrap-work');if(expw)expw.style.display='';
   renderWorkBar();
 }
 function onWorkEdit(){const node=S.work.find(n=>n.id===S.wsel);if(!node)return;node.content=EDITORS.we?.html||'';dsave();}
@@ -3176,6 +3192,18 @@ function mobToggleTracker(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  내보내기 (Word / PDF / PNG)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function toggleExportMenuWork(){
+  const m=document.getElementById('export-menu-work');if(!m)return;
+  m.classList.toggle('open');
+  if(m.classList.contains('open')){
+    setTimeout(()=>document.addEventListener('click',function h(e){
+      if(!document.getElementById('export-wrap-work')?.contains(e.target)){
+        m.classList.remove('open');document.removeEventListener('click',h);
+      }
+    }),100);
+  }
+}
 function toggleExportMenu(){
   const m=document.getElementById('export-menu');if(!m)return;
   m.classList.toggle('open');
@@ -3188,18 +3216,31 @@ function toggleExportMenu(){
   }
 }
 
+function getActiveEditorContent(){
+  // 현재 탭에서 활성화된 에디터와 제목 반환
+  const tab=document.querySelector('.tbtn.on')?.id?.replace('tb-','');
+  if(tab==='notes'){
+    const nd=S.notes.find(n=>n.id===S.p1);
+    return {html:EDITORS.e1?.html||'', title:nd?.n||'문서', el:document.getElementById('eq1')};
+  } else if(tab==='work'){
+    const nd=S.work.find(n=>n.id===S.wsel);
+    return {html:EDITORS.we?.html||'', title:nd?.n||'문서', el:document.getElementById('weq')};
+  }
+  return {html:'', title:'문서', el:null};
+}
+
 function exportDoc(type){
   document.getElementById('export-menu')?.classList.remove('open');
-  const nd=S.notes.find(n=>n.id===S.p1);
-  if(!nd){toast('먼저 문서를 선택하세요.',true);return;}
-  const html=EDITORS.e1?.html||'';
-  const title=nd.n||'문서';
+  document.querySelectorAll('.export-menu').forEach(m=>m.classList.remove('open'));
+  const {html, title, el}=getActiveEditorContent();
+  if(!html){toast('내보낼 내용이 없습니다.',true);return;}
   if(type==='word'){
-    // Word: HTML을 docx 호환 mhtml로 감싸서 다운로드
-    const docHtml=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><title>${title}</title><style>body{font-family:'맑은 고딕',sans-serif;font-size:11pt;line-height:1.8}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}</style></head><body>${html}</body></html>`;
-    const blob=new Blob(['﻿'+docHtml],{type:'application/msword'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.doc';a.click();
-    URL.revokeObjectURL(a.href);toast('Word 파일로 저장됩니다.');
+    // Word XML 방식 (.docx 호환 mhtml)
+    const docHtml='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><title>'+title+'</title><style>@page{margin:2cm}body{font-family:"맑은 고딕",sans-serif;font-size:11pt;line-height:1.8}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 10px}img{max-width:100%}</style></head><body>'+html+'</body></html>';
+    const blob=new Blob(['﻿'+docHtml],{type:'application/vnd.ms-word;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.docx';a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast('Word 파일 저장 중...');
   } else if(type==='pdf'){
     // PDF: 인쇄 다이얼로그 (PDF 저장 선택)
     const win=window.open('','_blank','width=800,height=600');
