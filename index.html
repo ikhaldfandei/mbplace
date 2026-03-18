@@ -564,10 +564,8 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
             <span style="font-size:11px;color:var(--tx3)">로딩 중...</span>
           </div>
           <div style="font-size:11px;color:var(--tx3);margin-top:6px;line-height:1.6">
-            💡 로컬 저장 공간 한도는 브라우저마다 다르나 보통 <b>5~10MB</b>입니다.<br>
-            에디터에 이미지를 직접 삽입(Base64 변환)하면 공간을 많이 차지합니다.<br>
-            공간이 부족하면 저장이 실패하고 데이터가 날아가는 원인이 됩니다.<br>
-            <b>GitHub 저장을 항상 먼저 하고, 로컬 백업은 추가 보험으로 사용하세요.</b>
+            💡 현재 <b>IndexedDB</b> 방식으로 저장됩니다. 브라우저 캐시 삭제를 하지 않는 한 데이터는 유지됩니다.<br>
+            추가 보험으로 <b>GitHub에 저장</b>하거나 <b>JSON 백업 내보내기</b>를 주기적으로 해두세요.
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -1969,10 +1967,7 @@ async function ghPull(){
     const data=await resp.json();
     const content=data.files?.['mb_data.json']?.content;
     if(!content){ghBar('❌ 데이터 파일을 찾을 수 없습니다.','err');if(lb)lb.disabled=false;return;}
-    // 불러오기 전 현재 로컬 데이터 자동 백업
-    const bak=JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,v:3,date:new Date().toISOString()});
-    localStorage.setItem('mb_pull_bak',bak);
-    if(!confirm('GitHub 데이터로 현재 데이터를 덮어씁니다.\n(현재 데이터는 로컬 임시 백업에 자동 저장됩니다)\n계속하시겠습니까?')){if(lb)lb.disabled=false;ghBar('','ok',1);return;}
+    if(!confirm('GitHub 데이터로 현재 데이터를 덮어씁니다.\n계속하시겠습니까?')){if(lb)lb.disabled=false;ghBar('','ok',1);return;}
     const d=JSON.parse(content);
     if(d.notes)S.notes=d.notes;if(d.clients)S.clients=d.clients;if(d.scheds)S.scheds=d.scheds;if(d.work)S.work=d.work;
     await save();
