@@ -1275,12 +1275,9 @@ function switchTab(t){
   if(t==='settings'){renderClients();loadTheme();updateStorageInfo();gdRefreshUI();renderAppStats();loadEditorDefaults();loadClockoutSettings();}
   if(t==='sched')updateTracker();
   if(t==='report'){renderFmClients();renderFiles();}
-  // 모바일 하단 탭 + 탭명 동기화 (직접 통합)
   const _TL={'notes':'클라이언트','work':'통합문서','sched':'월간스케줄','report':'월간보고서','settings':'설정'};
   const _ct=document.getElementById('mob-curtab');if(_ct)_ct.textContent=_TL[t]||'';
-  ['notes','work','sched','report','settings'].forEach(x=>{
-    const b=document.getElementById('mob-tb-'+x);if(b)b.classList.toggle('on',x===t);
-  });
+  ['notes','work','sched','report','settings'].forEach(x=>{const b=document.getElementById('mob-tb-'+x);if(b)b.classList.toggle('on',x===t);});
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1987,25 +1984,26 @@ function openDoc(id){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  회의록 (Meeting Note)
-//  • 벡터 방식: 선 좌표를 JSON으로 저장
-//    → 불러와도 수정/지우기 가능
-//  • 단일 캔버스: 텍스트+필기 한 화면
-//  • setPane으로 다른 문서 열면 자동 복원
+//  회의록 (Meeting Note) — 캔버스 드로잉
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
 const MTG_TOOLS={
-  pen:  {color:'rgba(26,26,26,1)',    lw:2.5, comp:'source-over'},
-  hl_y: {color:'rgba(255,220,0,.45)', lw:18,  comp:'multiply'},
-  hl_p: {color:'rgba(255,80,160,.4)', lw:18,  comp:'multiply'},
-  erase:{color:'',                    lw:24,  comp:'destination-out'},
+  pen:   {color:'rgba(20,20,20,1)',     lw:2.5, comp:'source-over'},
+  pen_t: {color:'rgba(20,20,20,1)',     lw:5,   comp:'source-over'},
+  pen_th:{color:'rgba(20,20,20,1)',     lw:10,  comp:'source-over'},
+  hl_y:  {color:'rgba(255,220,0,0.35)',lw:16,  comp:'source-over'},
+  hl_p:  {color:'rgba(255,80,160,0.3)',lw:16,  comp:'source-over'},
+  erase: {color:'',                    lw:20,  comp:'destination-out'},
+  erase_l:{color:'',                   lw:40,  comp:'destination-out'},
 };
 let _mtg={canvas:null,ctx:null,tool:'pen',drawing:false,paths:[],curPath:null,nodeId:null,ro:null};
-
 function addMeetingDoc(){
   const sel=S.notes.find(n=>n.id===S.p1);
   const pid=sel?(S.notes.find(p=>p.id===sel.p&&p.t==='F')?sel.p:null):null;
   const mo=S.notes.filter(n=>n.p===pid).reduce((m,n)=>Math.max(m,n.o),-1);
-  const today=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'}).replace('. ','/').replace('.','').trim();
+  const d=new Date();
+  const today=(d.getMonth()+1).toString().padStart(2,'0')+'/'+(d.getDate()).toString().padStart(2,'0');
   const nd={id:uid(),t:'D',mt:'meeting',n:today+' 회의록',p:pid,o:mo+1,c:'',paths:[]};
   S.notes.push(nd);save();renderNoteTree();openMeetingDoc(nd.id);
 }
@@ -2021,45 +2019,41 @@ function openMeetingDoc(id){
   et.textContent='📋 '+nd.n; et.className='etitle';
   ee.style.display='none';
   ew.classList.remove('hidden');
-  // 기존 에디터 숨기기
   if(eq1tb)eq1tb.style.display='none';
   if(eq1)eq1.style.display='none';
-  // 회의록 컨테이너 (없으면 생성, 있으면 재사용)
   let outer=ew.querySelector('#mtg-outer');
-  if(!outer){
-    outer=document.createElement('div');
-    outer.id='mtg-outer';
-    outer.style.cssText='display:flex;flex-direction:column;flex:1;overflow:hidden;';
-    ew.appendChild(outer);
-  }
+  if(!outer){outer=document.createElement('div');outer.id='mtg-outer';outer.style.cssText='display:flex;flex-direction:column;flex:1;overflow:hidden;';ew.appendChild(outer);}
   outer.style.display='flex';
   outer.innerHTML=`
-    <div style="display:flex;align-items:center;gap:4px;padding:6px 10px;background:var(--surf2);border-bottom:1px solid var(--bdr);flex-wrap:wrap;flex-shrink:0">
-      <button class="mtool on" id="mtg-t-pen"   onclick="mtgTool('pen')"   title="펜">✒️ 펜</button>
-      <button class="draw-pen-btn on" id="mtg-t-hl_y"  onclick="mtgTool('hl_y')"  style="background:#ffe600"                          title="형광펜 노랑"></button>
-      <button class="draw-pen-btn"    id="mtg-t-hl_p"  onclick="mtgTool('hl_p')"  style="background:#ff64b4;opacity:.85"              title="형광펜 핑크"></button>
-      <button class="draw-pen-btn"    id="mtg-t-erase" onclick="mtgTool('erase')" style="background:var(--surf3);font-size:11px;line-height:1" title="지우개">⬜</button>
-      <div style="width:1px;height:18px;background:var(--bdr);margin:0 4px;align-self:center"></div>
-      <button class="mtool" id="mtg-t-text" onclick="mtgTool('text')" title="텍스트 입력">⌨️</button>
+    <div style="display:flex;align-items:center;gap:4px;padding:5px 10px;background:var(--surf2);border-bottom:1px solid var(--bdr);flex-wrap:wrap;flex-shrink:0">
+      <span style="font-size:10px;color:var(--tx3)">펜두께</span>
+      <button class="mtool on" id="mtg-t-pen"    onclick="mtgTool('pen')"    style="font-size:10px;min-width:26px">가</button>
+      <button class="mtool"    id="mtg-t-pen_t"  onclick="mtgTool('pen_t')"  style="font-size:13px;min-width:26px">가</button>
+      <button class="mtool"    id="mtg-t-pen_th" onclick="mtgTool('pen_th')" style="font-size:16px;font-weight:700;min-width:26px">가</button>
+      <div style="width:1px;height:16px;background:var(--bdr);margin:0 2px;align-self:center"></div>
+      <button class="draw-pen-btn" id="mtg-t-hl_y" onclick="mtgTool('hl_y')" style="background:#ffe600;width:26px;height:26px" title="형광펜 노랑"></button>
+      <button class="draw-pen-btn" id="mtg-t-hl_p" onclick="mtgTool('hl_p')" style="background:#ff64b4;width:26px;height:26px;opacity:.8" title="형광펜 핑크"></button>
+      <div style="width:1px;height:16px;background:var(--bdr);margin:0 2px;align-self:center"></div>
+      <span style="font-size:10px;color:var(--tx3)">지우개</span>
+      <button class="mtool" id="mtg-t-erase"   onclick="mtgTool('erase')"   style="font-size:11px;min-width:26px">小</button>
+      <button class="mtool" id="mtg-t-erase_l" onclick="mtgTool('erase_l')" style="font-size:11px;min-width:26px">大</button>
+      <div style="width:1px;height:16px;background:var(--bdr);margin:0 2px;align-self:center"></div>
+      <button class="mtool" id="mtg-t-text" onclick="mtgTool('text')" title="텍스트">⌨️</button>
       <span style="flex:1"></span>
-      <button class="mtool" onclick="mtgUndo()" title="실행취소 (마지막 획)">↩</button>
+      <button class="mtool" onclick="mtgUndo()" title="실행취소">↩</button>
       <button class="mtool" onclick="mtgClearAll()" title="전체 지우기" style="color:var(--rd)">🗑</button>
     </div>
     <div style="flex:1;position:relative;overflow:hidden;background:var(--surf);touch-action:pan-y" id="mtg-cvwrap">
-      <canvas id="mtg-canvas" style="position:absolute;top:0;left:0;touch-action:none;display:block"></canvas>
-    </div>`;
+      <canvas id="mtg-canvas" style="position:absolute;top:0;left:0;touch-action:none;display:block;cursor:crosshair"></canvas>
+    </div>\`;
   _mtg.nodeId=id;
-  _mtg.paths=(nd.paths&&Array.isArray(nd.paths))?nd.paths.map(p=>({...p,pts:p.pts?[...p.pts]:[]})):[];
+  _mtg.paths=(nd.paths&&Array.isArray(nd.paths))?JSON.parse(JSON.stringify(nd.paths)):[];
   _mtg.tool='pen';
-  // 캔버스 초기화
   requestAnimationFrame(()=>{
     _mtg.canvas=document.getElementById('mtg-canvas');
     if(!_mtg.canvas)return;
     _mtg.ctx=_mtg.canvas.getContext('2d');
-    mtgFitCanvas();
-    mtgRedraw();
-    mtgBindEvents();
-    // ResizeObserver
+    mtgFitCanvas();mtgRedraw();mtgBindEvents();
     if(_mtg.ro)_mtg.ro.disconnect();
     _mtg.ro=new ResizeObserver(()=>{mtgFitCanvas();mtgRedraw();});
     _mtg.ro.observe(document.getElementById('mtg-cvwrap'));
@@ -2068,94 +2062,43 @@ function openMeetingDoc(id){
   const rdBtn=document.getElementById('rdonly-btn1');if(rdBtn)rdBtn.style.display='none';
   renderNoteTree();
 }
-
 function hideMeetingCanvas(){
-  // 에디터 복원
   const eq1tb=document.getElementById('eq1toolbar');if(eq1tb)eq1tb.style.display='';
   const eq1=document.getElementById('eq1');if(eq1)eq1.style.display='';
   const outer=document.getElementById('mtg-outer');if(outer)outer.style.display='none';
   if(_mtg.ro){_mtg.ro.disconnect();_mtg.ro=null;}
   _mtg.nodeId=null;_mtg.paths=[];_mtg.canvas=null;_mtg.ctx=null;
 }
-
-function setPane(p,id){
-  const t=document.getElementById('et'+p);
-  const ew=document.getElementById('ew'+p);
-  const ee=document.getElementById('ee'+p);
-  const ed=p===1?EDITORS.e1:EDITORS.e2;
-  if(p===1)S.p1=id;else S.p2=id;
-  if(!id){
-    t.textContent='← 문서를 선택하세요';t.className='etitle empty';
-    ew.classList.add('hidden');ee.style.display='flex';
-    if(p===1){
-      const btn=document.getElementById('rdonly-btn1');if(btn)btn.style.display='none';
-      if(_rdonly1){_rdonly1=false;const e1=document.getElementById('eq1');if(e1)e1.contentEditable='true';const b=document.getElementById('readonly-badge1');if(b)b.classList.remove('on');}
-    }
-    return;
-  }
-  const nd=S.notes.find(n=>n.id===id);if(!nd)return;
-  // 회의록 → 일반 문서 전환 시 캔버스 숨기기
-  if(p===1&&typeof _mtg!=='undefined'&&_mtg&&_mtg.nodeId&&id!==_mtg.nodeId)try{hideMeetingCanvas();}catch(e){}
-  t.textContent=nd.n;t.className='etitle';
-  ew.classList.remove('hidden');ee.style.display='none';
-  if(ed)ed.html=nd.c||'';
-  if(p===2){
-    const e2=document.getElementById('eq2');if(e2)e2.contentEditable='true';
-    const badge=document.getElementById('readonly-badge2');if(badge)badge.classList.remove('on');
-  }
-  if(p===1){const btn=document.getElementById('rdonly-btn1');if(btn)btn.style.display='';}
-  renderNoteTree();
-}
-function toggleSplit(){
-  S.p2on=!S.p2on;document.getElementById('ep2').style.display=S.p2on?'flex':'none';
-  document.getElementById('splitbtn').textContent=S.p2on?'단일 보기':'분할 보기';
-  if(S.p2on)S.ap=2;
-}
-function closeSplit(){S.p2on=false;S.p2=null;S.ap=1;document.getElementById('ep2').style.display='none';document.getElementById('splitbtn').textContent='분할 보기';}
-
-function renderWorkBar(){
-  const w=document.getElementById('wtreewrap');w.innerHTML='';
-  buildWorkTree(w,null,0);
-}
-
-
 function mtgFitCanvas(){
   const wrap=document.getElementById('mtg-cvwrap');
   if(!wrap||!_mtg.canvas)return;
-  const w=wrap.clientWidth||wrap.offsetWidth;
-  const h=wrap.clientHeight||wrap.offsetHeight;
+  const w=wrap.offsetWidth;const h=wrap.offsetHeight;
   if(!w||!h)return;
   _mtg.canvas.width=w;_mtg.canvas.height=h;
   _mtg.canvas.style.width=w+'px';_mtg.canvas.style.height=h+'px';
   _mtg.ctx=_mtg.canvas.getContext('2d');
 }
-
 function mtgRedraw(){
   const ctx=_mtg.ctx;const cv=_mtg.canvas;if(!ctx||!cv||!cv.width)return;
   ctx.clearRect(0,0,cv.width,cv.height);
-  (_mtg.paths||[]).forEach(path=>{
-    if(path.tool==='text'){
-      // 텍스트 재렌더링
+  (_mtg.paths||[]).forEach(p=>{
+    if(p.tool==='text'){
       ctx.save();ctx.globalCompositeOperation='source-over';
       ctx.font='15px Malgun Gothic,Apple SD Gothic Neo,sans-serif';
-      ctx.fillStyle=document.body.classList.contains('th-light')||document.body.classList.contains('th-gray')||document.body.classList.contains('th-warm')
-        ?'#1a1a1a':'#e6edf3';
-      ctx.fillText(path.text||'',path.x||0,(path.y||0)+3);ctx.restore();
-      return;
+      const dark=!document.body.className||['navy','slate','forest'].some(t=>document.body.className.includes(t));
+      ctx.fillStyle=dark?'#e6edf3':'#1a1a1a';
+      ctx.fillText(p.text||'',p.x||0,(p.y||0)+3);ctx.restore();return;
     }
-    if(!path.pts||path.pts.length<2)return;
-    const cfg=MTG_TOOLS[path.tool]||MTG_TOOLS.pen;
-    ctx.save();
-    ctx.globalCompositeOperation=cfg.comp;
-    ctx.strokeStyle=path.color||cfg.color;
-    ctx.lineWidth=path.lw||cfg.lw;
+    if(!p.pts||p.pts.length<2)return;
+    const cfg=MTG_TOOLS[p.tool]||MTG_TOOLS.pen;
+    ctx.save();ctx.globalCompositeOperation=cfg.comp;
+    ctx.strokeStyle=p.color||cfg.color;ctx.lineWidth=p.lw||cfg.lw;
     ctx.lineCap='round';ctx.lineJoin='round';
-    ctx.beginPath();ctx.moveTo(path.pts[0].x,path.pts[0].y);
-    for(let i=1;i<path.pts.length;i++)ctx.lineTo(path.pts[i].x,path.pts[i].y);
+    ctx.beginPath();ctx.moveTo(p.pts[0].x,p.pts[0].y);
+    for(let i=1;i<p.pts.length;i++)ctx.lineTo(p.pts[i].x,p.pts[i].y);
     ctx.stroke();ctx.restore();
   });
 }
-
 function mtgTool(t){
   _mtg.tool=t;
   const wrap=document.getElementById('mtg-cvwrap');
@@ -2163,22 +2106,16 @@ function mtgTool(t){
   mtgSyncUI();
 }
 function mtgSyncUI(){
-  ['pen','hl_y','hl_p','erase','text'].forEach(t=>{
+  ['pen','pen_t','pen_th','hl_y','hl_p','erase','erase_l','text'].forEach(t=>{
     const b=document.getElementById('mtg-t-'+t);if(b)b.classList.toggle('on',t===_mtg.tool);
   });
 }
-
 function mtgBindEvents(){
-  const canvas=_mtg.canvas;if(!canvas||canvas._bound)return;
-  canvas._bound=true;
-  const getPos=e=>{const r=canvas.getBoundingClientRect();const s=canvas.width/(r.width||1);return{x:(e.clientX-r.left)*s,y:(e.clientY-r.top)*s};};
+  const canvas=_mtg.canvas;if(!canvas||canvas._mtgBound)return;
+  canvas._mtgBound=true;
+  const getPos=e=>{const r=canvas.getBoundingClientRect();const sx=canvas.width/(r.width||1);const sy=canvas.height/(r.height||1);return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};};
   canvas.addEventListener('pointerdown',e=>{
-    // 손가락(touch) 스크롤 허용, 펜만 그리기
-    if(e.pointerType==='touch'){
-      const wrap=document.getElementById('mtg-cvwrap');
-      if(wrap)wrap.style.touchAction='pan-y';
-      return;
-    }
+    if(e.pointerType==='touch')return;
     if(_mtg.tool==='text'){mtgPlaceText(getPos(e));return;}
     e.preventDefault();
     try{canvas.setPointerCapture(e.pointerId);}catch(err){}
@@ -2193,63 +2130,820 @@ function mtgBindEvents(){
     ctx.beginPath();ctx.moveTo(p.x,p.y);
   },{passive:false});
   canvas.addEventListener('pointermove',e=>{
-    if(!_mtg.drawing||!_mtg.curPath)return;
-    if(e.pointerType==='touch')return;
+    if(!_mtg.drawing||!_mtg.curPath||e.pointerType==='touch')return;
     e.preventDefault();
     const p=getPos(e);
     _mtg.curPath.pts.push({x:p.x,y:p.y});
     _mtg.ctx.lineTo(p.x,p.y);_mtg.ctx.stroke();
   },{passive:false});
-  const endDraw=e=>{
-    if(!_mtg.drawing)return;
-    _mtg.drawing=false;
-    try{_mtg.ctx.restore();}catch(err){}
-    if(_mtg.curPath&&_mtg.curPath.pts.length>1){
-      _mtg.paths.push({..._mtg.curPath,pts:[..._mtg.curPath.pts]});
-    }
-    _mtg.curPath=null;
-    mtgAutoSave();
+  const endDraw=()=>{
+    if(!_mtg.drawing)return;_mtg.drawing=false;
+    try{_mtg.ctx.restore();}catch(e){}
+    if(_mtg.curPath&&_mtg.curPath.pts.length>1)_mtg.paths.push(JSON.parse(JSON.stringify(_mtg.curPath)));
+    _mtg.curPath=null;mtgAutoSave();
   };
   canvas.addEventListener('pointerup',endDraw);
   canvas.addEventListener('pointercancel',endDraw);
 }
-
 function mtgPlaceText(pos){
   const wrap=document.getElementById('mtg-cvwrap');if(!wrap)return;
   const inp=document.createElement('input');
-  inp.style.cssText=`position:absolute;left:${pos.x}px;top:${Math.max(0,pos.y-14)}px;background:rgba(0,0,0,.05);border:none;border-bottom:1.5px dashed var(--ac);outline:none;color:var(--tx);font-size:15px;font-family:inherit;min-width:100px;padding:2px 4px;z-index:20;backdrop-filter:blur(2px)`;
+  inp.style.cssText='position:absolute;left:'+pos.x+'px;top:'+Math.max(0,pos.y-14)+'px;background:transparent;border:none;border-bottom:1.5px dashed var(--ac);outline:none;color:var(--tx);font-size:15px;font-family:inherit;min-width:120px;padding:2px 4px;z-index:20;';
   wrap.appendChild(inp);inp.focus();
   const commit=()=>{
     const val=inp.value.trim();
-    if(val){
-      const nd=S.notes.find(n=>n.id===_mtg.nodeId);
-      if(nd){
-        _mtg.paths.push({tool:'text',x:pos.x,y:pos.y,text:val});
-        mtgRedraw();mtgAutoSave();
-      }
-    }
+    if(val){_mtg.paths.push({tool:'text',x:pos.x,y:pos.y,text:val});mtgRedraw();mtgAutoSave();}
     inp.remove();
   };
   inp.addEventListener('blur',commit,{once:true});
   inp.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){e.preventDefault();commit();}
+    if(e.key==='Enter'){e.preventDefault();inp.removeEventListener('blur',commit);commit();}
     if(e.key==='Escape'){inp.removeEventListener('blur',commit);inp.remove();}
   });
 }
+function mtgUndo(){if(!_mtg.paths.length)return;_mtg.paths.pop();mtgRedraw();mtgAutoSave();}
+function mtgClearAll(){if(!confirm('회의록을 모두 지우시겠습니까?'))return;_mtg.paths=[];mtgRedraw();mtgAutoSave();}
+function mtgAutoSave(){const nd=S.notes.find(n=>n.id===_mtg.nodeId);if(!nd)return;nd.paths=JSON.parse(JSON.stringify(_mtg.paths));dsave();}
 
-function mtgUndo(){
-  if(!_mtg.paths.length)return;
-  _mtg.paths.pop();mtgRedraw();mtgAutoSave();
+
+
+
+
+
+
+
+
+
+
+
+
+function setPane(p,id){
+  const t=document.getElementById('et'+p);
+  const ew=document.getElementById('ew'+p);
+  const ee=document.getElementById('ee'+p);
+  const ed=p===1?EDITORS.e1:EDITORS.e2;
+  if(p===1)S.p1=id;else S.p2=id;
+  if(!id){t.textContent='← 문서를 선택하세요';t.className='etitle empty';ew.classList.add('hidden');ee.style.display='flex';
+    if(p===1){const btn=document.getElementById('rdonly-btn1');if(btn)btn.style.display='none';if(_rdonly1){_rdonly1=false;const e1=document.getElementById('eq1');if(e1)e1.contentEditable='true';const b=document.getElementById('readonly-badge1');if(b)b.classList.remove('on');}}
+    return;
+  }
+  const nd=S.notes.find(n=>n.id===id);if(!nd)return;
+  if(p===1&&typeof _mtg!=='undefined'&&_mtg&&_mtg.nodeId&&id!==_mtg.nodeId)try{hideMeetingCanvas();}catch(e){}
+  t.textContent=nd.n;t.className='etitle';
+  ew.classList.remove('hidden');ee.style.display='none';
+  if(ed)ed.html=nd.c||'';
+  // 오른쪽 패널이면 편집 가능 상태 복구 (xPanel로 readOnly 됐을 수 있음)
+  if(p===2){
+    const e2=document.getElementById('eq2');if(e2)e2.contentEditable='true';
+    const badge=document.getElementById('readonly-badge2');if(badge)badge.classList.remove('on');
+  }
+  if(p===1){const btn=document.getElementById('rdonly-btn1');if(btn)btn.style.display='';}
+  renderNoteTree();
 }
-function mtgClearAll(){
-  if(!confirm('회의록 내용을 모두 지우시겠습니까?'))return;
-  _mtg.paths=[];mtgRedraw();mtgAutoSave();
+function toggleSplit(){
+  S.p2on=!S.p2on;document.getElementById('ep2').style.display=S.p2on?'flex':'none';
+  document.getElementById('splitbtn').textContent=S.p2on?'단일 보기':'분할 보기';
+  if(S.p2on)S.ap=2;
 }
-function mtgAutoSave(){
-  const nd=S.notes.find(n=>n.id===_mtg.nodeId);if(!nd)return;
-  nd.paths=_mtg.paths.map(p=>({...p,pts:p.pts?[...p.pts]:[]}));
-  dsave();
+function closeSplit(){S.p2on=false;S.p2=null;S.ap=1;document.getElementById('ep2').style.display='none';document.getElementById('splitbtn').textContent='분할 보기';}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  WORK NOTES (업무 노트 — 트리 구조)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function wkids(pid){return S.work.filter(n=>n.p===pid).sort((a,b)=>a.o-b.o);}
+let wDragId=null,wDropPos=null;
+
+function renderWorkBar(){
+  const w=document.getElementById('wtreewrap');w.innerHTML='';
+  buildWorkTree(w,null,0);
 }
+function buildWorkTree(wrap,pid,depth){
+  wkids(pid).forEach(node=>{
+    const isF=node.t==='F';
+    const item=document.createElement('div');
+    item.style.paddingLeft=(depth*14)+'px';
+    item.className='titem'+(S.wsel===node.id?' sel':'');
+    item.dataset.id=node.id;item.draggable=true;
+
+    const arr=document.createElement('span');arr.className='tarrow'+(isF?(node.open?' open':''):' open');arr.style.visibility=isF?'visible':'hidden';arr.textContent='▶';
+    const ico=document.createElement('span');ico.className='ticon';ico.textContent=node.icon||(isF?'📁':'📄');
+    const lbl=document.createElement('span');lbl.className='tlabel';lbl.textContent=node.n;
+    item.append(arr,ico,lbl);
+
+    // Drag
+    item.addEventListener('dragstart',e=>{wDragId=node.id;e.dataTransfer.effectAllowed='move';setTimeout(()=>item.classList.add('dragging'),0);});
+    item.addEventListener('dragend',()=>{wDragId=null;wDropPos=null;item.classList.remove('dragging');clearDCW(wrap);});
+    item.addEventListener('dragover',e=>{
+      e.preventDefault();if(!wDragId||wDragId===node.id)return;
+      const rect=item.getBoundingClientRect();const y=e.clientY-rect.top;clearDCW(wrap);
+      if(isF&&y>rect.height*.25&&y<rect.height*.75){wDropPos='inside';item.classList.add('drop-inside');}
+      else if(y<rect.height*.5){wDropPos='before';item.classList.add('drop-before');}
+      else{wDropPos='after';item.classList.add('drop-after');}
+    });
+    item.addEventListener('dragleave',e=>{if(!item.contains(e.relatedTarget))item.classList.remove('drop-before','drop-after','drop-inside');});
+    item.addEventListener('drop',e=>{
+      e.preventDefault();if(!wDragId||wDragId===node.id)return;
+      const dn=S.work.find(n=>n.id===wDragId);if(!dn)return;
+      if(wDropPos==='inside'&&node.t==='F'){
+        dn.p=node.id;node.open=true;
+        const sib=wkids(node.id).filter(n=>n.id!==wDragId);dn.o=sib.length;
+      }else{
+        dn.p=node.p;
+        const sib=wkids(node.p).filter(n=>n.id!==wDragId);
+        const ti=sib.findIndex(n=>n.id===node.id);
+        const ins=wDropPos==='before'?ti:ti+1;
+        sib.splice(ins,0,dn);sib.forEach((n,i)=>n.o=i);
+      }
+      wDragId=null;wDropPos=null;save();renderWorkBar();
+    });
+
+    item.addEventListener('click',e=>{e.stopPropagation();if(isF){node.open=!node.open;save();renderWorkBar();}else selectWork(node.id);});
+    item.addEventListener('dblclick',e=>{e.stopPropagation();startWorkRename(item,node);});
+    item.addEventListener('contextmenu',e=>{
+      const menu=[];
+      if(isF){menu.push({l:'📄 문서 추가',a:()=>addWorkDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addWorkSubFolder(node.id)});menu.push('sep');}
+      menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)startWorkRename(el,node);}});
+      menu.push({l:'🗑 삭제',d:true,a:()=>delWork(node.id)});
+      showCtx(e,menu);
+    });
+    wrap.appendChild(item);
+    if(isF&&node.open)buildWorkTree(wrap,node.id,depth+1);
+  });
+}
+function clearDCW(w){w.querySelectorAll('.drop-before,.drop-after,.drop-inside').forEach(el=>el.classList.remove('drop-before','drop-after','drop-inside'));}
+
+function selectWork(id){
+  S.wsel=id;const node=S.work.find(n=>n.id===id&&n.t==='D');
+  const t=document.getElementById('wet'),ew=document.getElementById('wew'),e=document.getElementById('wee');
+  if(!node){t.textContent='← 문서를 선택하세요';t.className='etitle empty';ew.classList.add('hidden');e.style.display='flex';return;}
+  t.textContent=(node.icon||'📄')+' '+node.n;t.className='etitle';
+  ew.classList.remove('hidden');e.style.display='none';
+  if(EDITORS.we)EDITORS.we.html=node.content||'';
+  renderWorkBar();
+}
+function onWorkEdit(){const node=S.work.find(n=>n.id===S.wsel);if(!node)return;node.content=EDITORS.we?.html||'';dsave();}
+
+function addWorkFolder(){
+  const mo=S.work.filter(n=>n.p===null).reduce((m,n)=>Math.max(m,n.o),-1);
+  S.work.push({id:uid(),t:'F',n:'새 폴더',p:null,o:mo+1,open:true,icon:'📁'});
+  save();renderWorkBar();
+}
+function addWorkSubFolder(pid){
+  const par=S.work.find(n=>n.id===pid);if(par)par.open=true;
+  const mo=wkids(pid).reduce((m,n)=>Math.max(m,n.o),-1);
+  S.work.push({id:uid(),t:'F',n:'새 폴더',p:pid,o:mo+1,open:false,icon:'📁'});
+  save();renderWorkBar();
+}
+function addWorkDoc(){
+  const cur=S.wsel;const nd=S.work.find(n=>n.id===cur);
+  addWorkDocTo(nd?(nd.t==='F'?nd.id:nd.p)||null:null);
+}
+function addWorkDocTo(pid){
+  const par=S.work.find(n=>n.id===pid);if(par)par.open=true;
+  const mo=wkids(pid).reduce((m,n)=>Math.max(m,n.o),-1);
+  const icons=['📝','💡','🔖','🗒','⚡','🎯','📊','🔑','📎','🧩'];
+  S.work.push({id:uid(),t:'D',n:'새 문서',p:pid,o:mo+1,icon:icons[Math.floor(Math.random()*icons.length)],content:''});
+  save();renderWorkBar();
+}
+function startWorkRename(itemEl,node){
+  const lbl=itemEl.querySelector('.tlabel');
+  const inp=document.createElement('input');inp.className='rnminput';inp.value=node.n;lbl.replaceWith(inp);inp.focus();inp.select();
+  const done=()=>{const v=inp.value.trim();if(v)node.n=v;save();renderWorkBar();if(S.wsel===node.id)document.getElementById('wet').textContent=(node.icon||'📄')+' '+node.n;};
+  inp.onblur=done;inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();done();}if(e.key==='Escape')renderWorkBar();};
+}
+function delWork(id){
+  if(!confirm('삭제하시겠습니까? 하위 항목도 모두 삭제됩니다.'))return;
+  const collect=i=>{const ids=[i];S.work.filter(n=>n.p===i).forEach(c=>ids.push(...collect(c.id)));return ids;};
+  const del=collect(id);S.work=S.work.filter(n=>!del.includes(n.id));
+  if(del.includes(S.wsel)){S.wsel=null;selectWork(null);}
+  save();renderWorkBar();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCHEDULE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function getWeeks(y,m){
+  const dim=new Date(y,m,0).getDate();const dow=new Date(y,m-1,1).getDay();const off=dow===0?-6:1-dow;
+  let mon=1+off;const wks=[];
+  while(mon<=dim){
+    const wk=[];let any=false;
+    for(let d=0;d<5;d++){const day=mon+d;wk.push(day>=1&&day<=dim?day:null);if(day>=1&&day<=dim)any=true;}
+    if(any)wks.push(wk);mon+=7;
+  }
+  return wks;
+}
+function mkey(y,m){return y+'-'+String(m).padStart(2,'0');}
+function getCell(y,m,wi,ch,di){return S.scheds[mkey(y,m)]?.cells?.['w'+wi+'-'+ch+'-'+di]||'';}
+function setCell(y,m,wi,ch,di,v){const k=mkey(y,m);if(!S.scheds[k])S.scheds[k]={cells:{}};S.scheds[k].cells['w'+wi+'-'+ch+'-'+di]=v;}
+// Count cells that contain "(kw)" with parentheses
+function countMentions(y,m,kw,ch){
+  const cells=S.scheds[mkey(y,m)]?.cells||{};const tag='('+kw+')';let n=0;
+  Object.entries(cells).forEach(([k,v])=>{if(k.includes('-'+ch+'-')&&v&&v.includes(tag))n++;});return n;
+}
+function renderSched(){
+  const{sy:y,sm:m}=S;document.getElementById('mlabel').textContent=y+'년 '+m+'월';
+  const wks=getWeeks(y,m);const main=document.getElementById('schedmain');main.innerHTML='';
+  const now=new Date();const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
+  const isThisMonth=(y===todayY&&m===todayM);
+  wks.forEach((wk,wi)=>{
+    const sec=document.createElement('div');sec.className='weeksec';
+    const hdr=document.createElement('div');hdr.className='wkhdr';
+    const wlbl=document.createElement('div');wlbl.className='wkhdrcell';wlbl.innerHTML=(wi+1)+'주차';hdr.appendChild(wlbl);
+    wk.forEach((d,di)=>{
+      const isToday=isThisMonth&&d===todayD;
+      const c=document.createElement('div');
+      c.className='wkhdrcell'+(isToday?' today-hdr':'');
+      c.innerHTML=DY[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
+      hdr.appendChild(c);
+    });
+    sec.appendChild(hdr);
+    CH.forEach(ch=>{
+      const row=document.createElement('div');row.className='crow';
+      const lbl=document.createElement('div');lbl.className='clabel';lbl.textContent=ch;row.appendChild(lbl);
+      wk.forEach((d,di)=>{
+        const isToday=isThisMonth&&d===todayD;
+        const cell=document.createElement('div');
+        if(d){
+          cell.className='scell'+(isToday?' today-col':'');cell.contentEditable='true';cell.innerText=getCell(y,m,wi,ch,di);
+          let ct;cell.addEventListener('input',()=>{setCell(y,m,wi,ch,di,cell.innerText);clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
+        }else{cell.className='scell off';}
+        row.appendChild(cell);
+      });
+      sec.appendChild(row);
+    });
+    main.appendChild(sec);
+  });
+  updateTracker();
+}
+function chMonth(d){S.sm+=d;if(S.sm>12){S.sm=1;S.sy++;}if(S.sm<1){S.sm=12;S.sy--;}renderSched();}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  TRACKER (잔여 횟수 + 운영 현황 요약)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function toggleTrkEdit(){
+  S.trkEd=!S.trkEd;
+  document.getElementById('trkedbtn').style.color=S.trkEd?'var(--ac)':'';
+  updateTracker();
+}
+function updateTracker(){
+  const{sy:y,sm:m}=S;
+  const cls=getMonthClients(y,m).filter(c=>c.q&&Object.values(c.q).some(v=>v>0));
+  const trkEl=document.getElementById('trkbody');
+  const sumEl=document.getElementById('sumtbl');
+
+  if(!cls.length){
+    trkEl.innerHTML='<div style="font-size:11px;color:var(--tx3);padding:6px">🔄 버튼으로 설정의 클라이언트를 동기화하세요</div>';
+    sumEl.innerHTML='';return;
+  }
+
+  // ── 잔여 횟수 트래커 ──
+  let h=`<table class="trktbl"><thead><tr><th class="trkch">채널</th>`;
+  cls.forEach(c=>{h+=`<th style="color:${c.color}" title="${c.name}">${c.kw}</th>`;});
+  h+=`</tr></thead><tbody>`;
+  if(S.trkEd){
+    CH.forEach(ch=>{
+      h+=`<tr><td class="trkch">${ch}</td>`;
+      cls.forEach((c,ci)=>{
+        const q=c.q[ch]||0;
+        h+=`<td><input type="number" class="trkedinput" min="0" value="${q}" onchange="updQ(${ci},'${ch}',this.value)"></td>`;
+      });h+=`</tr>`;
+    });
+  }else{
+    CH.forEach(ch=>{
+      const show=cls.some(c=>(c.q[ch]||0)>0||countMentions(y,m,c.kw,ch)>0);if(!show)return;
+      h+=`<tr><td class="trkch">${ch}</td>`;
+      cls.forEach(c=>{
+        const q=c.q[ch]||0;const done=countMentions(y,m,c.kw,ch);
+        if(q===0&&done===0){h+=`<td class="trkn na">—</td>`;}
+        else if(q===0){h+=`<td class="trkn r" title="${done}건">${done}</td>`;}
+        else{const rem=q-done;const cl2=rem<0?'r':rem===0?'g':rem<=2?'y':'';h+=`<td class="trkn ${cl2}" title="${done}/${q}">${rem}</td>`;}
+      });h+=`</tr>`;
+    });
+  }
+  h+=`</tbody></table>`;
+  trkEl.innerHTML=h;
+
+  // ── 업체별 월간 운영 현황 요약 표 ──
+  // Only show channels that have at least one client with quota > 0
+  const activeCh=CH.filter(ch=>cls.some(c=>(c.q[ch]||0)>0));
+  let s=`<table style="width:100%;border-collapse:collapse;font-size:10px">`;
+  s+=`<thead><tr><th style="background:var(--surf3);color:var(--tx3);padding:4px 5px;border:1px solid var(--bdr);white-space:nowrap;text-align:left">업체명</th>`;
+  activeCh.forEach(ch=>{s+=`<th style="background:var(--surf3);color:var(--tx3);padding:4px 3px;border:1px solid var(--bdr);white-space:nowrap;text-align:center;font-size:9.5px">${ch}</th>`;});
+  s+=`</tr></thead><tbody>`;
+  cls.forEach((c,ci)=>{
+    s+=`<tr><td style="padding:3px 5px;border:1px solid var(--bdr);color:${c.color};font-weight:600;white-space:nowrap;font-size:10px">${c.name}</td>`;
+    activeCh.forEach(ch=>{
+      const q=c.q[ch]||0;
+      const val=q===0?'—':formatQ(ch,q);
+      s+=`<td style="padding:3px;border:1px solid var(--bdr);text-align:center;color:${q>0?'var(--tx2)':'var(--bdr)'};font-size:10px;white-space:nowrap">
+        <span style="cursor:pointer" onclick="editSumCell(${ci},'${ch}')" title="클릭하여 수정">${val}</span></td>`;
+    });
+    s+=`</tr>`;
+  });
+  s+=`</tbody></table>`;
+  sumEl.innerHTML=s;
+}
+function formatQ(ch,q){
+  if(ch==='영수증리뷰')return `월 ${q}개`;
+  if(ch==='체험단모집')return `총 ${q}명`;
+  if(ch==='닥톡'){return `주 ${Math.round(q/4)}회`;}
+  return `월 ${q}회`;
+}
+function editSumCell(ci,ch){
+  // Quick inline quota editor for summary table
+  const mCls=getMonthClients(S.sy,S.sm);const c=mCls[ci];if(!c)return;
+  const v=prompt(`${c.name} / ${ch} 할당량:`,c.q[ch]||0);
+  if(v===null)return;const n=parseInt(v);if(isNaN(n))return;
+  mCls[ci].q[ch]=n;save();updateTracker();
+}
+function updQ(ci,ch,v){
+  const mCls=getMonthClients(S.sy,S.sm);
+  if(mCls[ci])mCls[ci].q[ch]=parseInt(v)||0;
+  save();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  RESIZE HANDLE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function initResize(){
+  const h=document.getElementById('rhandle');const tk=document.getElementById('tracker');
+  let sx,sw,on=false;
+  h.addEventListener('mousedown',e=>{e.preventDefault();on=true;sx=e.clientX;sw=tk.offsetWidth;h.classList.add('ra');document.body.style.cursor='col-resize';document.body.style.userSelect='none';});
+  document.addEventListener('mousemove',e=>{if(!on)return;const nw=Math.max(180,Math.min(520,sw+(sx-e.clientX)));tk.style.width=nw+'px';});
+  document.addEventListener('mouseup',()=>{if(!on)return;on=false;h.classList.remove('ra');document.body.style.cursor='';document.body.style.userSelect='';});
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  FILE MANAGER (월간 보고서)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderFmClients(){
+  const el=document.getElementById('fmclientlist');el.innerHTML='';
+  S.clients.forEach(c=>{
+    const item=document.createElement('div');item.className='fmclientitem'+(S.fmCl===c.id?' sel':'');
+    item.innerHTML=`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0"></span><span class="fmclabel">${c.name}</span>`;
+    item.onclick=()=>{S.fmCl=c.id;renderFmClients();renderFiles();};
+    el.appendChild(item);
+  });
+}
+async function renderFiles(){
+  const grid=document.getElementById('fmgrid');grid.innerHTML='';
+  if(!S.fmCl){grid.innerHTML='<div class="fmempty"><span style="font-size:30px">🏥</span>왼쪽에서 클라이언트를 선택하세요</div>';return;}
+  const yr=parseInt(document.getElementById('fmyear').value);
+  const mo=parseInt(document.getElementById('fmmonth').value);
+  let files=[];
+  try{files=await IDB.fgetAll();}catch(e){files=[];}
+  files=files.filter(f=>f.clientId===S.fmCl&&f.year===yr&&(mo===0||f.month===mo));
+  files.sort((a,b)=>a.month-b.month||a.uploadDate.localeCompare(b.uploadDate));
+  if(!files.length){
+    const cl=S.clients.find(c=>c.id===S.fmCl);
+    grid.innerHTML=`<div class="fmempty"><span style="font-size:30px">📭</span><b>${cl?.name||''}</b>의 보고서가 없습니다<br><span style="font-size:11px;color:var(--tx3)">"파일 업로드" 버튼으로 추가하세요</span></div>`;
+    return;
+  }
+  files.forEach(f=>{
+    const isPdf=f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf');
+    const card=document.createElement('div');card.className='fcard';
+    card.innerHTML=`<div class="fcico">${isPdf?'📕':'📊'}</div><div class="fcname">${f.name}</div><div class="fcmeta">${f.year}년 ${f.month}월 · ${fmtSize(f.size)}</div><div class="fcmeta" style="font-size:9px">${new Date(f.uploadDate).toLocaleDateString('ko-KR')}</div><div class="fcbtns">${isPdf?`<button class="fcbtn" onclick="previewPdf('${f.id}')">미리보기</button>`:''}<button class="fcbtn" onclick="dlFile('${f.id}')">다운로드</button><button class="fcbtn d" onclick="rmFile('${f.id}')">삭제</button></div>`;
+    grid.appendChild(card);
+  });
+}
+function fmtSize(b){if(b>1024*1024)return(b/1024/1024).toFixed(1)+'MB';if(b>1024)return(b/1024).toFixed(0)+'KB';return b+'B';}
+function uploadFile(){
+  if(!S.fmCl){toast('클라이언트를 먼저 선택하세요.');return;}
+  const yr=parseInt(document.getElementById('fmyear').value);
+  const mo=parseInt(document.getElementById('fmmonth').value);
+  if(mo===0){toast('월을 선택해주세요.');return;}
+  const inp=document.createElement('input');inp.type='file';inp.accept='.pdf,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation';
+  inp.onchange=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    const ab=await file.arrayBuffer();
+    try{
+      await IDB.fput({id:uid(),name:file.name,type:file.type||'',data:ab,clientId:S.fmCl,year:yr,month:mo,uploadDate:new Date().toISOString(),size:file.size});
+      toast(`"${file.name}" 업로드 완료`);renderFiles();
+    }catch(err){toast('업로드 실패: 파일이 너무 클 수 있습니다.');}
+  };inp.click();
+}
+async function dlFile(id){
+  const f=await IDB.fget(id);if(!f)return;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([f.data],{type:f.type}));a.download=f.name;a.click();
+}
+async function previewPdf(id){
+  const f=await IDB.fget(id);if(!f)return;
+  const url=URL.createObjectURL(new Blob([f.data],{type:'application/pdf'}));
+  const bg=document.createElement('div');bg.className='modal-bg';
+  bg.innerHTML=`<div class="modal-box"><div class="modal-hdr"><span class="modal-title">📕 ${f.name}</span><button class="modal-close" onclick="this.closest('.modal-bg').remove()">✕</button></div><div class="modal-body"><embed src="${url}" type="application/pdf"></div></div>`;
+  bg.addEventListener('click',e=>{if(e.target===bg){URL.revokeObjectURL(url);bg.remove();}});
+  document.body.appendChild(bg);
+}
+async function rmFile(id){
+  if(!confirm('파일을 삭제하시겠습니까?'))return;
+  await IDB.fdel(id);toast('삭제되었습니다.');renderFiles();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SETTINGS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderClients(){
+  const c=document.getElementById('cleditor');c.innerHTML='';
+  S.clients.forEach((cl,i)=>{
+    const card=document.createElement('div');card.className='cccard';
+    card.innerHTML=`<div class="ccrow"><input type="color" value="${cl.color}" onchange="S.clients[${i}].color=this.value;save();updateTracker()"><input type="text" class="ccinput" value="${cl.name}" placeholder="클라이언트명" style="flex:1;max-width:160px" oninput="S.clients[${i}].name=this.value;save()"><span style="font-size:11px;color:var(--tx3)">키워드</span><input type="text" class="ccinput" value="${cl.kw}" placeholder="ex)동탄" style="max-width:70px" oninput="S.clients[${i}].kw=this.value;save();updateTracker()"><button class="btn btnr" style="padding:4px 8px;font-size:11px" onclick="removeClient(${i})">삭제</button></div><div style="font-size:10px;color:var(--tx3);margin-bottom:5px;font-weight:700">월간 할당량</div><div class="qgrid">${CH.map(ch=>`<div class="qitem"><label>${ch}</label><input type="number" class="qinput" min="0" value="${cl.q?.[ch]||0}" onchange="S.clients[${i}].q['${ch}']=parseInt(this.value)||0;save();updateTracker()"></div>`).join('')}</div>`;
+    c.appendChild(card);
+  });
+}
+function addClient(){
+  S.clients.push({id:uid(),name:'새 클라이언트',kw:'키워드',color:'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'),q:Object.fromEntries(CH.map(ch=>[ch,0]))});
+  save();renderClients();toast('클라이언트가 추가되었습니다.');
+}
+function removeClient(i){
+  if(!confirm(`"${S.clients[i].name}" 삭제하시겠습니까?`))return;
+  S.clients.splice(i,1);save();renderClients();updateTracker();
+}
+async function changePw(){
+  const cp=document.getElementById('cpw').value,np=document.getElementById('npw').value,np2=document.getElementById('npw2').value;
+  const msg=document.getElementById('pwmsg');
+  if(!cp||!np||!np2){msg.style.color='var(--rd)';msg.textContent='모든 항목을 입력하세요.';return;}
+  if(np!==np2){msg.style.color='var(--rd)';msg.textContent='새 비밀번호가 일치하지 않습니다.';return;}
+  if(np.length<4){msg.style.color='var(--rd)';msg.textContent='4자 이상 입력하세요.';return;}
+  if(await sha256(cp)!==localStorage.getItem('mb_pw')){msg.style.color='var(--rd)';msg.textContent='현재 비밀번호가 틀렸습니다.';return;}
+  localStorage.setItem('mb_pw',await sha256(np));
+  msg.style.color='var(--gn)';msg.textContent='✓ 변경 완료';
+  ['cpw','npw','npw2'].forEach(id=>document.getElementById(id).value='');
+}
+function exportData(){
+  const d={notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,v:3,date:new Date().toISOString()};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
+  a.download='마케팅허브_백업_'+new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').replace(/-$/,'')+'.json';
+  a.click();toast('백업 파일이 다운로드되었습니다.');
+}
+function importData(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=async ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(!confirm('기존 데이터를 덮어씁니다. 계속하시겠습니까?'))return;
+        if(d.notes)S.notes=d.notes;if(d.clients)S.clients=d.clients;if(d.scheds)S.scheds=d.scheds;if(d.work)S.work=d.work;
+        await save();
+        _gdDirty=false; clearTimeout(_gdAutoT);
+        renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
+        toast('데이터를 불러왔습니다.');
+      }catch(e){alert('파일 형식이 올바르지 않습니다.');}
+    };r.readAsText(f);
+  };inp.click();
+}
+async function resetAll(){
+  if(!confirm('⚠️ 모든 데이터가 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.'))return;
+  S.notes=makeDefNotes();S.clients=JSON.parse(JSON.stringify(DEF_CLIENTS));S.scheds={};S.work=makeDefWork();
+  S.p1=null;S.p2=null;S.wsel=null;S.fmCl=null;
+  await save();
+  renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
+  setPane(1,null);setPane(2,null);selectWork(null);toast('초기화 완료.');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  GOOGLE DRIVE 동기화 (브라우저 직접 API)
+//  용량 제한 없음 — 파일 크기 상관없이 저장 가능
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const GD_SCOPE   = 'https://www.googleapis.com/auth/drive.file';
+const GD_FNAME   = '마케팅허브_백업.json';
+let _gdToken     = null;   // access token
+let _gdAutoT     = null;   // 자동저장 타이머
+let _gdDirty     = false;  // 미저장 변경 있음
+let _gdBusy      = false;
+
+function gdClientId(){ return localStorage.getItem('gd_client_id')||''; }
+function gdSaveToken(t){ _gdToken=t; localStorage.setItem('gd_token_exp', Date.now()+3500000); localStorage.setItem('gd_token', t); }
+function gdLoadToken(){ const t=localStorage.getItem('gd_token'); const exp=parseInt(localStorage.getItem('gd_token_exp')||'0'); if(t&&Date.now()<exp){_gdToken=t;return t;} return null; }
+
+function gdLog(msg, ok){
+  const el=document.getElementById('gd_log'); if(!el)return;
+  el.style.color = ok===false?'var(--rd)':ok?'var(--gn)':'var(--tx3)';
+  el.textContent = msg;
+}
+function gdBar(msg,type,ms=3500){ ghBar(msg,type,ms); }
+
+async function gdRefreshUI(){
+  const bar=document.getElementById('gd-status-bar');
+  const pb=document.getElementById('gd-push-btn');
+  const dlb=document.getElementById('gd-pull-btn');
+  const conBtn=document.getElementById('gd-connect-btn');
+  const disBtn=document.getElementById('gd-disconnect-btn');
+  const autoChk=document.getElementById('gd-auto-chk');
+  const tok = gdLoadToken();
+  const cid = gdClientId();
+  // restore client id input
+  const cidEl=document.getElementById('gd_client_id');
+  if(cidEl&&!cidEl.value&&cid) cidEl.value=cid;
+  if(autoChk) autoChk.checked = localStorage.getItem('gd_auto')==='1';
+  if(tok){
+    if(bar){bar.style.borderColor='var(--gn)'; bar.style.color='var(--gn)';
+      const lastSave=localStorage.getItem('gd_last_save')||'';
+      bar.innerHTML=`✅ Google Drive 연결됨${lastSave?'<br><span style="font-size:10px;color:var(--tx3)">마지막 저장: '+new Date(lastSave).toLocaleString('ko-KR')+'</span>':''}`;}
+    if(conBtn) conBtn.style.display='none';
+    if(disBtn) disBtn.style.display='';
+    if(pb) pb.disabled=false;
+    if(dlb) dlb.disabled=false;
+    setTimeout(gdFetchQuota, 500); // 연결 상태일 때 용량 자동 조회
+  } else {
+    if(bar){bar.style.borderColor='var(--bdr)'; bar.style.color='var(--tx3)';
+      bar.textContent = cid ? '🔗 Client ID 입력됨 — Google 계정 연결 버튼을 눌러주세요' : '⚙️ Client ID를 먼저 입력해주세요';}
+    if(conBtn) conBtn.style.display='';
+    if(disBtn) disBtn.style.display='none';
+    if(pb) pb.disabled=true;
+    if(dlb) dlb.disabled=true;
+  }
+}
+
+function gdConnect(){
+  const cid = gdClientId();
+  if(!cid){ toast('Client ID를 먼저 입력해주세요.', true); return; }
+  // Google Identity Services implicit flow
+  const params = new URLSearchParams({
+    client_id: cid,
+    redirect_uri: location.origin + location.pathname,
+    response_type: 'token',
+    scope: GD_SCOPE,
+    state: 'gd_auth',
+  });
+  // Save state to detect callback
+  sessionStorage.setItem('gd_auth_pending','1');
+  location.href = 'https://accounts.google.com/o/oauth2/auth?' + params;
+}
+
+// OAuth2 implicit 콜백 처리 (페이지 로드 시)
+function gdHandleCallback(){
+  const hash = location.hash;
+  if(!hash || !sessionStorage.getItem('gd_auth_pending')) return;
+  const params = new URLSearchParams(hash.slice(1));
+  const token = params.get('access_token');
+  const expiresIn = parseInt(params.get('expires_in')||'3600');
+  if(token){
+    gdSaveToken(token);
+    sessionStorage.removeItem('gd_auth_pending');
+    // URL 정리
+    history.replaceState(null,'',location.pathname);
+    toast('✅ Google Drive 연결 완료!');
+    gdRefreshUI();
+  }
+}
+
+async function gdApiCall(method, url, token, body, ctype){
+  const headers = { 'Authorization': 'Bearer '+token };
+  if(ctype) headers['Content-Type'] = ctype;
+  const resp = await fetch(url, { method, headers, body });
+  if(resp.status === 401){ _gdToken=null; localStorage.removeItem('gd_token'); gdRefreshUI(); throw new Error('토큰 만료. 다시 연결해주세요.'); }
+  if(!resp.ok){ const e=await resp.json(); throw new Error(e.error?.message||resp.status); }
+  const ct = resp.headers.get('Content-Type')||'';
+  if(ct.includes('json')) return resp.json();
+  return resp.text();
+}
+
+async function gdFindFile(token, fname){
+  const q = `name='${fname}' and trashed=false`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime)`;
+  const r = await gdApiCall('GET', url, token);
+  return r.files?.[0] || null;
+}
+
+async function gdPush(auto=false){
+  const token = _gdToken || gdLoadToken();
+  if(!token){ if(!auto) toast('먼저 Google 계정을 연결해주세요.', true); return; }
+  if(_gdBusy){ if(!auto) toast('저장 중입니다...'); return; }
+  _gdBusy = true;
+  const pb=document.getElementById('gd-push-btn'); if(pb) pb.disabled=true;
+  if(!auto) gdBar('💾 Google Drive에 저장 중...','ing',0);
+  gdLog('저장 중...');
+  try{
+    const payload = JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,v:3,date:new Date().toISOString()});
+    const blob = new Blob([payload], {type:'application/json'});
+    const existing = await gdFindFile(token, GD_FNAME);
+    const boundary = '-------mbhub_boundary';
+    const meta = JSON.stringify({name: GD_FNAME, mimeType:'application/json'});
+    // multipart upload
+    const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--${boundary}--`;
+    const uploadUrl = existing
+      ? `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`
+      : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+    const method = existing ? 'PATCH' : 'POST';
+    await gdApiCall(method, uploadUrl, token, body, `multipart/related; boundary=${boundary}`);
+    _gdDirty = false;
+    const now = new Date().toISOString();
+    localStorage.setItem('gd_last_save', now);
+    const timeStr = new Date(now).toLocaleString('ko-KR');
+    gdLog(`✓ ${timeStr} 저장 완료`, true);
+    gdBar(`✓ Drive 저장 완료 — ${new Date().toLocaleTimeString('ko-KR')}`, 'ok');
+    if(!auto) toast('Google Drive에 저장 완료!');
+    gdRefreshUI();
+  }catch(e){
+    gdLog('❌ 저장 실패: '+e.message, false);
+    gdBar('❌ Drive 저장 실패: '+e.message, 'err');
+    if(!auto) toast('Drive 저장 실패: '+e.message, true);
+  }finally{
+    _gdBusy=false; if(pb) pb.disabled=false;
+  }
+}
+
+async function gdPull(){
+  const token = _gdToken || gdLoadToken();
+  if(!token){ toast('먼저 Google 계정을 연결해주세요.', true); return; }
+  if(!confirm('Google Drive의 데이터로 현재 데이터를 덮어씁니다.\n계속하시겠습니까?')) return;
+  const lb=document.getElementById('gd-pull-btn'); if(lb) lb.disabled=true;
+  gdBar('💾 Google Drive에서 불러오는 중...','ing',0);
+  gdLog('불러오는 중...');
+  try{
+    const existing = await gdFindFile(token, GD_FNAME);
+    if(!existing){ gdLog('❌ Drive에 저장된 데이터가 없습니다.', false); gdBar('❌ Drive에 저장된 데이터가 없습니다.','err'); return; }
+    const url = `https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`;
+    const text = await gdApiCall('GET', url, token);
+    const d = typeof text==='string' ? JSON.parse(text) : text;
+    if(d.notes)S.notes=d.notes; if(d.clients)S.clients=d.clients;
+    if(d.scheds)S.scheds=d.scheds; if(d.work)S.work=d.work;
+    await save();
+    _gdDirty=false; clearTimeout(_gdAutoT);
+    renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
+    const timeStr = new Date().toLocaleString('ko-KR');
+    gdLog(`✓ ${timeStr} 불러오기 완료`, true);
+    gdBar(`✓ Drive 불러오기 완료 — ${new Date().toLocaleTimeString('ko-KR')}`, 'ok');
+    toast('Google Drive에서 불러오기 완료!');
+  }catch(e){
+    gdLog('❌ 불러오기 실패: '+e.message, false);
+    gdBar('❌ Drive 불러오기 실패: '+e.message, 'err');
+    toast('Drive 불러오기 실패: '+e.message, true);
+  }finally{ if(lb) lb.disabled=false; }
+}
+
+function gdDisconnect(){
+  if(!confirm('Google Drive 연결을 해제하시겠습니까?')) return;
+  _gdToken=null;
+  localStorage.removeItem('gd_token'); localStorage.removeItem('gd_token_exp');
+  const qb=document.getElementById('gd-quota-bar');if(qb)qb.style.display='none';
+  gdRefreshUI(); toast('Google Drive 연결 해제됨.');
+}
+
+async function gdFetchQuota(){
+  const token=_gdToken||gdLoadToken();if(!token)return;
+  try{
+    const r=await gdApiCall('GET','https://www.googleapis.com/drive/v3/about?fields=storageQuota',token);
+    const q=r.storageQuota;if(!q)return;
+    const used=parseInt(q.usage||0);const total=parseInt(q.limit||0);
+    const usedGB=(used/1e9).toFixed(2);const totalGB=total?(total/1e9).toFixed(1):'무제한';
+    const pct=total?Math.round(used/total*100):0;
+    const color=pct>85?'var(--rd)':pct>65?'var(--yw)':'var(--gn)';
+    const el=document.getElementById('gd-quota-text');
+    if(el)el.innerHTML=`구글 드라이브 용량: <b style="color:${color}">${usedGB}GB / ${totalGB}GB</b>${total?` (${pct}% 사용중)`:''}`;
+    const fill=document.getElementById('gd-quota-bar-fill');
+    if(fill){fill.style.background=color;fill.style.width=Math.min(pct,100)+'%';}
+    const qb=document.getElementById('gd-quota-bar');if(qb)qb.style.display='block';
+  }catch(e){console.warn('Drive 용량 조회 실패:',e.message);}
+}
+
+function gdToggleAuto(checked){
+  localStorage.setItem('gd_auto', checked?'1':'0');
+  toast(checked?'변경 시 자동 Drive 저장 켜짐':'자동 저장 꺼짐');
+}
+
+// dsave 후 자동 Drive 저장 예약
+function gdScheduleAuto(){
+  if(localStorage.getItem('gd_auto')!=='1') return;
+  const token = _gdToken || gdLoadToken();
+  if(!token) return;
+  _gdDirty=true;
+  clearTimeout(_gdAutoT);
+  _gdAutoT=setTimeout(()=>{ if(_gdDirty&&!_gdBusy) gdPush(true); }, 30000);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  전체 검색 (Ctrl+K)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _srchOpen=false;
+function openSearch(){
+  _srchOpen=true;
+  const bar=document.getElementById('srchbar');bar.classList.add('open');
+  const inp=document.getElementById('srch-input');inp.value='';inp.focus();
+  document.getElementById('srch-results').innerHTML='';
+  document.getElementById('srch-results').className='srch-results';
+}
+function closeSearch(){
+  _srchOpen=false;
+  document.getElementById('srchbar').classList.remove('open');
+  document.getElementById('srch-input').value='';
+}
+function doSearch(q){
+  const res=document.getElementById('srch-results');
+  if(!q.trim()){res.className='srch-results';res.innerHTML='';return;}
+  const kw=q.toLowerCase();
+  const hl=s=>s.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),m=>`<span class="srch-hl">${m}</span>`);
+  let html='';
+  // 클라이언트 노트
+  const notes=S.notes.filter(n=>n.t==='D'&&((n.n||'').toLowerCase().includes(kw)||(n.c||'').toLowerCase().includes(kw)));
+  if(notes.length){
+    html+=`<div class="srch-group">📝 클라이언트 노트 (${notes.length})</div>`;
+    notes.slice(0,8).forEach(n=>{
+      const preview=(n.c||'').replace(/<[^>]*>/g,'').slice(0,80);
+      html+=`<div class="srch-item" onclick="srchGoNote('${n.id}')"><span style="font-size:14px">📄</span><div style="min-width:0"><div class="srch-item-title">${hl(n.n||'')}</div><div class="srch-item-preview">${hl(preview)}</div></div></div>`;
+    });
+  }
+  // 업무 노트
+  const works=S.work.filter(n=>n.t==='D'&&((n.n||'').toLowerCase().includes(kw)||(n.content||'').toLowerCase().includes(kw)));
+  if(works.length){
+    html+=`<div class="srch-group">🗂 통합문서 (${works.length})</div>`;
+    works.slice(0,8).forEach(n=>{
+      const preview=(n.content||'').replace(/<[^>]*>/g,'').slice(0,80);
+      html+=`<div class="srch-item" onclick="srchGoWork('${n.id}')"><span style="font-size:14px">${n.icon||'📄'}</span><div style="min-width:0"><div class="srch-item-title">${hl(n.n||'')}</div><div class="srch-item-preview">${hl(preview)}</div></div></div>`;
+    });
+  }
+  if(!html){html='<div style="padding:14px 10px;font-size:12px;color:var(--tx3)">검색 결과가 없습니다.</div>';}
+  res.innerHTML=html;res.className='srch-results has-results';
+}
+function srchGoNote(id){closeSearch();switchTab('notes');setTimeout(()=>openDoc(id),80);}
+function srchGoWork(id){closeSearch();switchTab('work');setTimeout(()=>selectWork(id),80);}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  창 분할 — 다른 탭 문서 가져오기
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function toggleXPanel(e){
+  e.stopPropagation();
+  const menu=document.getElementById('xpanel-menu');
+  if(menu.style.display!=='none'){menu.style.display='none';return;}
+  // 메뉴 빌드
+  let html='<div style="padding:4px">';
+  // 업무 노트 섹션
+  html+='<div class="srch-group" style="padding:6px 8px">🗂 통합문서</div>';
+  function buildWork(pid,depth){
+    S.work.filter(n=>n.p===pid).sort((a,b)=>a.o-b.o).forEach(n=>{
+      const pad=depth*12;
+      if(n.t==='F'){
+        html+=`<div style="padding:5px 8px 5px ${8+pad}px;font-size:11px;color:var(--tx3);font-weight:600">${n.icon||'📁'} ${n.n}</div>`;
+        buildWork(n.id,depth+1);
+      } else {
+        html+=`<div class="srch-item" style="padding:5px ${8+pad}px" onclick="xPanelLoadWork('${n.id}')">${n.icon||'📄'} ${n.n}</div>`;
+      }
+    });
+  }
+  buildWork(null,0);
+  // 월간 스케줄
+  html+='<div class="srch-group" style="padding:6px 8px;margin-top:4px">📅 월간스케줄</div>';
+  html+=`<div class="srch-item" style="padding:5px 8px" onclick="xPanelLoadSched()">📅 ${S.sy}년 ${S.sm}월 스케줄 (간략 보기)</div>`;
+  html+='</div>';
+  menu.innerHTML=html;menu.style.display='block';
+  // 외부 클릭 닫기
+  setTimeout(()=>document.addEventListener('click',closeXMenu,{once:true}),10);
+}
+function closeXMenu(){const m=document.getElementById('xpanel-menu');if(m)m.style.display='none';}
+function xPanelLoadWork(id){
+  closeXMenu();
+  if(!S.p2on){S.p2on=true;document.getElementById('ep2').style.display='flex';document.getElementById('splitbtn').textContent='단일 보기';}
+  const node=S.work.find(n=>n.id===id&&n.t==='D');if(!node)return;
+  // 오른쪽 패널에 업무노트 내용 표시 (읽기전용 뷰)
+  const t=document.getElementById('et2');const ew=document.getElementById('ew2');const ee=document.getElementById('ee2');
+  t.textContent=(node.icon||'📄')+' '+node.n+' (통합문서)';t.className='etitle';
+  ee.style.display='none';ew.classList.remove('hidden');
+  if(EDITORS.e2)EDITORS.e2.html=node.content||'';
+  // 편집 불가 처리
+  const ed2=document.getElementById('eq2');if(ed2)ed2.contentEditable='false';
+  const badge=document.getElementById('readonly-badge2');if(badge){badge.textContent='통합문서';badge.classList.add('on');}
+  S.p2=null; // 클라이언트 노트 ID 비워서 수정 안 되게
+}
+function xPanelLoadSched(){
+  closeXMenu();
+  if(!S.p2on){S.p2on=true;document.getElementById('ep2').style.display='flex';document.getElementById('splitbtn').textContent='단일 보기';}
+  const t=document.getElementById('et2');const ew=document.getElementById('ew2');const ee=document.getElementById('ee2');
+  t.textContent=`📅 ${S.sy}년 ${S.sm}월 스케줄`;t.className='etitle';
+  ee.style.display='none';ew.classList.remove('hidden');
+  // 스케줄 간략 HTML 렌더링
+  const wks=getWeeks(S.sy,S.sm);
+  const now=new Date();const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
+  const isTM=(S.sy===todayY&&S.sm===todayM);
+  let schedHtml='<div style="padding:8px;font-size:11px;overflow:auto">';
+  wks.forEach((wk,wi)=>{
+    schedHtml+=`<div style="margin-bottom:8px"><div style="font-weight:700;color:var(--tx3);font-size:10px;margin-bottom:4px">${wi+1}주차</div>`;
+    schedHtml+='<table style="width:100%;border-collapse:collapse;font-size:10px">';
+    schedHtml+='<tr><th style="border:1px solid var(--bdr);padding:2px 4px;background:var(--surf2);color:var(--tx3);width:60px">구분</th>';
+    wk.forEach((d,di)=>{
+      const isT=isTM&&d===todayD;
+      schedHtml+=`<th style="border:1px solid var(--bdr);padding:2px 4px;background:${isT?'rgba(56,139,253,.2)':'var(--surf2)'};color:${isT?'var(--ac)':'var(--tx3)'};">${['월','화','수','목','금'][di]}${d?` ${d}일`:''}</th>`;
+    });
+    schedHtml+='</tr>';
+    CH.forEach(ch=>{
+      schedHtml+='<tr>';
+      schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;color:var(--tx3);white-space:nowrap">${ch}</td>`;
+      wk.forEach((d,di)=>{
+        const isT=isTM&&d===todayD;
+        const val=d?getCell(S.sy,S.sm,wi,ch,di):'';
+        schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;min-width:50px;background:${isT?'rgba(56,139,253,.07)':'transparent'}">${val}</td>`;
+      });
+      schedHtml+='</tr>';
+    });
+    schedHtml+='</table></div>';
+  });
+  schedHtml+='</div>';
+  if(EDITORS.e2)EDITORS.e2.html=schedHtml;
+  const ed2=document.getElementById('eq2');if(ed2)ed2.contentEditable='false';
+  const badge=document.getElementById('readonly-badge2');if(badge){badge.textContent='스케줄';badge.classList.add('on');}
+  S.p2=null;
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  읽기 전용 잠금 (패널 1)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2323,7 +3017,8 @@ function mobCloseSidebar(){
   document.querySelectorAll('.sidebar.mob-open').forEach(sb=>sb.classList.remove('mob-open'));
   const ov=document.getElementById('mob-overlay');if(ov)ov.classList.remove('on');
 }
-// switchTab 모바일 동기화 — 원본 함수에 직접 통합됨 (1272줄)
+// 패널 전환 시 사이드바 참조 업데이트
+// switchTab 모바일 동기화 — 원본에 직접 통합됨
 // 초기화
 function initMobile(){
   const isMobile=window.innerWidth<=768;
@@ -2332,216 +3027,6 @@ function initMobile(){
   const ct=document.getElementById('mob-curtab');if(ct)ct.textContent='클라이언트';
 }
 
-
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  복원된 함수들 (SCHEDULE / GOOGLE DRIVE)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function renderSched(){
-  const{sy:y,sm:m}=S;document.getElementById('mlabel').textContent=y+'년 '+m+'월';
-  const wks=getWeeks(y,m);const main=document.getElementById('schedmain');main.innerHTML='';
-  const now=new Date();const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
-  const isThisMonth=(y===todayY&&m===todayM);
-  wks.forEach((wk,wi)=>{
-    const sec=document.createElement('div');sec.className='weeksec';
-    const hdr=document.createElement('div');hdr.className='wkhdr';
-    const wlbl=document.createElement('div');wlbl.className='wkhdrcell';wlbl.innerHTML=(wi+1)+'주차';hdr.appendChild(wlbl);
-    wk.forEach((d,di)=>{
-      const isToday=isThisMonth&&d===todayD;
-      const c=document.createElement('div');
-      c.className='wkhdrcell'+(isToday?' today-hdr':'');
-      c.innerHTML=DY[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
-      hdr.appendChild(c);
-    });
-    sec.appendChild(hdr);
-    CH.forEach(ch=>{
-      const row=document.createElement('div');row.className='crow';
-      const lbl=document.createElement('div');lbl.className='clabel';lbl.textContent=ch;row.appendChild(lbl);
-      wk.forEach((d,di)=>{
-        const isToday=isThisMonth&&d===todayD;
-        const cell=document.createElement('div');
-        if(d){
-          cell.className='scell'+(isToday?' today-col':'');cell.contentEditable='true';cell.innerText=getCell(y,m,wi,ch,di);
-          let ct;cell.addEventListener('input',()=>{setCell(y,m,wi,ch,di,cell.innerText);clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
-        }else{cell.className='scell off';}
-        row.appendChild(cell);
-      });
-      sec.appendChild(row);
-    });
-    main.appendChild(sec);
-  });
-  updateTracker();
-}
-function updateTracker(){
-  const{sy:y,sm:m}=S;
-  const cls=getMonthClients(y,m).filter(c=>c.q&&Object.values(c.q).some(v=>v>0));
-  const trkEl=document.getElementById('trkbody');
-  const sumEl=document.getElementById('sumtbl');
-
-  if(!cls.length){
-    trkEl.innerHTML='<div style="font-size:11px;color:var(--tx3);padding:6px">🔄 버튼으로 설정의 클라이언트를 동기화하세요</div>';
-    sumEl.innerHTML='';return;
-  }
-
-  // ── 잔여 횟수 트래커 ──
-  let h=`<table class="trktbl"><thead><tr><th class="trkch">채널</th>`;
-  cls.forEach(c=>{h+=`<th style="color:${c.color}" title="${c.name}">${c.kw}</th>`;});
-  h+=`</tr></thead><tbody>`;
-  if(S.trkEd){
-    CH.forEach(ch=>{
-      h+=`<tr><td class="trkch">${ch}</td>`;
-      cls.forEach((c,ci)=>{
-        const q=c.q[ch]||0;
-        h+=`<td><input type="number" class="trkedinput" min="0" value="${q}" onchange="updQ(${ci},'${ch}',this.value)"></td>`;
-      });h+=`</tr>`;
-    });
-  }else{
-    CH.forEach(ch=>{
-      const show=cls.some(c=>(c.q[ch]||0)>0||countMentions(y,m,c.kw,ch)>0);if(!show)return;
-      h+=`<tr><td class="trkch">${ch}</td>`;
-      cls.forEach(c=>{
-        const q=c.q[ch]||0;const done=countMentions(y,m,c.kw,ch);
-        if(q===0&&done===0){h+=`<td class="trkn na">—</td>`;}
-        else if(q===0){h+=`<td class="trkn r" title="${done}건">${done}</td>`;}
-        else{const rem=q-done;const cl2=rem<0?'r':rem===0?'g':rem<=2?'y':'';h+=`<td class="trkn ${cl2}" title="${done}/${q}">${rem}</td>`;}
-      });h+=`</tr>`;
-    });
-  }
-  h+=`</tbody></table>`;
-  trkEl.innerHTML=h;
-
-  // ── 업체별 월간 운영 현황 요약 표 ──
-  // Only show channels that have at least one client with quota > 0
-  const activeCh=CH.filter(ch=>cls.some(c=>(c.q[ch]||0)>0));
-  let s=`<table style="width:100%;border-collapse:collapse;font-size:10px">`;
-  s+=`<thead><tr><th style="background:var(--surf3);color:var(--tx3);padding:4px 5px;border:1px solid var(--bdr);white-space:nowrap;text-align:left">업체명</th>`;
-  activeCh.forEach(ch=>{s+=`<th style="background:var(--surf3);color:var(--tx3);padding:4px 3px;border:1px solid var(--bdr);white-space:nowrap;text-align:center;font-size:9.5px">${ch}</th>`;});
-  s+=`</tr></thead><tbody>`;
-  cls.forEach((c,ci)=>{
-    s+=`<tr><td style="padding:3px 5px;border:1px solid var(--bdr);color:${c.color};font-weight:600;white-space:nowrap;font-size:10px">${c.name}</td>`;
-    activeCh.forEach(ch=>{
-      const q=c.q[ch]||0;
-      const val=q===0?'—':formatQ(ch,q);
-      s+=`<td style="padding:3px;border:1px solid var(--bdr);text-align:center;color:${q>0?'var(--tx2)':'var(--bdr)'};font-size:10px;white-space:nowrap">
-        <span style="cursor:pointer" onclick="editSumCell(${ci},'${ch}')" title="클릭하여 수정">${val}</span></td>`;
-    });
-    s+=`</tr>`;
-  });
-  s+=`</tbody></table>`;
-  sumEl.innerHTML=s;
-}
-async function gdRefreshUI(){
-  const bar=document.getElementById('gd-status-bar');
-  const pb=document.getElementById('gd-push-btn');
-  const dlb=document.getElementById('gd-pull-btn');
-  const conBtn=document.getElementById('gd-connect-btn');
-  const disBtn=document.getElementById('gd-disconnect-btn');
-  const autoChk=document.getElementById('gd-auto-chk');
-  const tok = gdLoadToken();
-  const cid = gdClientId();
-  // restore client id input
-  const cidEl=document.getElementById('gd_client_id');
-  if(cidEl&&!cidEl.value&&cid) cidEl.value=cid;
-  if(autoChk) autoChk.checked = localStorage.getItem('gd_auto')==='1';
-  if(tok){
-    if(bar){bar.style.borderColor='var(--gn)'; bar.style.color='var(--gn)';
-      const lastSave=localStorage.getItem('gd_last_save')||'';
-      bar.innerHTML=`✅ Google Drive 연결됨${lastSave?'<br><span style="font-size:10px;color:var(--tx3)">마지막 저장: '+new Date(lastSave).toLocaleString('ko-KR')+'</span>':''}`;}
-    if(conBtn) conBtn.style.display='none';
-    if(disBtn) disBtn.style.display='';
-    if(pb) pb.disabled=false;
-    if(dlb) dlb.disabled=false;
-    setTimeout(gdFetchQuota, 500); // 연결 상태일 때 용량 자동 조회
-  } else {
-    if(bar){bar.style.borderColor='var(--bdr)'; bar.style.color='var(--tx3)';
-      bar.textContent = cid ? '🔗 Client ID 입력됨 — Google 계정 연결 버튼을 눌러주세요' : '⚙️ Client ID를 먼저 입력해주세요';}
-    if(conBtn) conBtn.style.display='';
-    if(disBtn) disBtn.style.display='none';
-    if(pb) pb.disabled=true;
-    if(dlb) dlb.disabled=true;
-  }
-}
-async function gdPush(auto=false){
-  const token = _gdToken || gdLoadToken();
-  if(!token){ if(!auto) toast('먼저 Google 계정을 연결해주세요.', true); return; }
-  if(_gdBusy){ if(!auto) toast('저장 중입니다...'); return; }
-  _gdBusy = true;
-  const pb=document.getElementById('gd-push-btn'); if(pb) pb.disabled=true;
-  if(!auto) gdBar('💾 Google Drive에 저장 중...','ing',0);
-  gdLog('저장 중...');
-  try{
-    const payload = JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,v:3,date:new Date().toISOString()});
-    const blob = new Blob([payload], {type:'application/json'});
-    const existing = await gdFindFile(token, GD_FNAME);
-    const boundary = '-------mbhub_boundary';
-    const meta = JSON.stringify({name: GD_FNAME, mimeType:'application/json'});
-    // multipart upload
-    const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--${boundary}--`;
-    const uploadUrl = existing
-      ? `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`
-      : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
-    const method = existing ? 'PATCH' : 'POST';
-    await gdApiCall(method, uploadUrl, token, body, `multipart/related; boundary=${boundary}`);
-    _gdDirty = false;
-    const now = new Date().toISOString();
-    localStorage.setItem('gd_last_save', now);
-    const timeStr = new Date(now).toLocaleString('ko-KR');
-    gdLog(`✓ ${timeStr} 저장 완료`, true);
-    gdBar(`✓ Drive 저장 완료 — ${new Date().toLocaleTimeString('ko-KR')}`, 'ok');
-    if(!auto) toast('Google Drive에 저장 완료!');
-    gdRefreshUI();
-  }catch(e){
-    gdLog('❌ 저장 실패: '+e.message, false);
-    gdBar('❌ Drive 저장 실패: '+e.message, 'err');
-    if(!auto) toast('Drive 저장 실패: '+e.message, true);
-  }finally{
-    _gdBusy=false; if(pb) pb.disabled=false;
-  }
-}
-async function gdPull(){
-  const token = _gdToken || gdLoadToken();
-  if(!token){ toast('먼저 Google 계정을 연결해주세요.', true); return; }
-  if(!confirm('Google Drive의 데이터로 현재 데이터를 덮어씁니다.\n계속하시겠습니까?')) return;
-  const lb=document.getElementById('gd-pull-btn'); if(lb) lb.disabled=true;
-  gdBar('💾 Google Drive에서 불러오는 중...','ing',0);
-  gdLog('불러오는 중...');
-  try{
-    const existing = await gdFindFile(token, GD_FNAME);
-    if(!existing){ gdLog('❌ Drive에 저장된 데이터가 없습니다.', false); gdBar('❌ Drive에 저장된 데이터가 없습니다.','err'); return; }
-    const url = `https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`;
-    const text = await gdApiCall('GET', url, token);
-    const d = typeof text==='string' ? JSON.parse(text) : text;
-    if(d.notes)S.notes=d.notes; if(d.clients)S.clients=d.clients;
-    if(d.scheds)S.scheds=d.scheds; if(d.work)S.work=d.work;
-    await save();
-    _gdDirty=false; clearTimeout(_gdAutoT);
-    renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
-    const timeStr = new Date().toLocaleString('ko-KR');
-    gdLog(`✓ ${timeStr} 불러오기 완료`, true);
-    gdBar(`✓ Drive 불러오기 완료 — ${new Date().toLocaleTimeString('ko-KR')}`, 'ok');
-    toast('Google Drive에서 불러오기 완료!');
-  }catch(e){
-    gdLog('❌ 불러오기 실패: '+e.message, false);
-    gdBar('❌ Drive 불러오기 실패: '+e.message, 'err');
-    toast('Drive 불러오기 실패: '+e.message, true);
-  }finally{ if(lb) lb.disabled=false; }
-}
-async function gdFetchQuota(){
-  const token=_gdToken||gdLoadToken();if(!token)return;
-  try{
-    const r=await gdApiCall('GET','https://www.googleapis.com/drive/v3/about?fields=storageQuota',token);
-    const q=r.storageQuota;if(!q)return;
-    const used=parseInt(q.usage||0);const total=parseInt(q.limit||0);
-    const usedGB=(used/1e9).toFixed(2);const totalGB=total?(total/1e9).toFixed(1):'무제한';
-    const pct=total?Math.round(used/total*100):0;
-    const color=pct>85?'var(--rd)':pct>65?'var(--yw)':'var(--gn)';
-    const el=document.getElementById('gd-quota-text');
-    if(el)el.innerHTML=`구글 드라이브 용량: <b style="color:${color}">${usedGB}GB / ${totalGB}GB</b>${total?` (${pct}% 사용중)`:''}`;
-    const fill=document.getElementById('gd-quota-bar-fill');
-    if(fill){fill.style.background=color;fill.style.width=Math.min(pct,100)+'%';}
-    const qb=document.getElementById('gd-quota-bar');if(qb)qb.style.display='block';
-  }catch(e){console.warn('Drive 용량 조회 실패:',e.message);}
-}
 // 기존 GitHub 함수들 — stub (호환성 유지)
 function ghPush(){gdPush();}
 function ghPull(){gdPull();}
