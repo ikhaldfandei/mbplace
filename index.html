@@ -1534,7 +1534,6 @@ function setPane(p,id){
   const ed=p===1?EDITORS.e1:EDITORS.e2;
   if(p===1)S.p1=id;else S.p2=id;
   if(!id){t.textContent='← 문서를 선택하세요';t.className='etitle empty';ew.classList.add('hidden');ee.style.display='flex';
-    // 읽기전용 버튼 숨김
     if(p===1){const btn=document.getElementById('rdonly-btn1');if(btn)btn.style.display='none';if(_rdonly1){_rdonly1=false;const e1=document.getElementById('eq1');if(e1)e1.contentEditable='true';const b=document.getElementById('readonly-badge1');if(b)b.classList.remove('on');}}
     return;
   }
@@ -1542,7 +1541,11 @@ function setPane(p,id){
   t.textContent=nd.n;t.className='etitle';
   ew.classList.remove('hidden');ee.style.display='none';
   if(ed)ed.html=nd.c||'';
-  // 읽기전용 버튼 표시 (패널1)
+  // 오른쪽 패널이면 편집 가능 상태 복구 (xPanel로 readOnly 됐을 수 있음)
+  if(p===2){
+    const e2=document.getElementById('eq2');if(e2)e2.contentEditable='true';
+    const badge=document.getElementById('readonly-badge2');if(badge)badge.classList.remove('on');
+  }
   if(p===1){const btn=document.getElementById('rdonly-btn1');if(btn)btn.style.display='';}
   renderNoteTree();
 }
