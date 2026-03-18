@@ -450,10 +450,12 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
   .mbtb::-webkit-scrollbar{display:none}
   /* 폰트 크기 */
   .mbedit{font-size:15px!important;padding:14px 16px!important;line-height:1.9!important}
-  /* 트래커 사이드 숨김 */
+  /* 트래커 모바일 - 접기/펼치기 */
   .rhandle{display:none!important}
-  .tracker{width:100%!important;max-width:none!important;border-left:none!important;border-top:1px solid var(--bdr)}
-  .schedbody{flex-direction:column}
+  .tracker{width:100%!important;max-width:none!important;border-left:none!important;border-top:1px solid var(--bdr);max-height:200px;overflow-y:auto;flex-shrink:0}
+  .tracker.mob-collapsed{max-height:42px;overflow:hidden}
+  .schedbody{flex-direction:column;overflow:hidden}
+  .schedmain{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
   /* 설정 */
   .ssec{max-width:100%!important}
   /* 시계 대신 현재 탭명 */
@@ -473,6 +475,8 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 .mob-tab.on{color:var(--ac)}
 .mob-tab-ico{font-size:20px;line-height:1}
 /* 모바일 사이드바 버튼 */
+.mob-only{display:none}
+@media(max-width:768px){.mob-only{display:inline}}
 .mob-sidebar-btn{display:none;background:none;border:none;color:var(--tx2);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0}
 /* 모바일 탭명 */
 .mob-curtab{display:none}
@@ -649,11 +653,11 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
         <div class="schedmain" id="schedmain"></div>
         <div class="rhandle" id="rhandle"></div>
         <div class="tracker" id="tracker">
-          <div class="trktitle">
-            📊 잔여 횟수 트래커
-            <div style="display:flex;gap:4px">
+          <div class="trktitle" onclick="mobToggleTracker()" style="cursor:pointer">
+            📊 잔여 횟수 트래커 <span id="tracker-arrow" class="mob-only" style="font-size:10px;color:var(--tx3)">▼</span>
+            <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
               <button class="icobtn" id="trkedbtn" onclick="toggleTrkEdit()" title="이번 달 할당량 수정">✏️</button>
-              <button class="icobtn" onclick="syncMonthSnap(S.sy,S.sm)" title="설정의 클라이언트 목록을 이번 달에 동기화">🔄</button>
+              <button class="icobtn" onclick="syncMonthSnap(S.sy,S.sm)" title="클라이언트 목록 동기화">🔄</button>
             </div>
           </div>
           <div id="trkbody"></div>
@@ -1289,6 +1293,19 @@ function renderNoteTree(){
   const w=document.getElementById('ntreewrap');w.innerHTML='';
   const selId=S.p1||S.p2;
   buildTree(w,null,0,selId);
+  // 빈 공간에 drop 허용 (최상위 레벨로 이동)
+  w.ondragover=e=>e.preventDefault();
+  w.ondrop=e=>{
+    e.preventDefault();
+    if(!dragId)return;
+    const dn=S.notes.find(n=>n.id===dragId);if(!dn)return;
+    if(e.target===w||e.target.id==='ntreewrap'){
+      dn.p=null;
+      const roots=S.notes.filter(n=>!n.p&&n.id!==dragId);
+      dn.o=roots.length;
+      dragId=null;save();renderNoteTree();
+    }
+  };
 }
 
 function buildTree(wrap,pid,depth,selId){
@@ -1338,7 +1355,7 @@ function buildTree(wrap,pid,depth,selId){
     item.addEventListener('dblclick',e=>{e.stopPropagation();startRename(item,node);});
     item.addEventListener('contextmenu',e=>{
       const menu=[];
-      if(isF){menu.push({l:'📄 문서 추가',a:()=>addDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addSubFolder(node.id)});menu.push('sep');}
+      if(isF){menu.push({l:'📄 문서 추가',a:()=>addDocTo(node.id)});menu.push({l:'📋 회의록 추가',a:()=>addMeetingDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addSubFolder(node.id)});menu.push('sep');}
       menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)startRename(el,node);}});
       menu.push({l:'🗑 삭제',d:true,a:()=>delNode(node.id)});
       showCtx(e,menu);
@@ -1992,8 +2009,8 @@ const MTG_TOOLS={
   pen:   {color:'rgba(20,20,20,1)',     lw:2.5, comp:'source-over'},
   pen_t: {color:'rgba(20,20,20,1)',     lw:5,   comp:'source-over'},
   pen_th:{color:'rgba(20,20,20,1)',     lw:10,  comp:'source-over'},
-  hl_y:  {color:'rgba(255,220,0,0.35)',lw:16,  comp:'source-over'},
-  hl_p:  {color:'rgba(255,80,160,0.3)',lw:16,  comp:'source-over'},
+  hl_y:  {color:'rgba(255,220,0,0.28)',lw:16,  comp:'source-over'},
+  hl_p:  {color:'rgba(255,80,160,0.22)',lw:16,  comp:'source-over'},
   erase: {color:'',                    lw:20,  comp:'destination-out'},
   erase_l:{color:'',                   lw:40,  comp:'destination-out'},
 };
@@ -2001,6 +2018,14 @@ let _mtg={canvas:null,ctx:null,tool:'pen',drawing:false,paths:[],curPath:null,no
 function addMeetingDoc(){
   const sel=S.notes.find(n=>n.id===S.p1);
   const pid=sel?(S.notes.find(p=>p.id===sel.p&&p.t==='F')?sel.p:null):null;
+  const mo=S.notes.filter(n=>n.p===pid).reduce((m,n)=>Math.max(m,n.o),-1);
+  const d=new Date();
+  const today=(d.getMonth()+1).toString().padStart(2,'0')+'/'+(d.getDate()).toString().padStart(2,'0');
+  const nd={id:uid(),t:'D',mt:'meeting',n:today+' 회의록',p:pid,o:mo+1,c:'',paths:[]};
+  S.notes.push(nd);save();renderNoteTree();openMeetingDoc(nd.id);
+}
+function addMeetingDocTo(pid){
+  const par=S.notes.find(n=>n.id===pid);if(par)par.open=true;
   const mo=S.notes.filter(n=>n.p===pid).reduce((m,n)=>Math.max(m,n.o),-1);
   const d=new Date();
   const today=(d.getMonth()+1).toString().padStart(2,'0')+'/'+(d.getDate()).toString().padStart(2,'0');
@@ -2040,6 +2065,9 @@ function openMeetingDoc(id){
       <div style="width:1px;height:16px;background:var(--bdr);margin:0 2px;align-self:center"></div>
       <button class="mtool" id="mtg-t-text" onclick="mtgTool('text')" title="텍스트">⌨️</button>
       <span style="flex:1"></span>
+      <span style="font-size:10px;color:var(--tx3)">두께</span>
+      <input type="range" id="mtg-size-slider" min="1" max="30" value="3" style="width:64px;cursor:pointer;accent-color:var(--ac)" oninput="mtgSetSize(parseInt(this.value))" title="두께 조절">
+      <span id="mtg-size-val" style="font-size:10px;color:var(--tx3);min-width:16px">3</span>
       <button class="mtool" onclick="mtgUndo()" title="실행취소">↩</button>
       <button class="mtool" onclick="mtgClearAll()" title="전체 지우기" style="color:var(--rd)">🗑</button>
     </div>
@@ -2103,19 +2131,40 @@ function mtgTool(t){
   _mtg.tool=t;
   const wrap=document.getElementById('mtg-cvwrap');
   if(wrap)wrap.style.cursor=t==='text'?'text':'crosshair';
-  mtgSyncUI();
+  mtgSyncUI();mtgSyncSlider();
 }
 function mtgSyncUI(){
   ['pen','pen_t','pen_th','hl_y','hl_p','erase','erase_l','text'].forEach(t=>{
     const b=document.getElementById('mtg-t-'+t);if(b)b.classList.toggle('on',t===_mtg.tool);
   });
 }
+function mtgSetSize(v){
+  const tool=_mtg.tool;
+  if(tool==='text')return;
+  const cfg=MTG_TOOLS[tool];if(!cfg)return;
+  cfg.lw=v;
+  const val=document.getElementById('mtg-size-val');if(val)val.textContent=v;
+}
+function mtgSyncSlider(){
+  const tool=_mtg.tool;
+  const slider=document.getElementById('mtg-size-slider');
+  const val=document.getElementById('mtg-size-val');
+  if(!slider)return;
+  if(tool==='text'){slider.disabled=true;return;}
+  slider.disabled=false;
+  const cfg=MTG_TOOLS[tool];
+  if(cfg){slider.value=cfg.lw;if(val)val.textContent=cfg.lw;}
+}
 function mtgBindEvents(){
   const canvas=_mtg.canvas;if(!canvas||canvas._mtgBound)return;
   canvas._mtgBound=true;
   const getPos=e=>{const r=canvas.getBoundingClientRect();const sx=canvas.width/(r.width||1);const sy=canvas.height/(r.height||1);return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};};
   canvas.addEventListener('pointerdown',e=>{
-    if(e.pointerType==='touch')return;
+    // 손가락 터치: 텍스트 모드면 입력창, 그 외 스크롤
+    if(e.pointerType==='touch'){
+      if(_mtg.tool==='text'){e.preventDefault();mtgPlaceText(getPos(e));}
+      return;
+    }
     if(_mtg.tool==='text'){mtgPlaceText(getPos(e));return;}
     e.preventDefault();
     try{canvas.setPointerCapture(e.pointerId);}catch(err){}
@@ -2147,19 +2196,28 @@ function mtgBindEvents(){
 }
 function mtgPlaceText(pos){
   const wrap=document.getElementById('mtg-cvwrap');if(!wrap)return;
+  // 기존 텍스트 입력창 있으면 먼저 닫기
+  const existing=wrap.querySelector('.mtg-text-inp');if(existing)existing.remove();
   const inp=document.createElement('input');
-  inp.style.cssText='position:absolute;left:'+pos.x+'px;top:'+Math.max(0,pos.y-14)+'px;background:transparent;border:none;border-bottom:1.5px dashed var(--ac);outline:none;color:var(--tx);font-size:15px;font-family:inherit;min-width:120px;padding:2px 4px;z-index:20;';
-  wrap.appendChild(inp);inp.focus();
+  inp.className='mtg-text-inp';
+  inp.style.cssText='position:absolute;left:'+pos.x+'px;top:'+Math.max(0,pos.y-16)+'px;background:var(--surf);border:1px solid var(--ac);border-radius:3px;outline:none;color:var(--tx);font-size:15px;font-family:inherit;min-width:140px;padding:3px 8px;z-index:30;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+  inp.placeholder='텍스트 입력 후 Enter';
+  wrap.appendChild(inp);
+  // 모바일/PC 모두 포커스
+  setTimeout(()=>{inp.focus();if(inp.focus)inp.focus();},50);
   const commit=()=>{
     const val=inp.value.trim();
     if(val){_mtg.paths.push({tool:'text',x:pos.x,y:pos.y,text:val});mtgRedraw();mtgAutoSave();}
-    inp.remove();
+    if(inp.parentNode)inp.remove();
   };
-  inp.addEventListener('blur',commit,{once:true});
+  inp.addEventListener('blur',()=>setTimeout(commit,100),{once:true});
   inp.addEventListener('keydown',e=>{
+    e.stopPropagation();
     if(e.key==='Enter'){e.preventDefault();inp.removeEventListener('blur',commit);commit();}
-    if(e.key==='Escape'){inp.removeEventListener('blur',commit);inp.remove();}
+    if(e.key==='Escape'){inp.removeEventListener('blur',commit);if(inp.parentNode)inp.remove();}
   });
+  // 모바일: 터치 이벤트도 처리
+  inp.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
 }
 function mtgUndo(){if(!_mtg.paths.length)return;_mtg.paths.pop();mtgRedraw();mtgAutoSave();}
 function mtgClearAll(){if(!confirm('회의록을 모두 지우시겠습니까?'))return;_mtg.paths=[];mtgRedraw();mtgAutoSave();}
@@ -2964,6 +3022,15 @@ function toggleReadonly(p){
 //  퇴근 알림 (평일 오후 6시)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _clkShown='';
+
+function mobToggleTracker(){
+  if(window.innerWidth>768)return;
+  const t=document.getElementById('tracker');
+  const arrow=document.getElementById('tracker-arrow');
+  if(!t)return;
+  const collapsed=t.classList.toggle('mob-collapsed');
+  if(arrow)arrow.textContent=collapsed?'▶':'▼';
+}
 function checkClockout(){
   const cfg=JSON.parse(localStorage.getItem('mb_clockout')||'{"time":"18:00","on":true}');
   if(cfg.on===false)return;
@@ -3006,7 +3073,9 @@ function mobSwitchTab(t){
   mobCloseSidebar();
 }
 function mobToggleSidebar(){
-  const sb=document.querySelector('#pnotes .sidebar, .panel.on .sidebar');
+  // 현재 활성화된 패널의 사이드바 찾기
+  const activePanel=document.querySelector('.panel.on');
+  const sb=activePanel?activePanel.querySelector('.sidebar'):null;
   if(!sb)return;
   const ov=document.getElementById('mob-overlay');
   const isOpen=sb.classList.contains('mob-open');
