@@ -2045,7 +2045,7 @@ function openMeetingDoc(id){
     </div>
     <div style="flex:1;position:relative;overflow:hidden;background:var(--surf);touch-action:pan-y" id="mtg-cvwrap">
       <canvas id="mtg-canvas" style="position:absolute;top:0;left:0;touch-action:none;display:block;cursor:crosshair"></canvas>
-    </div>\`;
+    </div>`;
   _mtg.nodeId=id;
   _mtg.paths=(nd.paths&&Array.isArray(nd.paths))?JSON.parse(JSON.stringify(nd.paths)):[];
   _mtg.tool='pen';
