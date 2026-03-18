@@ -60,6 +60,64 @@ body.th-navy{
 body.th-navy .mbedit{background:#0f2040;color:#dce8ff}
 body.th-navy .scell{background:#0a1628;color:#dce8ff}
 
+/* ── PASTEL THEME ── */
+body.th-pastel{
+  --bg:#fef9ff;--surf:#ffffff;--surf2:#f3eeff;--surf3:#e9dfff;
+  --bdr:#d4c5f0;--bdr2:#e4d8f8;
+  --tx:#2d1b5e;--tx2:#5a4080;--tx3:#9880c0;
+  --ac:#8b5cf6;--ac2:#7c3aed;
+  --gn:#34d399;--yw:#f59e0b;--rd:#f87171;--pu:#a78bfa;
+}
+body.th-pastel .mbedit{background:#fffcff;color:#2d1b5e}
+body.th-pastel .scell{background:#fffcff;color:#2d1b5e}
+body.th-pastel .scell:focus{background:#f0e8ff}
+
+/* ── MINT THEME ── */
+body.th-mint{
+  --bg:#f0fdf8;--surf:#ffffff;--surf2:#e0faf2;--surf3:#c8f5e8;
+  --bdr:#a0e8cc;--bdr2:#c0f0dc;
+  --tx:#0a2e20;--tx2:#1a5c3e;--tx3:#4a9a72;
+  --ac:#059669;--ac2:#047857;
+  --gn:#10b981;--yw:#d97706;--rd:#ef4444;
+}
+body.th-mint .mbedit{background:#f8fffc;color:#0a2e20}
+body.th-mint .scell{background:#f8fffc;color:#0a2e20}
+body.th-mint .scell:focus{background:#e0fff4}
+
+/* ── ROSE THEME ── */
+body.th-rose{
+  --bg:#fff1f3;--surf:#ffffff;--surf2:#ffe4e8;--surf3:#ffd0d6;
+  --bdr:#ffa0b0;--bdr2:#ffc0cc;
+  --tx:#3b0a14;--tx2:#7a1c30;--tx3:#c05070;
+  --ac:#e11d48;--ac2:#be123c;
+  --gn:#16a34a;--yw:#ca8a04;--rd:#dc2626;
+}
+body.th-rose .mbedit{background:#fffcfd;color:#3b0a14}
+body.th-rose .scell{background:#fffcfd;color:#3b0a14}
+body.th-rose .scell:focus{background:#ffe8ee}
+
+/* ── SLATE THEME ── */
+body.th-slate{
+  --bg:#1e2533;--surf:#252d3e;--surf2:#2d3748;--surf3:#374151;
+  --bdr:#4a5568;--bdr2:#374151;
+  --tx:#e2e8f0;--tx2:#a0aec0;--tx3:#718096;
+  --ac:#63b3ed;--ac2:#4299e1;
+  --gn:#48bb78;--yw:#ecc94b;--rd:#fc8181;
+}
+body.th-slate .mbedit{background:#252d3e;color:#e2e8f0}
+body.th-slate .scell{background:#1e2533;color:#e2e8f0}
+
+/* ── FOREST THEME ── */
+body.th-forest{
+  --bg:#0d1f12;--surf:#132819;--surf2:#1a3420;--surf3:#224228;
+  --bdr:#2d5c38;--bdr2:#1e4428;
+  --tx:#d4edda;--tx2:#90c49a;--tx3:#5a8a64;
+  --ac:#4caf6e;--ac2:#3d9a5c;
+  --gn:#66bb6a;--yw:#cddc39;--rd:#ef5350;
+}
+body.th-forest .mbedit{background:#132819;color:#d4edda}
+body.th-forest .scell{background:#0d1f12;color:#d4edda}
+
 /* theme switcher UI */
 .theme-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
 .theme-opt{width:80px;cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s;text-align:center}
@@ -217,6 +275,8 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .schedbody{flex:1;display:flex;overflow:hidden;min-height:0}
 .schedmain{flex:1;overflow:auto;padding:12px;min-width:0}
 .weeksec{border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.today-col{background:rgba(56,139,253,.07)!important;}
+.today-hdr{background:rgba(56,139,253,.18)!important;color:var(--ac)!important;font-weight:700!important;}
 .wkhdr{display:grid;grid-template-columns:72px repeat(5,1fr);background:var(--surf2);border-bottom:1px solid var(--bdr)}
 .wkhdrcell{padding:6px;font-size:11px;font-weight:600;color:var(--tx3);text-align:center;border-right:1px solid var(--bdr)}
 .wkhdrcell:first-child{text-align:left;color:var(--ac);padding-left:8px}
@@ -310,6 +370,32 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 .ctxitem.d{color:var(--rd)}
 .ctxsep{height:1px;background:var(--bdr);margin:4px 0}
 
+
+/* ── 전체 검색 ── */
+.srchbar{position:fixed;top:48px;left:0;right:0;z-index:5000;background:var(--surf);border-bottom:2px solid var(--ac);box-shadow:0 4px 24px rgba(0,0,0,.3);transform:translateY(-100%);transition:transform .18s;padding:8px 16px;display:flex;flex-direction:column;gap:6px}
+.srchbar.open{transform:translateY(0)}
+.srchbar-row{display:flex;align-items:center;gap:8px}
+.srch-input{flex:1;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:7px 12px;color:var(--tx);font-size:13px;font-family:inherit;outline:none}
+.srch-input:focus{border-color:var(--ac)}
+.srch-results{max-height:320px;overflow-y:auto;display:none}
+.srch-results.has-results{display:block}
+.srch-group{font-size:10px;font-weight:700;color:var(--tx3);padding:6px 4px 2px;text-transform:uppercase;letter-spacing:.5px}
+.srch-item{padding:7px 10px;border-radius:4px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px}
+.srch-item:hover{background:var(--surf2)}
+.srch-item-title{font-weight:600;color:var(--tx)}
+.srch-item-preview{color:var(--tx3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px}
+.srch-hl{color:var(--ac);font-weight:700}
+/* ── 퇴근 알림 ── */
+.clk-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-60px);z-index:9999;background:var(--surf);border:2px solid var(--ac);border-radius:12px;padding:20px 32px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.4);opacity:0;transition:all .3s;pointer-events:none}
+.clk-popup.show{opacity:1;transform:translate(-50%,-50%)}
+.clk-popup-ico{font-size:32px;margin-bottom:8px}
+.clk-popup-msg{font-size:15px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.clk-popup-sub{font-size:12px;color:var(--tx3)}
+/* ── 읽기전용 모드 ── */
+.readonly-badge{display:none;font-size:10px;background:var(--yw);color:#000;border-radius:3px;padding:1px 6px;font-weight:700;margin-left:6px}
+.readonly-badge.on{display:inline}
+.mbedit[readonly-mode]{pointer-events:none;opacity:.85}
+
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
@@ -335,13 +421,14 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
   <div class="hdr">
     <div class="hlogo">MB</div>
     <div class="tabs">
-      <button class="tbtn on" id="tb-notes" onclick="switchTab('notes')">📝 클라이언트 노트</button>
-      <button class="tbtn" id="tb-work" onclick="switchTab('work')">🗂 업무 노트</button>
-      <button class="tbtn" id="tb-sched" onclick="switchTab('sched')">📅 월간 스케줄</button>
-      <button class="tbtn" id="tb-report" onclick="switchTab('report')">📁 월간 보고서</button>
+      <button class="tbtn on" id="tb-notes" onclick="switchTab('notes')">📝 클라이언트</button>
+      <button class="tbtn" id="tb-work" onclick="switchTab('work')">🗂 통합문서</button>
+      <button class="tbtn" id="tb-sched" onclick="switchTab('sched')">📅 월간스케줄</button>
+      <button class="tbtn" id="tb-report" onclick="switchTab('report')">📁 월간보고서</button>
       <button class="tbtn" id="tb-settings" onclick="switchTab('settings')">⚙️ 설정</button>
     </div>
     <div class="hsp"></div>
+    <button class="splitbtn" onclick="openSearch()" title="전체 검색 (Ctrl+K)" style="flex-shrink:0;padding:4px 8px;font-size:12px">🔍</button>
     <div class="saveind" id="saveind"></div>
     <button class="hghbtn" id="hpushbtn" onclick="gdPush()" title="Google Drive에 저장">💾 ↑ 저장</button>
     <button class="hghbtn hghpull" id="hpullbtn" onclick="gdPull()" title="Google Drive에서 불러오기">💾 ↓ 불러오기</button>
@@ -350,6 +437,21 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
   </div>
   <!-- GitHub 작업 상태 표시줄 -->
   <div class="ghstatbar" id="ghstatbar"></div>
+  <!-- 전체 검색창 -->
+  <div class="srchbar" id="srchbar">
+    <div class="srchbar-row">
+      <span style="font-size:13px">🔍</span>
+      <input class="srch-input" id="srch-input" placeholder="전체 검색 — 클라이언트 노트, 통합문서, 스케줄..." autocomplete="off">
+      <button class="splitbtn" onclick="closeSearch()">✕ 닫기 (Esc)</button>
+    </div>
+    <div class="srch-results" id="srch-results"></div>
+  </div>
+  <!-- 퇴근 알림 팝업 -->
+  <div class="clk-popup" id="clk-popup">
+    <div class="clk-popup-ico">🕕</div>
+    <div class="clk-popup-msg">퇴근 시간입니다!</div>
+    <div class="clk-popup-sub">Drive 저장 잊지 마세요 💾</div>
+  </div>
 
   <div class="abody">
 
@@ -369,6 +471,8 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
         <div class="epane" id="ep1" onmousedown="S.ap=1">
           <div class="etbar">
             <span class="etitle empty" id="et1">← 문서를 선택하세요</span>
+            <span id="readonly-badge1" class="readonly-badge">읽기전용</span>
+            <button class="splitbtn" id="rdonly-btn1" onclick="toggleReadonly(1)" title="읽기 전용 잠금" style="display:none">🔓</button>
             <button class="splitbtn" id="splitbtn" onclick="toggleSplit()">분할 보기</button>
           </div>
           <div class="eempty" id="ee1"><span style="font-size:28px">📄</span>문서를 선택하세요</div>
@@ -380,6 +484,11 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
         <div class="epane" id="ep2" style="display:none" onmousedown="S.ap=2">
           <div class="etbar">
             <span class="etitle empty" id="et2">← 문서를 선택하세요</span>
+            <span id="readonly-badge2" class="readonly-badge">읽기전용</span>
+            <div style="position:relative;display:inline-block">
+              <button class="splitbtn" id="xpanel-btn" onclick="toggleXPanel(event)" title="다른 탭 문서 가져오기">📂 가져오기 ▾</button>
+              <div id="xpanel-menu" style="display:none;position:absolute;right:0;top:110%;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);min-width:220px;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.3);max-height:360px;overflow-y:auto"></div>
+            </div>
             <button class="splitbtn" onclick="closeSplit()">✕ 닫기</button>
           </div>
           <div class="eempty" id="ee2"><span style="font-size:24px">📄</span>두 번째 패널<br><span style="font-size:11px;color:var(--tx3)">클릭 후 사이드바에서 선택</span></div>
@@ -517,6 +626,46 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
             </div>
             <div class="theme-label" style="background:#162a52;color:#607ab8">🔵 네이비</div>
           </div>
+          <div class="theme-opt" id="th-opt-pastel" onclick="applyTheme('pastel')" title="파스텔">
+            <div class="theme-swatch" style="background:#fef9ff">
+              <div style="height:8px;border-radius:2px;background:#f3eeff;border:1px solid #d4c5f0"></div>
+              <div style="height:5px;border-radius:2px;background:#8b5cf6;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#d4c5f0"></div>
+            </div>
+            <div class="theme-label" style="background:#e9dfff;color:#9880c0">💜 파스텔</div>
+          </div>
+          <div class="theme-opt" id="th-opt-mint" onclick="applyTheme('mint')" title="민트">
+            <div class="theme-swatch" style="background:#f0fdf8">
+              <div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #a0e8cc"></div>
+              <div style="height:5px;border-radius:2px;background:#059669;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#a0e8cc"></div>
+            </div>
+            <div class="theme-label" style="background:#c8f5e8;color:#4a9a72">🌿 민트</div>
+          </div>
+          <div class="theme-opt" id="th-opt-rose" onclick="applyTheme('rose')" title="로즈">
+            <div class="theme-swatch" style="background:#fff1f3">
+              <div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #ffa0b0"></div>
+              <div style="height:5px;border-radius:2px;background:#e11d48;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#ffa0b0"></div>
+            </div>
+            <div class="theme-label" style="background:#ffd0d6;color:#c05070">🌹 로즈</div>
+          </div>
+          <div class="theme-opt" id="th-opt-slate" onclick="applyTheme('slate')" title="슬레이트">
+            <div class="theme-swatch" style="background:#1e2533">
+              <div style="height:8px;border-radius:2px;background:#252d3e"></div>
+              <div style="height:5px;border-radius:2px;background:#63b3ed;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#4a5568"></div>
+            </div>
+            <div class="theme-label" style="background:#2d3748;color:#718096">🩵 슬레이트</div>
+          </div>
+          <div class="theme-opt" id="th-opt-forest" onclick="applyTheme('forest')" title="포레스트">
+            <div class="theme-swatch" style="background:#0d1f12">
+              <div style="height:8px;border-radius:2px;background:#132819"></div>
+              <div style="height:5px;border-radius:2px;background:#4caf6e;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#2d5c38"></div>
+            </div>
+            <div class="theme-label" style="background:#1a3420;color:#5a8a64">🌲 포레스트</div>
+          </div>
         </div>
       </div>
       <div class="ssec">
@@ -535,6 +684,11 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
         <div class="sstitle">💾 Google Drive 동기화 <span style="font-size:11px;color:var(--tx3);font-weight:400">— 집/회사 어디서든 같은 데이터 사용</span></div>
         <div id="gd-status-bar" style="padding:10px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--surf2);margin-bottom:14px;font-size:12px;color:var(--tx3)">
           🔄 상태 확인 중...
+        </div>
+        <div id="gd-quota-bar" style="display:none;margin-bottom:10px;font-size:11px;color:var(--tx3)">
+          <span id="gd-quota-text"></span>
+          <button class="btng btn" style="font-size:10px;padding:2px 7px;margin-left:6px" onclick="gdFetchQuota()">새로고침</button>
+          <div style="height:5px;background:var(--surf3);border-radius:3px;margin-top:4px"><div id="gd-quota-bar-fill" style="height:5px;border-radius:3px;background:var(--ac);width:0%;transition:width .4s"></div></div>
         </div>
         <div style="font-size:12px;color:var(--tx2);margin-bottom:12px;line-height:1.8;background:var(--surf2);padding:12px;border-radius:6px;border-left:3px solid var(--ac)">
           <b>최초 1회 설정:</b><br>
@@ -1528,19 +1682,28 @@ function countMentions(y,m,kw,ch){
 function renderSched(){
   const{sy:y,sm:m}=S;document.getElementById('mlabel').textContent=y+'년 '+m+'월';
   const wks=getWeeks(y,m);const main=document.getElementById('schedmain');main.innerHTML='';
+  const now=new Date();const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
+  const isThisMonth=(y===todayY&&m===todayM);
   wks.forEach((wk,wi)=>{
     const sec=document.createElement('div');sec.className='weeksec';
     const hdr=document.createElement('div');hdr.className='wkhdr';
     const wlbl=document.createElement('div');wlbl.className='wkhdrcell';wlbl.innerHTML=(wi+1)+'주차';hdr.appendChild(wlbl);
-    wk.forEach((d,di)=>{const c=document.createElement('div');c.className='wkhdrcell';c.innerHTML=DY[di]+(d?`<span class="wkdate">${d}일`:'');hdr.appendChild(c);});
+    wk.forEach((d,di)=>{
+      const isToday=isThisMonth&&d===todayD;
+      const c=document.createElement('div');
+      c.className='wkhdrcell'+(isToday?' today-hdr':'');
+      c.innerHTML=DY[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
+      hdr.appendChild(c);
+    });
     sec.appendChild(hdr);
     CH.forEach(ch=>{
       const row=document.createElement('div');row.className='crow';
       const lbl=document.createElement('div');lbl.className='clabel';lbl.textContent=ch;row.appendChild(lbl);
       wk.forEach((d,di)=>{
+        const isToday=isThisMonth&&d===todayD;
         const cell=document.createElement('div');
         if(d){
-          cell.className='scell';cell.contentEditable='true';cell.innerText=getCell(y,m,wi,ch,di);
+          cell.className='scell'+(isToday?' today-col':'');cell.contentEditable='true';cell.innerText=getCell(y,m,wi,ch,di);
           let ct;cell.addEventListener('input',()=>{setCell(y,m,wi,ch,di,cell.innerText);clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
         }else{cell.className='scell off';}
         row.appendChild(cell);
@@ -1820,6 +1983,7 @@ async function gdRefreshUI(){
     if(disBtn) disBtn.style.display='';
     if(pb) pb.disabled=false;
     if(dlb) dlb.disabled=false;
+    setTimeout(gdFetchQuota, 500); // 연결 상태일 때 용량 자동 조회
   } else {
     if(bar){bar.style.borderColor='var(--bdr)'; bar.style.color='var(--tx3)';
       bar.textContent = cid ? '🔗 Client ID 입력됨 — Google 계정 연결 버튼을 눌러주세요' : '⚙️ Client ID를 먼저 입력해주세요';}
@@ -1952,7 +2116,25 @@ function gdDisconnect(){
   if(!confirm('Google Drive 연결을 해제하시겠습니까?')) return;
   _gdToken=null;
   localStorage.removeItem('gd_token'); localStorage.removeItem('gd_token_exp');
+  const qb=document.getElementById('gd-quota-bar');if(qb)qb.style.display='none';
   gdRefreshUI(); toast('Google Drive 연결 해제됨.');
+}
+
+async function gdFetchQuota(){
+  const token=_gdToken||gdLoadToken();if(!token)return;
+  try{
+    const r=await gdApiCall('GET','https://www.googleapis.com/drive/v3/about?fields=storageQuota',token);
+    const q=r.storageQuota;if(!q)return;
+    const used=parseInt(q.usage||0);const total=parseInt(q.limit||0);
+    const usedGB=(used/1e9).toFixed(2);const totalGB=total?(total/1e9).toFixed(1):'무제한';
+    const pct=total?Math.round(used/total*100):0;
+    const color=pct>85?'var(--rd)':pct>65?'var(--yw)':'var(--gn)';
+    const el=document.getElementById('gd-quota-text');
+    if(el)el.innerHTML=`구글 드라이브 용량: <b style="color:${color}">${usedGB}GB / ${totalGB}GB</b>${total?` (${pct}% 사용중)`:''}`;
+    const fill=document.getElementById('gd-quota-bar-fill');
+    if(fill){fill.style.background=color;fill.style.width=Math.min(pct,100)+'%';}
+    const qb=document.getElementById('gd-quota-bar');if(qb)qb.style.display='block';
+  }catch(e){console.warn('Drive 용량 조회 실패:',e.message);}
 }
 
 function gdToggleAuto(checked){
@@ -1969,6 +2151,197 @@ function gdScheduleAuto(){
   clearTimeout(_gdAutoT);
   _gdAutoT=setTimeout(()=>{ if(_gdDirty&&!_gdBusy) gdPush(true); }, 30000);
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  전체 검색 (Ctrl+K)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _srchOpen=false;
+function openSearch(){
+  _srchOpen=true;
+  const bar=document.getElementById('srchbar');bar.classList.add('open');
+  const inp=document.getElementById('srch-input');inp.value='';inp.focus();
+  document.getElementById('srch-results').innerHTML='';
+  document.getElementById('srch-results').className='srch-results';
+}
+function closeSearch(){
+  _srchOpen=false;
+  document.getElementById('srchbar').classList.remove('open');
+  document.getElementById('srch-input').value='';
+}
+function doSearch(q){
+  const res=document.getElementById('srch-results');
+  if(!q.trim()){res.className='srch-results';res.innerHTML='';return;}
+  const kw=q.toLowerCase();
+  const hl=s=>s.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),m=>`<span class="srch-hl">${m}</span>`);
+  let html='';
+  // 클라이언트 노트
+  const notes=S.notes.filter(n=>n.t==='D'&&((n.n||'').toLowerCase().includes(kw)||(n.c||'').toLowerCase().includes(kw)));
+  if(notes.length){
+    html+=`<div class="srch-group">📝 클라이언트 노트 (${notes.length})</div>`;
+    notes.slice(0,8).forEach(n=>{
+      const preview=(n.c||'').replace(/<[^>]*>/g,'').slice(0,80);
+      html+=`<div class="srch-item" onclick="srchGoNote('${n.id}')"><span style="font-size:14px">📄</span><div style="min-width:0"><div class="srch-item-title">${hl(n.n||'')}</div><div class="srch-item-preview">${hl(preview)}</div></div></div>`;
+    });
+  }
+  // 업무 노트
+  const works=S.work.filter(n=>n.t==='D'&&((n.n||'').toLowerCase().includes(kw)||(n.content||'').toLowerCase().includes(kw)));
+  if(works.length){
+    html+=`<div class="srch-group">🗂 통합문서 (${works.length})</div>`;
+    works.slice(0,8).forEach(n=>{
+      const preview=(n.content||'').replace(/<[^>]*>/g,'').slice(0,80);
+      html+=`<div class="srch-item" onclick="srchGoWork('${n.id}')"><span style="font-size:14px">${n.icon||'📄'}</span><div style="min-width:0"><div class="srch-item-title">${hl(n.n||'')}</div><div class="srch-item-preview">${hl(preview)}</div></div></div>`;
+    });
+  }
+  if(!html){html='<div style="padding:14px 10px;font-size:12px;color:var(--tx3)">검색 결과가 없습니다.</div>';}
+  res.innerHTML=html;res.className='srch-results has-results';
+}
+function srchGoNote(id){closeSearch();switchTab('notes');setTimeout(()=>openDoc(id),80);}
+function srchGoWork(id){closeSearch();switchTab('work');setTimeout(()=>selectWork(id),80);}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  창 분할 — 다른 탭 문서 가져오기
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function toggleXPanel(e){
+  e.stopPropagation();
+  const menu=document.getElementById('xpanel-menu');
+  if(menu.style.display!=='none'){menu.style.display='none';return;}
+  // 메뉴 빌드
+  let html='<div style="padding:4px">';
+  // 업무 노트 섹션
+  html+='<div class="srch-group" style="padding:6px 8px">🗂 통합문서</div>';
+  function buildWork(pid,depth){
+    S.work.filter(n=>n.p===pid).sort((a,b)=>a.o-b.o).forEach(n=>{
+      const pad=depth*12;
+      if(n.t==='F'){
+        html+=`<div style="padding:5px 8px 5px ${8+pad}px;font-size:11px;color:var(--tx3);font-weight:600">${n.icon||'📁'} ${n.n}</div>`;
+        buildWork(n.id,depth+1);
+      } else {
+        html+=`<div class="srch-item" style="padding:5px ${8+pad}px" onclick="xPanelLoadWork('${n.id}')">${n.icon||'📄'} ${n.n}</div>`;
+      }
+    });
+  }
+  buildWork(null,0);
+  // 월간 스케줄
+  html+='<div class="srch-group" style="padding:6px 8px;margin-top:4px">📅 월간스케줄</div>';
+  html+=`<div class="srch-item" style="padding:5px 8px" onclick="xPanelLoadSched()">📅 ${S.sy}년 ${S.sm}월 스케줄 (간략 보기)</div>`;
+  html+='</div>';
+  menu.innerHTML=html;menu.style.display='block';
+  // 외부 클릭 닫기
+  setTimeout(()=>document.addEventListener('click',closeXMenu,{once:true}),10);
+}
+function closeXMenu(){const m=document.getElementById('xpanel-menu');if(m)m.style.display='none';}
+function xPanelLoadWork(id){
+  closeXMenu();
+  if(!S.p2on){S.p2on=true;document.getElementById('ep2').style.display='flex';document.getElementById('splitbtn').textContent='단일 보기';}
+  const node=S.work.find(n=>n.id===id&&n.t==='D');if(!node)return;
+  // 오른쪽 패널에 업무노트 내용 표시 (읽기전용 뷰)
+  const t=document.getElementById('et2');const ew=document.getElementById('ew2');const ee=document.getElementById('ee2');
+  t.textContent=(node.icon||'📄')+' '+node.n+' (통합문서)';t.className='etitle';
+  ee.style.display='none';ew.classList.remove('hidden');
+  if(EDITORS.e2)EDITORS.e2.html=node.content||'';
+  // 편집 불가 처리
+  const ed2=document.getElementById('eq2');if(ed2)ed2.contentEditable='false';
+  const badge=document.getElementById('readonly-badge2');if(badge){badge.textContent='통합문서';badge.classList.add('on');}
+  S.p2=null; // 클라이언트 노트 ID 비워서 수정 안 되게
+}
+function xPanelLoadSched(){
+  closeXMenu();
+  if(!S.p2on){S.p2on=true;document.getElementById('ep2').style.display='flex';document.getElementById('splitbtn').textContent='단일 보기';}
+  const t=document.getElementById('et2');const ew=document.getElementById('ew2');const ee=document.getElementById('ee2');
+  t.textContent=`📅 ${S.sy}년 ${S.sm}월 스케줄`;t.className='etitle';
+  ee.style.display='none';ew.classList.remove('hidden');
+  // 스케줄 간략 HTML 렌더링
+  const wks=getWeeks(S.sy,S.sm);
+  const now=new Date();const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
+  const isTM=(S.sy===todayY&&S.sm===todayM);
+  let schedHtml='<div style="padding:8px;font-size:11px;overflow:auto">';
+  wks.forEach((wk,wi)=>{
+    schedHtml+=`<div style="margin-bottom:8px"><div style="font-weight:700;color:var(--tx3);font-size:10px;margin-bottom:4px">${wi+1}주차</div>`;
+    schedHtml+='<table style="width:100%;border-collapse:collapse;font-size:10px">';
+    schedHtml+='<tr><th style="border:1px solid var(--bdr);padding:2px 4px;background:var(--surf2);color:var(--tx3);width:60px">구분</th>';
+    wk.forEach((d,di)=>{
+      const isT=isTM&&d===todayD;
+      schedHtml+=`<th style="border:1px solid var(--bdr);padding:2px 4px;background:${isT?'rgba(56,139,253,.2)':'var(--surf2)'};color:${isT?'var(--ac)':'var(--tx3)'};">${['월','화','수','목','금'][di]}${d?` ${d}일`:''}</th>`;
+    });
+    schedHtml+='</tr>';
+    CH.forEach(ch=>{
+      schedHtml+='<tr>';
+      schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;color:var(--tx3);white-space:nowrap">${ch}</td>`;
+      wk.forEach((d,di)=>{
+        const isT=isTM&&d===todayD;
+        const val=d?getCell(S.sy,S.sm,wi,ch,di):'';
+        schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;min-width:50px;background:${isT?'rgba(56,139,253,.07)':'transparent'}">${val}</td>`;
+      });
+      schedHtml+='</tr>';
+    });
+    schedHtml+='</table></div>';
+  });
+  schedHtml+='</div>';
+  if(EDITORS.e2)EDITORS.e2.html=schedHtml;
+  const ed2=document.getElementById('eq2');if(ed2)ed2.contentEditable='false';
+  const badge=document.getElementById('readonly-badge2');if(badge){badge.textContent='스케줄';badge.classList.add('on');}
+  S.p2=null;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  읽기 전용 잠금 (패널 1)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _rdonly1=false;
+function toggleReadonly(p){
+  if(p===1){
+    _rdonly1=!_rdonly1;
+    const ed=document.getElementById('eq1');if(ed)ed.contentEditable=_rdonly1?'false':'true';
+    const btn=document.getElementById('rdonly-btn1');if(btn)btn.textContent=_rdonly1?'🔒':'🔓';
+    const badge=document.getElementById('readonly-badge1');
+    if(badge){if(_rdonly1){badge.classList.add('on');}else{badge.classList.remove('on');}}
+    toast(_rdonly1?'읽기 전용 잠금':'잠금 해제');
+  }
+}
+// 문서 열릴 때 읽기전용 버튼 표시
+const _origSetPane=setPane;
+function setPane(p,id){
+  _origSetPane(p,id);
+  if(p===1){
+    const btn=document.getElementById('rdonly-btn1');
+    if(btn)btn.style.display=id?'':'none';
+    if(!id&&_rdonly1){_rdonly1=false;const ed=document.getElementById('eq1');if(ed)ed.contentEditable='true';const badge=document.getElementById('readonly-badge1');if(badge)badge.classList.remove('on');}
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  퇴근 알림 (평일 오후 6시)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _clkShown='';
+function checkClockout(){
+  const now=new Date();
+  const dow=now.getDay(); // 0=일,6=토
+  if(dow===0||dow===6)return;
+  const key=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  if(now.getHours()===18&&now.getMinutes()===0&&_clkShown!==key){
+    _clkShown=key;
+    const popup=document.getElementById('clk-popup');if(!popup)return;
+    popup.classList.add('show');
+    setTimeout(()=>popup.classList.remove('show'),6000);
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  startClock 오버라이드 — 퇴근 체크 추가
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const _origStartClock=startClock;
+function startClock(){
+  _origStartClock();
+  setInterval(checkClockout, 30000); // 30초마다 체크
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  키보드 단축키 전역 등록
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();if(_srchOpen)closeSearch();else openSearch();}
+  if(e.key==='Escape'&&_srchOpen){closeSearch();}
+});
+document.getElementById('srch-input')?.addEventListener('input',e=>doSearch(e.target.value));
 
 // 기존 GitHub 함수들 — stub (호환성 유지)
 function ghPush(){gdPush();}
@@ -2003,7 +2376,7 @@ async function updateStorageInfo(){
   }catch(e){el.innerHTML='<span style="font-size:11px;color:var(--tx3)">로딩 중...</span>';}
 }
 
-const THEMES=['dark','light','gray','warm','navy'];
+const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest'];
 function applyTheme(t){
   if(!THEMES.includes(t))t='dark';
   document.body.className=t==='dark'?'':'th-'+t;
