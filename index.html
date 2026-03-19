@@ -630,6 +630,13 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
                 <div class="export-item" onclick="exportDoc('png')">🖼 PNG</div>
               </div>
             </div>
+            <div class="export-wrap" id="export-wrap-mtg" style="display:none">
+              <button class="splitbtn" onclick="toggleExportMenu('export-menu-mtg')">🖼 내보내기</button>
+              <div class="export-menu" id="export-menu-mtg">
+                <div class="export-item" onclick="mtgExportImg('jpg')">📷 JPG</div>
+                <div class="export-item" onclick="mtgExportImg('png')">🖼 PNG</div>
+              </div>
+            </div>
             <button class="splitbtn" id="splitbtn" onclick="toggleSplit()">분할 보기</button>
           </div>
           <div class="eempty" id="ee1"><span style="font-size:28px">📄</span>문서를 선택하세요</div>
@@ -2205,6 +2212,7 @@ function openMeetingDoc(id){
   mtgSyncUI();mtgUpdateColorDot();
   const rdBtn=document.getElementById('rdonly-btn1');if(rdBtn)rdBtn.style.display='none';
   const expw=document.getElementById('export-wrap');if(expw)expw.style.display='none';
+  const expwm=document.getElementById('export-wrap-mtg');if(expwm)expwm.style.display='';
   renderNoteTree();
 }
 
@@ -2416,6 +2424,33 @@ function mtgPlaceText(pos){
 function mtgUndo(){if(!_mtg.paths.length)return;_mtg.paths.pop();mtgRedraw();mtgSave();}
 function mtgClearAll(){if(!confirm('회의록을 모두 지우시겠습니까?'))return;_mtg.paths=[];mtgRedraw();mtgSave();}
 function mtgSave(){const nd=S.notes.find(n=>n.id===_mtg.nodeId);if(!nd)return;nd.paths=JSON.parse(JSON.stringify(_mtg.paths));dsave();}
+function mtgExportImg(fmt){
+  document.querySelectorAll('.export-menu').forEach(m=>m.classList.remove('open'));
+  const canvas=_mtg.canvas;
+  if(!canvas){toast('회의록 캔버스를 찾을 수 없습니다.',true);return;}
+  const nd=S.notes.find(n=>n.id===_mtg.nodeId);
+  const title=(nd?nd.n:'회의록').replace(/[/\\:*?"<>|]/g,'_');
+  // 임시 캔버스에 흰 배경 + 원본 합성
+  const tmp=document.createElement('canvas');
+  tmp.width=canvas.width;tmp.height=canvas.height;
+  const ctx=tmp.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,tmp.width,tmp.height);
+  ctx.drawImage(canvas,0,0);
+  const mimeType=fmt==='jpg'?'image/jpeg':'image/png';
+  const quality=fmt==='jpg'?0.92:1.0;
+  const ext=fmt==='jpg'?'.jpg':'.png';
+  tmp.toBlob(blob=>{
+    if(!blob){toast('이미지 변환에 실패했습니다.',true);return;}
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=title+ext;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast(ext.slice(1).toUpperCase()+' 저장 완료!');
+  },mimeType,quality);
+}
+
 
 // ── 모바일 플로팅 툴바 ──
 function mtgCreateFloat(){
@@ -2539,6 +2574,7 @@ function setPane(p,id){
   if(p===1){
     const btn=document.getElementById('rdonly-btn1');if(btn)btn.style.display='';
     const expw=document.getElementById('export-wrap');if(expw)expw.style.display='';
+    const expwm=document.getElementById('export-wrap-mtg');if(expwm)expwm.style.display='none';
   }
   renderNoteTree();
 }
