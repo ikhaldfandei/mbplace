@@ -2504,7 +2504,7 @@ function initResize(){
   h.addEventListener('touchstart',e=>{e.preventDefault();on=true;sx=e.touches[0].clientY;sw=tk.offsetHeight||200;h.classList.add('ra');},{passive:false});
   h.addEventListener('touchmove',e=>{
     if(!on)return;e.preventDefault();
-    const nh=Math.max(60,Math.min(500,sw+(e.touches[0].clientY-sx)));
+    const nh=Math.max(60,Math.min(500,sw-(e.touches[0].clientY-sx)));
     tk.style.maxHeight=nh+'px';
   },{passive:false});
   h.addEventListener('touchend',()=>{if(!on)return;on=false;h.classList.remove('ra');});
