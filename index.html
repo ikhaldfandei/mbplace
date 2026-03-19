@@ -436,8 +436,8 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
   /* 앱 높이 - 하단 탭바 공간 */
   .abody{padding-bottom:0}
   .panel.on{height:calc(100% - 60px)!important;max-height:calc(100% - 60px)!important}
-  .equill-wrap{overflow-y:auto!important}
-  .mbedit{padding-bottom:60px!important}
+  .equill-wrap{overflow-y:auto!important;padding-bottom:72px!important}
+  .mbedit{padding-bottom:72px!important;min-height:100%}
   /* 사이드바 → 드로어 */
   .sidebar{position:fixed!important;left:0;top:48px;bottom:60px;z-index:500;transform:translateX(-100%);transition:transform .22s;box-shadow:4px 0 20px rgba(0,0,0,.4);width:260px!important;min-width:0!important}
   .sidebar.mob-open{transform:translateX(0)}
@@ -949,18 +949,53 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
         </div>
       </div>
 
-      <!-- 퇴근 알림 시간 설정 -->
+      <!-- 알림 설정 -->
       <div class="ssec">
-        <div class="sstitle">🕕 퇴근 알림 설정</div>
-        <div class="srow">
-          <span class="slabel">알림 시각</span>
-          <input type="time" class="sinput" id="clockout-time" value="18:00" style="max-width:120px" onchange="saveClockoutTime()">
-          <span style="font-size:11px;color:var(--tx3);margin-left:6px">평일에만 알림</span>
+        <div class="sstitle">🔔 알림 설정</div>
+
+        <!-- OS 알림 권한 -->
+        <div style="background:var(--surf2);border-radius:8px;padding:12px 14px;margin-bottom:14px;border:1px solid var(--bdr)">
+          <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:6px">📱 OS 알림 (브라우저 알림)</div>
+          <div style="font-size:11px;color:var(--tx3);line-height:1.7;margin-bottom:8px">
+            탭이 백그라운드 상태일 때도 화면 우측 하단에 알림이 표시됩니다.<br>
+            <b>① 브라우저 허용:</b> 아래 버튼 클릭 → 팝업에서 "허용" 선택<br>
+            <b>② Windows 허용:</b> <a href="#" onclick="window.open('ms-settings:notifications');return false;" style="color:var(--ac)">Windows 알림 설정 열기</a> → Chrome 알림 켜기<br>
+            <span style="color:var(--tx3)">Chrome 주소창에서: 🔒 자물쇠 클릭 → 알림 → 허용</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn" onclick="requestNotifPerm()" style="font-size:11px;padding:4px 12px">🔔 알림 권한 요청</button>
+            <button class="btn btng" onclick="testAlarm()" style="font-size:11px;padding:4px 12px">▶ 테스트 알림 보내기</button>
+            <span id="alarm-notif-status" style="font-size:11px;color:var(--tx3)">확인 중...</span>
+          </div>
         </div>
-        <div class="srow">
-          <span class="slabel">알림 켜기</span>
-          <input type="checkbox" id="clockout-on" onchange="saveClockoutTime()" style="cursor:pointer">
-          <label for="clockout-on" style="font-size:12px;color:var(--tx2);cursor:pointer;margin-left:6px">퇴근 알림 사용</label>
+
+        <!-- 퇴근 알림 -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:6px">🕕 퇴근 알림 <span style="font-size:10px;color:var(--tx3);font-weight:400">(평일만)</span></div>
+          <div class="srow">
+            <span class="slabel">알림 시각</span>
+            <input type="time" class="sinput" id="clockout-time" value="18:00" style="max-width:120px" onchange="saveAlarmSettings()">
+            <input type="checkbox" id="clockout-on" onchange="saveAlarmSettings()" style="cursor:pointer;margin-left:10px">
+            <label for="clockout-on" style="font-size:12px;color:var(--tx2);cursor:pointer;margin-left:4px">사용</label>
+          </div>
+        </div>
+
+        <!-- 체크리스트 알림 -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:6px">📋 주간 체크리스트 알림 <span style="font-size:10px;color:var(--tx3);font-weight:400">(매주 금요일 17:50 고정)</span></div>
+          <div class="srow">
+            <input type="checkbox" id="alarm-checklist-on" onchange="saveAlarmSettings()" style="cursor:pointer">
+            <label for="alarm-checklist-on" style="font-size:12px;color:var(--tx2);cursor:pointer;margin-left:6px">매주 금요일 오후 5시 50분에 체크리스트 작성 알림</label>
+          </div>
+        </div>
+
+        <!-- 월간보고서 마감 알림 -->
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:6px">📊 월간보고서 마감 알림 <span style="font-size:10px;color:var(--tx3);font-weight:400">(마감일 오전 9:10)</span></div>
+          <div class="srow">
+            <input type="checkbox" id="alarm-deadline-on" onchange="saveAlarmSettings()" style="cursor:pointer">
+            <label for="alarm-deadline-on" style="font-size:12px;color:var(--tx2);cursor:pointer;margin-left:6px">마감일 오전 9:10에 클라이언트별 알림 (클라이언트 설정에서 마감일 지정)</label>
+          </div>
         </div>
       </div>
 
@@ -1277,6 +1312,8 @@ async function enterApp(){
   gdLoadToken(); // 토큰 메모리에 로드
   initMobile();
   gdHandleCallback(); // OAuth 콜백 처리 (Drive 연결 후 리디렉션 시)
+  // 알림 권한 상태 UI 반영
+  setTimeout(()=>{if(typeof renderAlarmSettings==='function')renderAlarmSettings();},500);
   const yr=document.getElementById('fmyear');yr.innerHTML='';
   for(let y=2024;y<=2029;y++){const o=document.createElement('option');o.value=y;o.textContent=y+'년';if(y===S.sy)o.selected=true;yr.appendChild(o);}
   // Google Drive 연결 상태 복원 (설정 탭 열 때 gdRefreshUI 호출됨)
@@ -1302,8 +1339,154 @@ function isDesc(anc,id){// is 'anc' a descendant of 'id'? (prevent circular DnD)
 function startClock(){
   const tick=()=>{const n=new Date();document.getElementById('htime').textContent=n.toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'})+' '+n.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});};
   tick();setInterval(tick,5000);
-  setInterval(checkClockout,10000); // 퇴근 알림 체크 (10초마다)
+  setInterval(checkClockout,5000); // 퇴근 알림 체크 (10초마다)
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  알림 시스템
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _clkShown='';
+
+// OS 알림 권한 요청
+function requestNotifPerm(){
+  if(!('Notification' in window)){
+    toast('이 브라우저는 알림을 지원하지 않습니다.',true);return;
+  }
+  if(Notification.permission==='granted'){
+    toast('이미 알림 권한이 허용되어 있습니다.');return;
+  }
+  Notification.requestPermission().then(p=>{
+    if(p==='granted') toast('✅ 알림 권한이 허용되었습니다! 테스트 알림을 보내볼게요.');
+    else toast('알림 권한이 거부되었습니다. 브라우저/시스템 설정에서 허용해주세요.',true);
+    renderAlarmSettings();
+  });
+}
+
+// OS 알림 + 앱 내 팝업 동시 발송
+function sendNotification(title, body, icon){
+  // 앱 내 팝업
+  const popup=document.getElementById('clk-popup');
+  if(popup){
+    const msg=popup.querySelector('.clk-popup-msg');
+    const sub=popup.querySelector('.clk-popup-sub');
+    if(msg)msg.textContent=title;
+    if(sub)sub.textContent=body||'';
+    popup.classList.add('show');
+    setTimeout(()=>popup.classList.remove('show'),7000);
+  }
+  // OS 알림 (탭 백그라운드여도 작동)
+  if('Notification' in window && Notification.permission==='granted'){
+    try{
+      new Notification(title,{body:body||'',icon:icon||'',tag:'mbhub-alarm'});
+    }catch(e){}
+  }
+}
+
+// 알림 테스트
+function testAlarm(){
+  sendNotification('🔔 마케팅 허브 알림 테스트','알림이 정상적으로 작동합니다!');
+}
+
+// 알림 설정 저장
+function saveAlarmSettings(){
+  const cfg={
+    clockout:{
+      time: document.getElementById('clockout-time')?.value||'18:00',
+      on:   document.getElementById('clockout-on')?.checked??true,
+    },
+    checklist:{
+      on: document.getElementById('alarm-checklist-on')?.checked??false,
+    },
+    deadline:{
+      on: document.getElementById('alarm-deadline-on')?.checked??false,
+      hour:9, minute:10,
+    },
+  };
+  localStorage.setItem('mb_alarm_cfg', JSON.stringify(cfg));
+  // 하위 호환: 기존 mb_clockout도 유지
+  localStorage.setItem('mb_clockout', JSON.stringify({time:cfg.clockout.time, on:cfg.clockout.on}));
+  toast('알림 설정이 저장되었습니다.');
+}
+// 구 API 호환
+function saveClockoutTime(){saveAlarmSettings();}
+
+// 알림 설정 불러오기 + UI 반영
+function loadClockoutSettings(){
+  const dflt={clockout:{time:'18:00',on:true},checklist:{on:false},deadline:{on:false,hour:9,minute:10}};
+  let cfg;
+  try{ cfg=JSON.parse(localStorage.getItem('mb_alarm_cfg')||'null')||dflt; }
+  catch(e){ cfg=dflt; }
+  const el=document.getElementById('clockout-time');
+  const ck=document.getElementById('clockout-on');
+  if(el)el.value=cfg.clockout?.time||'18:00';
+  if(ck)ck.checked=cfg.clockout?.on!==false;
+  const clOn=document.getElementById('alarm-checklist-on');
+  if(clOn)clOn.checked=cfg.checklist?.on===true;
+  const dlOn=document.getElementById('alarm-deadline-on');
+  if(dlOn)dlOn.checked=cfg.deadline?.on===true;
+  renderAlarmSettings();
+}
+
+// 권한 상태 UI 업데이트
+function renderAlarmSettings(){
+  const statusEl=document.getElementById('alarm-notif-status');
+  if(!statusEl)return;
+  const perm='Notification' in window ? Notification.permission : 'unsupported';
+  const map={granted:'✅ 허용됨',denied:'❌ 차단됨',default:'⚠️ 미설정',unsupported:'⚠️ 미지원'};
+  statusEl.textContent='OS 알림 권한: '+(map[perm]||'확인 중...');
+  statusEl.style.color=perm==='granted'?'var(--gn)':'var(--rd)';
+}
+
+// 월~금 체크
+function _isWeekday(d){const w=d.getDay();return w>=1&&w<=5;}
+// 금요일 체크
+function _isFriday(d){return d.getDay()===5;}
+
+// 알림 체크 (5초마다 실행)
+function checkClockout(){
+  const dflt={clockout:{time:'18:00',on:true},checklist:{on:false},deadline:{on:false}};
+  let cfg;
+  try{ cfg=JSON.parse(localStorage.getItem('mb_alarm_cfg')||'null')||dflt; }
+  catch(e){ cfg=dflt; }
+
+  const now=new Date();
+  const H=now.getHours(), M=now.getMinutes();
+  const dateKey=now.toDateString();
+
+  // ── 퇴근 알림 ──
+  if(cfg.clockout?.on!==false && _isWeekday(now)){
+    const [ch,cm]=(cfg.clockout?.time||'18:00').split(':').map(Number);
+    const key='co_'+dateKey+'_'+ch+'_'+cm;
+    if(H===ch && M===cm && _clkShown!==key){
+      _clkShown=key;
+      sendNotification('🕕 퇴근 시간입니다!','Drive 저장 잊지 마세요 💾');
+    }
+  }
+
+  // ── 체크리스트 알림 (매주 금요일 17:50) ──
+  if(cfg.checklist?.on && _isFriday(now)){
+    const key='cl_'+dateKey;
+    if(H===17 && M===50 && _clkShown!==key){
+      _clkShown=key;
+      sendNotification('📋 주간 체크리스트 작성 시간!','오늘 금요일 체크리스트를 작성해주세요.');
+    }
+  }
+
+  // ── 월간보고서 마감 알림 (오전 9:10) ──
+  if(cfg.deadline?.on && H===9 && M===10){
+    const today=now.getDate();
+    const dlKey='dl_'+dateKey;
+    if(_clkShown!==dlKey){
+      const dueClients=(S.clients||[]).filter(cl=>Number(cl.deadline)===today&&cl.deadline);
+      if(dueClients.length>0){
+        _clkShown=dlKey;
+        const names=dueClients.map(cl=>cl.name).join(', ');
+        sendNotification('📊 월간보고서 마감일 알림',names+' 월간보고서 제출 마감일입니다.');
+      }
+    }
+  }
+}
+
 let _tt;
 function toast(msg, isErr=false){
   const el=document.getElementById('toast');
@@ -2934,7 +3117,7 @@ function renderClients(){
   const c=document.getElementById('cleditor');c.innerHTML='';
   S.clients.forEach((cl,i)=>{
     const card=document.createElement('div');card.className='cccard';
-    card.innerHTML=`<div class="ccrow"><input type="color" value="${cl.color}" onchange="S.clients[${i}].color=this.value;save();updateTracker()"><input type="text" class="ccinput" value="${cl.name}" placeholder="클라이언트명" style="flex:1;max-width:160px" oninput="S.clients[${i}].name=this.value;save()"><span style="font-size:11px;color:var(--tx3)">키워드</span><input type="text" class="ccinput" value="${cl.kw}" placeholder="ex)동탄" style="max-width:70px" oninput="S.clients[${i}].kw=this.value;save();updateTracker()"><button class="btn btnr" style="padding:4px 8px;font-size:11px" onclick="removeClient(${i})">삭제</button></div><div style="font-size:10px;color:var(--tx3);margin-bottom:5px;font-weight:700">월간 할당량</div><div class="qgrid">${CH.map(ch=>`<div class="qitem"><label>${ch}</label><input type="number" class="qinput" min="0" value="${cl.q?.[ch]||0}" onchange="S.clients[${i}].q['${ch}']=parseInt(this.value)||0;save();updateTracker()"></div>`).join('')}</div>`;
+    card.innerHTML=`<div class="ccrow"><input type="color" value="${cl.color}" onchange="S.clients[${i}].color=this.value;save();updateTracker()"><input type="text" class="ccinput" value="${cl.name}" placeholder="클라이언트명" style="flex:1;max-width:160px" oninput="S.clients[${i}].name=this.value;save()"><span style="font-size:11px;color:var(--tx3)">키워드</span><input type="text" class="ccinput" value="${cl.kw}" placeholder="ex)동탄" style="max-width:70px" oninput="S.clients[${i}].kw=this.value;save();updateTracker()"><span style="font-size:11px;color:var(--tx3)">보고서마감</span><input type="number" class="ccinput" value="${cl.deadline||''}" placeholder="매월 N일" min="1" max="31" style="max-width:64px" title="월간보고서 마감일 (매월 N일)" oninput="S.clients[${i}].deadline=this.value?parseInt(this.value):0;save()"><button class="btn btnr" style="padding:4px 8px;font-size:11px" onclick="removeClient(${i})">삭제</button></div><div style="font-size:10px;color:var(--tx3);margin-bottom:5px;font-weight:700">월간 할당량</div><div class="qgrid">${CH.map(ch=>`<div class="qitem"><label>${ch}</label><input type="number" class="qinput" min="0" value="${cl.q?.[ch]||0}" onchange="S.clients[${i}].q['${ch}']=parseInt(this.value)||0;save();updateTracker()"></div>`).join('')}</div>`;
     c.appendChild(card);
   });
 }
@@ -3351,7 +3534,6 @@ function toggleReadonly(p){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  퇴근 알림 (평일 오후 6시)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-let _clkShown='';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  내보내기 (Word / PDF / PNG)
@@ -3413,20 +3595,7 @@ function exportDoc(type){
   }
 }
 
-function checkClockout(){
-  const cfg=JSON.parse(localStorage.getItem('mb_clockout')||'{"time":"18:00","on":true}');
-  if(cfg.on===false)return;
-  const now=new Date();const dow=now.getDay();
-  if(dow===0||dow===6)return;
-  const [h,m]=(cfg.time||'18:00').split(':').map(Number);
-  const key=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${h}-${m}`;
-  if(now.getHours()===h&&now.getMinutes()===m&&_clkShown!==key){
-    _clkShown=key;
-    const popup=document.getElementById('clk-popup');if(!popup)return;
-    popup.classList.add('show');
-    setTimeout(()=>popup.classList.remove('show'),6000);
-  }
-}
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  키보드 단축키 전역 등록
@@ -3551,17 +3720,8 @@ function loadEditorDefaults(){
   if(a&&cfg.autosave)a.value=String(cfg.autosave);
 }
 
-function saveClockoutTime(){
-  const t=document.getElementById('clockout-time')?.value||'18:00';
-  const on=document.getElementById('clockout-on')?.checked??true;
-  localStorage.setItem('mb_clockout',JSON.stringify({time:t,on}));
-  toast(on?`퇴근 알림 ${t}으로 설정됨`:'퇴근 알림 꺼짐');
-}
-function loadClockoutSettings(){
-  const cfg=JSON.parse(localStorage.getItem('mb_clockout')||'{"time":"18:00","on":true}');
-  const el=document.getElementById('clockout-time');const ck=document.getElementById('clockout-on');
-  if(el)el.value=cfg.time||'18:00';if(ck)ck.checked=cfg.on!==false;
-}
+
+
 // checkClockout에서 설정 반영 — 원본 함수에 직접 통합됨 (아래 checkClockout 참조)
 
 async function updateStorageInfo(){
