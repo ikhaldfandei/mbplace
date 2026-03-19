@@ -3348,7 +3348,7 @@ function gdLog(msg, ok){
 function gdBar(msg,type,ms=3500){ ghBar(msg,type,ms); }
 
 async function gdRefreshUI(){
-  // 상태 확인만 — 토큰 재발급 시도 안 함 (팝업 방지)
+  const token_check=await gdGetValidToken();
   const bar=document.getElementById('gd-status-bar');
   const pb=document.getElementById('gd-push-btn');
   const dlb=document.getElementById('gd-pull-btn');
@@ -3357,18 +3357,19 @@ async function gdRefreshUI(){
   const autoChk=document.getElementById('gd-auto-chk');
   const tok = gdLoadToken();
   const cid = gdClientId();
+  // restore client id input
   const cidEl=document.getElementById('gd_client_id');
   if(cidEl&&!cidEl.value&&cid) cidEl.value=cid;
   if(autoChk) autoChk.checked = localStorage.getItem('gd_auto')==='1';
   if(tok){
     if(bar){bar.style.borderColor='var(--gn)'; bar.style.color='var(--gn)';
       const lastSave=localStorage.getItem('gd_last_save')||'';
-      bar.innerHTML='✅ Google Drive 연결됨'+(lastSave?'<br><span style="font-size:10px;color:var(--tx3)">마지막 저장: '+new Date(lastSave).toLocaleString('ko-KR')+'</span>':'');}
+      bar.innerHTML=`✅ Google Drive 연결됨${lastSave?'<br><span style="font-size:10px;color:var(--tx3)">마지막 저장: '+new Date(lastSave).toLocaleString('ko-KR')+'</span>':''}`;}
     if(conBtn) conBtn.style.display='none';
     if(disBtn) disBtn.style.display='';
     if(pb) pb.disabled=false;
     if(dlb) dlb.disabled=false;
-    setTimeout(gdFetchQuota, 500);
+    setTimeout(gdFetchQuota, 500); // 연결 상태일 때 용량 자동 조회
   } else {
     if(bar){bar.style.borderColor='var(--bdr)'; bar.style.color='var(--tx3)';
       bar.textContent = cid ? '🔗 Client ID 입력됨 — Google 계정 연결 버튼을 눌러주세요' : '⚙️ Client ID를 먼저 입력해주세요';}
