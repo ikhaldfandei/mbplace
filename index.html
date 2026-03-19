@@ -707,8 +707,7 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
           <div class="mlabel" id="mlabel">2026년 3월</div>
           <button class="mnavbtn" onclick="chMonth(1)">▶</button>
         </div>
-        <div id="sched-deadlines" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;padding:0 12px;overflow:hidden"></div>
-        <button class="icobtn" onclick="addDeadlineEntry()" title="보고서 마감일 추가" style="margin-right:8px;flex-shrink:0">📊+</button>
+        <div id="sched-deadlines" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1;padding:0 10px;overflow:hidden"></div>
       </div>
       <div class="schedbody">
         <div class="schedmain" id="schedmain"></div>
@@ -2933,15 +2932,8 @@ function renderSched(){
       const isToday=isThisMonth&&d===todayD;
       const cv=document.createElement('div');
       cv.className='wkhdrcell'+(isToday?' today-hdr':'');
-      // 날짜 + 마감일 배지
-      let hdHTML=DY[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
-      if(d){
-        const dueDls=dls.filter(dl=>dl.kw&&dl.day===d);
-        dueDls.forEach(dl=>{
-          hdHTML+=`<div style="font-size:8.5px;color:#ef4444;font-weight:600;line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${dl.kw}<br>보고서마감</div>`;
-        });
-      }
-      cv.innerHTML=hdHTML;hdr.appendChild(cv);
+      cv.innerHTML=DY[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
+      hdr.appendChild(cv);
     });
     sec.appendChild(hdr);
     CH.forEach(ch=>{
@@ -2953,7 +2945,8 @@ function renderSched(){
         if(d){
           // 월간보고서 행: 마감일 배지 표시
           if(ch==='월간보고서'&&dls.length>0){
-            const dueDls=dls.filter(dl=>dl.kw&&dl.day===d);
+            // 객체 구조: {키워드: 날짜} → 해당 날짜인 키워드 목록
+          const dueDls=Object.entries(dls).filter(([kw,day])=>day===d).map(([kw])=>kw);
             cell.className='scell'+(isToday?' today-col':'');
             cell.contentEditable='true';
             if(dueDls.length>0){
@@ -2961,7 +2954,7 @@ function renderSched(){
               const badge=document.createElement('div');
               badge.contentEditable='false';
               badge.style.cssText='font-size:9px;color:#ef4444;background:rgba(239,68,68,0.1);border-radius:3px;padding:1px 4px;margin-bottom:2px;pointer-events:none;user-select:none;display:inline-block';
-              badge.textContent=dueDls.map(dl=>dl.kw+' 마감').join(' · ');
+              badge.textContent=dueDls.join(' · ')+' 마감';
               cell.appendChild(badge);
               cell.appendChild(document.createElement('br'));
             }
@@ -2996,65 +2989,85 @@ function renderSched(){
   updateTracker();
 }
 
+
+
+
+
+
+
+
+
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  월간보고서 마감일 (스케줄 탭 전용)
+//  - 클라이언트 키워드 기준으로 자동 생성
+//  - 달마다 독립 저장 (객체 구조)
+//  - 클라이언트 삭제돼도 해당 달 데이터 유지
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function getDlKey(){ return mkey(S.sy, S.sm); }
 
+// 이번 달 마감일 객체 반환: {키워드: 날짜(숫자)} 형태
 function getDeadlines(){
   const k = getDlKey();
   if(!S.scheds[k]) S.scheds[k]={cells:{}};
-  if(!S.scheds[k].deadlines) S.scheds[k].deadlines=[];
+  // 기존 배열 구조 → 객체 마이그레이션
+  if(Array.isArray(S.scheds[k].deadlines)){
+    const old = S.scheds[k].deadlines;
+    const obj = {};
+    old.forEach(item=>{ if(item.kw) obj[item.kw]=item.day||0; });
+    S.scheds[k].deadlines = obj;
+  }
+  if(!S.scheds[k].deadlines || typeof S.scheds[k].deadlines!=='object')
+    S.scheds[k].deadlines={};
   return S.scheds[k].deadlines;
 }
 
+// 마감일 바 렌더링: S.clients 키워드 기준 자동 칸 생성
 function renderDeadlineBar(){
   const bar = document.getElementById('sched-deadlines');
   if(!bar) return;
   const dls = getDeadlines();
   bar.innerHTML = '';
-  dls.forEach((dl, idx)=>{
+  if(!S.clients || S.clients.length===0){
+    bar.innerHTML='<span style="font-size:10px;color:var(--tx3)">클라이언트 없음</span>';
+    return;
+  }
+  S.clients.forEach(cl=>{
+    const kw = cl.kw||cl.name||'';
+    if(!kw) return;
     const chip = document.createElement('div');
-    chip.style.cssText = 'display:flex;align-items:center;gap:3px;background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.3);border-radius:14px;padding:2px 8px 2px 6px;font-size:11px;color:var(--tx2);white-space:nowrap;flex-shrink:0';
-    // 키워드 입력
-    const kwInp = document.createElement('input');
-    kwInp.style.cssText = 'border:none;background:transparent;font-size:11px;color:var(--tx2);width:56px;outline:none;font-family:inherit';
-    kwInp.placeholder = '업체명';
-    kwInp.value = dl.kw||'';
-    kwInp.title = '키워드 (클라이언트 키워드와 일치시키면 알림 연동)';
-    kwInp.oninput = ()=>{ dls[idx].kw=kwInp.value.trim(); dsave(); renderSched(); };
-    // 구분자
-    const sep = document.createElement('span');
-    sep.style.cssText = 'color:rgba(220,38,38,0.5);font-size:10px';
-    sep.textContent = '·';
-    // 일자 입력
-    const dayInp = document.createElement('input');
-    dayInp.type = 'number'; dayInp.min='1'; dayInp.max='31';
-    dayInp.style.cssText = 'border:none;background:transparent;font-size:11px;color:#dc2626;width:26px;outline:none;font-family:inherit;font-weight:700;text-align:center';
-    dayInp.placeholder = '일';
-    dayInp.value = dl.day||'';
-    dayInp.title = '마감일 (매월 N일)';
-    dayInp.oninput = ()=>{ dls[idx].day=parseInt(dayInp.value)||0; dsave(); renderSched(); };
-    // 일 텍스트
+    chip.style.cssText='display:flex;align-items:center;gap:3px;flex-shrink:0';
+    // 키워드 라벨
+    const lbl = document.createElement('span');
+    lbl.style.cssText='font-size:10px;color:var(--tx2);white-space:nowrap';
+    lbl.textContent=kw;
+    // 날짜 입력
+    const inp = document.createElement('input');
+    inp.type='number'; inp.min='1'; inp.max='31';
+    inp.placeholder='일';
+    inp.value = dls[kw]||'';
+    inp.style.cssText='width:30px;border:1px solid var(--bdr);border-radius:4px;background:var(--surf);color:var(--tx);font-size:10px;padding:1px 3px;text-align:center;font-family:inherit;outline:none';
+    // 배경: 입력 있으면 강조
+    inp.style.borderColor = dls[kw] ? 'rgba(220,38,38,0.5)' : 'var(--bdr)';
+    inp.oninput=()=>{
+      const v=parseInt(inp.value)||0;
+      dls[kw]=v;
+      inp.style.borderColor = v ? 'rgba(220,38,38,0.5)' : 'var(--bdr)';
+      dsave(); renderSched();
+    };
     const dayLbl = document.createElement('span');
-    dayLbl.style.cssText = 'font-size:10px;color:var(--tx3)';
-    dayLbl.textContent = '일';
-    // 삭제 버튼
-    const del = document.createElement('button');
-    del.style.cssText = 'background:none;border:none;cursor:pointer;color:rgba(220,38,38,0.5);font-size:11px;padding:0 0 0 2px;line-height:1;font-family:inherit';
-    del.textContent = '✕';
-    del.title = '삭제';
-    del.onclick = ()=>{ dls.splice(idx,1); dsave(); renderDeadlineBar(); renderSched(); };
-    chip.append(kwInp, sep, dayInp, dayLbl, del);
+    dayLbl.style.cssText='font-size:10px;color:var(--tx3)';
+    dayLbl.textContent='일';
+    chip.append(lbl, inp, dayLbl);
     bar.appendChild(chip);
+    // 구분점
+    const dot = document.createElement('span');
+    dot.style.cssText='font-size:10px;color:var(--bdr);flex-shrink:0;margin:0 2px';
+    dot.textContent='·';
+    bar.appendChild(dot);
   });
-}
-
-function addDeadlineEntry(){
-  const dls = getDeadlines();
-  dls.push({kw:'', day:0});
-  dsave();
-  renderDeadlineBar();
+  // 마지막 구분점 제거
+  if(bar.lastChild && bar.lastChild.textContent==='·') bar.removeChild(bar.lastChild);
 }
 
 function chMonth(d){S.sm+=d;if(S.sm>12){S.sm=1;S.sy++;}if(S.sm<1){S.sm=12;S.sy--;}renderSched();}
