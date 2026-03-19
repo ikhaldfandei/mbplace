@@ -537,6 +537,10 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
   }
   .mtg-float-btn.on{background:rgba(255,255,255,0.32);border-color:#fff}
 }
+/* 숫자 입력 스핀버튼 제거 */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
@@ -2944,7 +2948,7 @@ function renderSched(){
         const cell=document.createElement('div');
         if(d){
           // 월간보고서 행: 마감일 배지 표시
-          if(ch==='월간보고서'&&dls.length>0){
+          if(ch==='월간보고서'&&Object.keys(dls).length>0){
             // 객체 구조: {키워드: 날짜} → 해당 날짜인 키워드 목록
           const dueDls=Object.entries(dls).filter(([kw,day])=>day===d).map(([kw])=>kw);
             cell.className='scell'+(isToday?' today-col':'');
@@ -3046,14 +3050,18 @@ function renderDeadlineBar(){
     inp.type='number'; inp.min='1'; inp.max='31';
     inp.placeholder='일';
     inp.value = dls[kw]||'';
-    inp.style.cssText='width:30px;border:1px solid var(--bdr);border-radius:4px;background:var(--surf);color:var(--tx);font-size:10px;padding:1px 3px;text-align:center;font-family:inherit;outline:none';
+    inp.style.cssText='width:30px;border:1px solid var(--bdr);border-radius:4px;background:var(--surf);color:var(--tx);font-size:10px;padding:1px 3px;text-align:center;font-family:inherit;outline:none;-webkit-appearance:textfield;appearance:textfield;-moz-appearance:textfield';
     // 배경: 입력 있으면 강조
     inp.style.borderColor = dls[kw] ? 'rgba(220,38,38,0.5)' : 'var(--bdr)';
+    let _dlTimer;
     inp.oninput=()=>{
       const v=parseInt(inp.value)||0;
       dls[kw]=v;
       inp.style.borderColor = v ? 'rgba(220,38,38,0.5)' : 'var(--bdr)';
-      dsave(); renderSched();
+      dsave();
+      // debounce: 입력 완료 후 600ms 뒤에 캘린더 갱신 (포커스 유지)
+      clearTimeout(_dlTimer);
+      _dlTimer = setTimeout(()=>{ renderSched(); }, 600);
     };
     const dayLbl = document.createElement('span');
     dayLbl.style.cssText='font-size:10px;color:var(--tx3)';
