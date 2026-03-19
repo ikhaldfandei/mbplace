@@ -547,6 +547,7 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="마케팅 허브">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -3217,19 +3218,19 @@ let _gdDirty     = false;  // 미저장 변경 있음
 let _gdBusy      = false;
 
 function gdClientId(){ return localStorage.getItem('gd_client_id')||''; }
-function gdSaveToken(access, refresh, expiresIn){
+function gdSaveToken(access, _refresh, expiresIn){
   _gdToken = access;
   localStorage.setItem('gd_token', access);
   localStorage.setItem('gd_token_exp', Date.now() + (expiresIn||3600)*1000 - 60000);
-  if(refresh) localStorage.setItem('gd_refresh_token', refresh);
 }
 function gdLoadToken(){
   const exp = parseInt(localStorage.getItem('gd_token_exp')||'0');
   if(Date.now() < exp){
     _gdToken = localStorage.getItem('gd_token')||null;
-  } else {
-    _gdToken = null; // 만료됨 — gdGetValidToken이 자동 갱신
+    return _gdToken;
   }
+  _gdToken = null;
+  return null;
 }
 
 function gdLog(msg, ok){
@@ -3272,97 +3273,65 @@ async function gdRefreshUI(){
   }
 }
 
-async function gdConnect(){
+function gdConnect(){
   const cid = gdClientId();
   if(!cid){ toast('Client ID를 먼저 입력해주세요.', true); return; }
-  // PKCE: code_verifier 생성
-  const arr = new Uint8Array(64);
-  crypto.getRandomValues(arr);
-  const verifier = btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  // code_challenge = SHA-256(verifier) → base64url
-  const enc = new TextEncoder().encode(verifier);
-  const hash = await crypto.subtle.digest('SHA-256', enc);
-  const challenge = btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-  sessionStorage.setItem('gd_pkce_verifier', verifier);
-  sessionStorage.setItem('gd_auth_pending', '1');
-  const params = new URLSearchParams({
+  // GIS: TokenClient 방식 — 서버 불필요, 브라우저에서 직접 토큰 발급
+  const client = google.accounts.oauth2.initTokenClient({
     client_id: cid,
-    redirect_uri: location.origin + location.pathname,
-    response_type: 'code',
     scope: GD_SCOPE,
-    code_challenge: challenge,
-    code_challenge_method: 'S256',
-    access_type: 'offline',
-    prompt: 'consent',
-    state: 'gd_pkce',
+    callback: (resp) => {
+      if(resp.error){ toast('Drive 연결 실패: '+resp.error, true); return; }
+      gdSaveToken(resp.access_token, null, resp.expires_in);
+      toast('✅ Google Drive 연결 완료!');
+      gdRefreshUI();
+    },
   });
-  location.href = 'https://accounts.google.com/o/oauth2/auth?' + params;
+  client.requestAccessToken({prompt: 'consent'});
 }
 
 // OAuth2 implicit 콜백 처리 (페이지 로드 시)
-async function gdHandleCallback(){
+function gdHandleCallback(){
+  // GIS 방식은 콜백 리디렉션 없음 — URL에 code 파라미터 있으면 정리
   const params = new URLSearchParams(location.search);
-  const code = params.get('code');
-  const state = params.get('state');
-  if(!code || state!=='gd_pkce' || !sessionStorage.getItem('gd_auth_pending')) return;
-  const verifier = sessionStorage.getItem('gd_pkce_verifier');
-  if(!verifier){ toast('PKCE verifier 없음. 다시 연결해주세요.',true); return; }
+  if(params.has('code') || params.has('error')){
+    history.replaceState(null,'',location.pathname);
+  }
+  // sessionStorage 잔여 정리
   sessionStorage.removeItem('gd_auth_pending');
   sessionStorage.removeItem('gd_pkce_verifier');
-  history.replaceState(null,'',location.pathname);
-  try{
-    const res = await fetch('https://oauth2.googleapis.com/token',{
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body: new URLSearchParams({
-        client_id: gdClientId(),
-        code,
-        code_verifier: verifier,
-        grant_type: 'authorization_code',
-        redirect_uri: location.origin + location.pathname,
-      }),
-    });
-    const data = await res.json();
-    if(data.access_token){
-      gdSaveToken(data.access_token, data.refresh_token, data.expires_in);
-      toast('✅ Google Drive 연결 완료! (자동 갱신 활성화)');
-      gdRefreshUI();
-    } else {
-      toast('Drive 연결 실패: '+(data.error_description||data.error||'알 수 없는 오류'),true);
-    }
-  }catch(e){ toast('Drive 연결 오류: '+e.message, true); }
 }
 // ── PKCE: refresh_token으로 access_token 자동 갱신 ──
-async function gdRefreshToken(){
-  const refresh = localStorage.getItem('gd_refresh_token');
-  if(!refresh){ gdDisconnect(); return null; }
-  try{
-    const res = await fetch('https://oauth2.googleapis.com/token',{
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body: new URLSearchParams({
-        client_id: gdClientId(),
-        refresh_token: refresh,
-        grant_type: 'refresh_token',
-      }),
+function gdSilentRefresh(){
+  return new Promise((resolve)=>{
+    const cid = gdClientId();
+    if(!cid || typeof google==='undefined' || !google.accounts){ resolve(null); return; }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: GD_SCOPE,
+      prompt: '',   // 빈 문자열 = 사용자 개입 없이 조용히 시도
+      callback: (resp)=>{
+        if(resp.access_token){
+          gdSaveToken(resp.access_token, null, resp.expires_in);
+          resolve(resp.access_token);
+        } else {
+          resolve(null);
+        }
+      },
     });
-    const data = await res.json();
-    if(data.access_token){
-      gdSaveToken(data.access_token, null, data.expires_in);
-      return data.access_token;
-    }
-  }catch(e){}
-  return null;
+    client.requestAccessToken();
+  });
 }
 
 // ── 유효한 토큰 반환 (만료 시 자동 갱신) ──
 async function gdGetValidToken(){
   const exp = parseInt(localStorage.getItem('gd_token_exp')||'0');
   if(_gdToken && Date.now() < exp) return _gdToken;
-  // 만료됨 → refresh 시도
-  const refreshed = await gdRefreshToken();
-  if(refreshed){ _gdToken = refreshed; return refreshed; }
-  return null;
+  // 저장된 토큰 확인
+  const stored = gdLoadToken();
+  if(stored) return stored;
+  // 만료 — GIS로 조용히 재발급 시도 (사용자 개입 없음)
+  return await gdSilentRefresh();
 }
 
 
@@ -3454,7 +3423,7 @@ async function gdPull(){
 function gdDisconnect(){
   if(!confirm('Google Drive 연결을 해제하시겠습니까?')) return;
   _gdToken=null;
-  localStorage.removeItem('gd_token'); localStorage.removeItem('gd_token_exp');
+  localStorage.removeItem('gd_token'); localStorage.removeItem('gd_token_exp'); localStorage.removeItem('gd_refresh_token');
   const qb=document.getElementById('gd-quota-bar');if(qb)qb.style.display='none';
   gdRefreshUI(); toast('Google Drive 연결 해제됨.');
 }
