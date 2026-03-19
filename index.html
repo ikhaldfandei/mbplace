@@ -267,7 +267,7 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 
 /* ── SCHEDULE ── */
 #psched{flex-direction:column}
-.schedtb{height:44px;background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 14px;gap:14px;flex-shrink:0}
+.schedtb{min-height:44px;background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;align-items:center;flex-wrap:wrap;padding:0 14px;gap:14px;flex-shrink:0}
 .mnav{display:flex;align-items:center;gap:8px}
 .mnavbtn{background:none;border:1px solid var(--bdr);border-radius:var(--r);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx3);font-size:13px}
 .mnavbtn:hover{color:var(--tx);border-color:var(--tx3)}
@@ -707,6 +707,8 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
           <div class="mlabel" id="mlabel">2026년 3월</div>
           <button class="mnavbtn" onclick="chMonth(1)">▶</button>
         </div>
+        <div id="sched-deadlines" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;padding:0 12px;overflow:hidden"></div>
+        <button class="icobtn" onclick="addDeadlineEntry()" title="보고서 마감일 추가" style="margin-right:8px;flex-shrink:0">📊+</button>
       </div>
       <div class="schedbody">
         <div class="schedmain" id="schedmain"></div>
@@ -2911,48 +2913,37 @@ function countMentions(y,m,kw,ch){
   Object.entries(cells).forEach(([k,v])=>{if(k.includes('-'+ch+'-')&&v&&v.includes(tag))n++;});return n;
 }
 function renderSched(){
-  const{sy:y,sm:m}=S;document.getElementById('mlabel').textContent=y+'년 '+m+'월';
-  const wks=getWeeks(y,m);const main=document.getElementById('schedmain');main.innerHTML='';
-  const now=new Date();const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
+  const{sy:y,sm:m}=S;
+  document.getElementById('mlabel').textContent=y+'년 '+m+'월';
+  const wks=getWeeks(y,m);
+  const main=document.getElementById('schedmain');main.innerHTML='';
+  const now=new Date();
+  const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
   const isThisMonth=(y===todayY&&m===todayM);
+  // 마감일 바 렌더링
+  renderDeadlineBar();
+  const dls=getDeadlines();
+
   wks.forEach((wk,wi)=>{
     const sec=document.createElement('div');sec.className='weeksec';
     const hdr=document.createElement('div');hdr.className='wkhdr';
-    const wlbl=document.createElement('div');wlbl.className='wkhdrcell';wlbl.innerHTML=(wi+1)+'주차';hdr.appendChild(wlbl);
+    const wlbl=document.createElement('div');wlbl.className='wkhdrcell';
+    wlbl.innerHTML=(wi+1)+'주차';hdr.appendChild(wlbl);
     wk.forEach((d,di)=>{
       const isToday=isThisMonth&&d===todayD;
-      const c=document.createElement('div');
-      c.className='wkhdrcell'+(isToday?' today-hdr':'');
-      c.innerHTML=DY[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
-      hdr.appendChild(c);
+      const cv=document.createElement('div');
+      cv.className='wkhdrcell'+(isToday?' today-hdr':'');
+      // 날짜 + 마감일 배지
+      let hdHTML=DY[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
+      if(d){
+        const dueDls=dls.filter(dl=>dl.kw&&dl.day===d);
+        dueDls.forEach(dl=>{
+          hdHTML+=`<div style="font-size:8.5px;color:#ef4444;font-weight:600;line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${dl.kw}<br>보고서마감</div>`;
+        });
+      }
+      cv.innerHTML=hdHTML;hdr.appendChild(cv);
     });
     sec.appendChild(hdr);
-    // ── 마감일 표시 행 (클라이언트별, 트래커와 무관) ──
-    const deadlineRow=document.createElement('div');deadlineRow.className='crow';
-    const dlLbl=document.createElement('div');dlLbl.className='clabel';
-    dlLbl.style.cssText='font-size:9px;color:var(--tx3);font-style:italic';
-    dlLbl.textContent='보고서마감';deadlineRow.appendChild(dlLbl);
-    let hasDl=false;
-    wk.forEach((d,di)=>{
-      const cell=document.createElement('div');cell.className='scell off';cell.style.cssText='padding:2px 3px;min-height:22px;background:transparent';
-      if(d){
-        const dueCls=(S.clients||[]).filter(cl=>cl.deadline&&Number(cl.deadline)===d);
-        if(dueCls.length>0){
-          hasDl=true;
-          cell.style.background='rgba(220,38,38,0.07)';
-          dueCls.forEach(cl=>{
-            const badge=document.createElement('div');
-            badge.style.cssText='font-size:9px;color:#dc2626;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%';
-            badge.title=cl.name+' 월간보고서 마감';
-            badge.textContent='📊'+cl.name;
-            cell.appendChild(badge);
-          });
-        }
-      }
-      deadlineRow.appendChild(cell);
-    });
-    if(hasDl)sec.appendChild(deadlineRow);
-
     CH.forEach(ch=>{
       const row=document.createElement('div');row.className='crow';
       const lbl=document.createElement('div');lbl.className='clabel';lbl.textContent=ch;row.appendChild(lbl);
@@ -2960,8 +2951,41 @@ function renderSched(){
         const isToday=isThisMonth&&d===todayD;
         const cell=document.createElement('div');
         if(d){
-          cell.className='scell'+(isToday?' today-col':'');cell.contentEditable='true';cell.innerText=getCell(y,m,wi,ch,di);
-          let ct;cell.addEventListener('input',()=>{setCell(y,m,wi,ch,di,cell.innerText);clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
+          // 월간보고서 행: 마감일 배지 표시
+          if(ch==='월간보고서'&&dls.length>0){
+            const dueDls=dls.filter(dl=>dl.kw&&dl.day===d);
+            cell.className='scell'+(isToday?' today-col':'');
+            cell.contentEditable='true';
+            if(dueDls.length>0){
+              // 배지 span 삽입 (contentEditable 안에 읽기전용 span)
+              const badge=document.createElement('div');
+              badge.contentEditable='false';
+              badge.style.cssText='font-size:9px;color:#ef4444;background:rgba(239,68,68,0.1);border-radius:3px;padding:1px 4px;margin-bottom:2px;pointer-events:none;user-select:none;display:inline-block';
+              badge.textContent=dueDls.map(dl=>dl.kw+' 마감').join(' · ');
+              cell.appendChild(badge);
+              cell.appendChild(document.createElement('br'));
+            }
+            // 기존 텍스트 설정
+            const existingText=getCell(y,m,wi,ch,di);
+            if(existingText){
+              const txt=document.createTextNode(existingText);
+              cell.appendChild(txt);
+            }
+            let ct;
+            cell.addEventListener('input',()=>{
+              // badge div 제외한 텍스트만 추출
+              let text='';
+              cell.childNodes.forEach(node=>{
+                if(node.nodeType===3) text+=node.textContent;
+              });
+              setCell(y,m,wi,ch,di,text.trim());
+              clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);
+            });
+          } else {
+            cell.className='scell'+(isToday?' today-col':'');cell.contentEditable='true';
+            cell.innerText=getCell(y,m,wi,ch,di);
+            let ct;cell.addEventListener('input',()=>{setCell(y,m,wi,ch,di,cell.innerText);clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
+          }
         }else{cell.className='scell off';}
         row.appendChild(cell);
       });
@@ -2971,6 +2995,68 @@ function renderSched(){
   });
   updateTracker();
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  월간보고서 마감일 (스케줄 탭 전용)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function getDlKey(){ return mkey(S.sy, S.sm); }
+
+function getDeadlines(){
+  const k = getDlKey();
+  if(!S.scheds[k]) S.scheds[k]={cells:{}};
+  if(!S.scheds[k].deadlines) S.scheds[k].deadlines=[];
+  return S.scheds[k].deadlines;
+}
+
+function renderDeadlineBar(){
+  const bar = document.getElementById('sched-deadlines');
+  if(!bar) return;
+  const dls = getDeadlines();
+  bar.innerHTML = '';
+  dls.forEach((dl, idx)=>{
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:flex;align-items:center;gap:3px;background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.3);border-radius:14px;padding:2px 8px 2px 6px;font-size:11px;color:var(--tx2);white-space:nowrap;flex-shrink:0';
+    // 키워드 입력
+    const kwInp = document.createElement('input');
+    kwInp.style.cssText = 'border:none;background:transparent;font-size:11px;color:var(--tx2);width:56px;outline:none;font-family:inherit';
+    kwInp.placeholder = '업체명';
+    kwInp.value = dl.kw||'';
+    kwInp.title = '키워드 (클라이언트 키워드와 일치시키면 알림 연동)';
+    kwInp.oninput = ()=>{ dls[idx].kw=kwInp.value.trim(); dsave(); renderSched(); };
+    // 구분자
+    const sep = document.createElement('span');
+    sep.style.cssText = 'color:rgba(220,38,38,0.5);font-size:10px';
+    sep.textContent = '·';
+    // 일자 입력
+    const dayInp = document.createElement('input');
+    dayInp.type = 'number'; dayInp.min='1'; dayInp.max='31';
+    dayInp.style.cssText = 'border:none;background:transparent;font-size:11px;color:#dc2626;width:26px;outline:none;font-family:inherit;font-weight:700;text-align:center';
+    dayInp.placeholder = '일';
+    dayInp.value = dl.day||'';
+    dayInp.title = '마감일 (매월 N일)';
+    dayInp.oninput = ()=>{ dls[idx].day=parseInt(dayInp.value)||0; dsave(); renderSched(); };
+    // 일 텍스트
+    const dayLbl = document.createElement('span');
+    dayLbl.style.cssText = 'font-size:10px;color:var(--tx3)';
+    dayLbl.textContent = '일';
+    // 삭제 버튼
+    const del = document.createElement('button');
+    del.style.cssText = 'background:none;border:none;cursor:pointer;color:rgba(220,38,38,0.5);font-size:11px;padding:0 0 0 2px;line-height:1;font-family:inherit';
+    del.textContent = '✕';
+    del.title = '삭제';
+    del.onclick = ()=>{ dls.splice(idx,1); dsave(); renderDeadlineBar(); renderSched(); };
+    chip.append(kwInp, sep, dayInp, dayLbl, del);
+    bar.appendChild(chip);
+  });
+}
+
+function addDeadlineEntry(){
+  const dls = getDeadlines();
+  dls.push({kw:'', day:0});
+  dsave();
+  renderDeadlineBar();
+}
+
 function chMonth(d){S.sm+=d;if(S.sm>12){S.sm=1;S.sy++;}if(S.sm<1){S.sm=12;S.sy--;}renderSched();}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3151,7 +3237,7 @@ function renderClients(){
   const c=document.getElementById('cleditor');c.innerHTML='';
   S.clients.forEach((cl,i)=>{
     const card=document.createElement('div');card.className='cccard';
-    card.innerHTML=`<div class="ccrow"><input type="color" value="${cl.color}" onchange="S.clients[${i}].color=this.value;save();updateTracker()"><input type="text" class="ccinput" value="${cl.name}" placeholder="클라이언트명" style="flex:1;max-width:160px" oninput="S.clients[${i}].name=this.value;save()"><span style="font-size:11px;color:var(--tx3)">키워드</span><input type="text" class="ccinput" value="${cl.kw}" placeholder="ex)동탄" style="max-width:70px" oninput="S.clients[${i}].kw=this.value;save();updateTracker()"><span style="font-size:11px;color:var(--tx3)">보고서마감</span><input type="number" class="ccinput" value="${cl.deadline||''}" placeholder="매월 N일" min="1" max="31" style="max-width:64px" title="월간보고서 마감일 (매월 N일)" oninput="S.clients[${i}].deadline=this.value?parseInt(this.value):0;save();if(typeof renderSched==='function')renderSched()"><button class="btn btnr" style="padding:4px 8px;font-size:11px" onclick="removeClient(${i})">삭제</button></div><div style="font-size:10px;color:var(--tx3);margin-bottom:5px;font-weight:700">월간 할당량</div><div class="qgrid">${CH.map(ch=>`<div class="qitem"><label>${ch}</label><input type="number" class="qinput" min="0" value="${cl.q?.[ch]||0}" onchange="S.clients[${i}].q['${ch}']=parseInt(this.value)||0;save();updateTracker()"></div>`).join('')}</div>`;
+    card.innerHTML=`<div class="ccrow"><input type="color" value="${cl.color}" onchange="S.clients[${i}].color=this.value;save();updateTracker()"><input type="text" class="ccinput" value="${cl.name}" placeholder="클라이언트명" style="flex:1;max-width:160px" oninput="S.clients[${i}].name=this.value;save()"><span style="font-size:11px;color:var(--tx3)">키워드</span><input type="text" class="ccinput" value="${cl.kw}" placeholder="ex)동탄" style="max-width:70px" oninput="S.clients[${i}].kw=this.value;save();updateTracker()"><button class="btn btnr" style="padding:4px 8px;font-size:11px" onclick="removeClient(${i})">삭제</button></div><div style="font-size:10px;color:var(--tx3);margin-bottom:5px;font-weight:700">월간 할당량</div><div class="qgrid">${CH.map(ch=>`<div class="qitem"><label>${ch}</label><input type="number" class="qinput" min="0" value="${cl.q?.[ch]||0}" onchange="S.clients[${i}].q['${ch}']=parseInt(this.value)||0;save();updateTracker()"></div>`).join('')}</div>`;
     c.appendChild(card);
   });
 }
