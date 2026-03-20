@@ -574,11 +574,11 @@ input[type=number]{-moz-appearance:textfield}
     <div class="hlogo">MB</div>
     <span class="mob-curtab" id="mob-curtab">클라이언트</span>
     <div class="tabs">
-      <button class="tbtn on" id="tb-notes" onclick="switchTab('notes')">📝 클라이언트</button>
-      <button class="tbtn" id="tb-work" onclick="switchTab('work')">🗂 통합문서</button>
-      <button class="tbtn" id="tb-sched" onclick="switchTab('sched')">📅 월간스케줄</button>
-      <button class="tbtn" id="tb-report" onclick="switchTab('report')">📁 월간보고서</button>
-      <button class="tbtn" id="tb-settings" onclick="switchTab('settings')">⚙️ 설정</button>
+      <button class="tbtn on" id="tb-notes" onclick="switchTab('notes')" ondblclick="editTabName(this,'notes')">📝 <span class="tbnm" id="tbnm-notes">클라이언트</span></button>
+      <button class="tbtn" id="tb-work" onclick="switchTab('work')" ondblclick="editTabName(this,'work')">🗂 <span class="tbnm" id="tbnm-work">통합문서</span></button>
+      <button class="tbtn" id="tb-sched" onclick="switchTab('sched')" ondblclick="editTabName(this,'sched')">📅 <span class="tbnm" id="tbnm-sched">월간스케줄</span></button>
+      <button class="tbtn" id="tb-report" onclick="switchTab('report')" ondblclick="editTabName(this,'report')">📁 <span class="tbnm" id="tbnm-report">월간보고서</span></button>
+      <button class="tbtn" id="tb-settings" onclick="switchTab('settings')" ondblclick="editTabName(this,'settings')">⚙️ <span class="tbnm" id="tbnm-settings">설정</span></button>
     </div>
     <div class="hsp"></div>
     <button class="splitbtn" onclick="openSearch()" title="전체 검색 (Ctrl+K)" style="flex-shrink:0;padding:4px 8px;font-size:12px">🔍</button>
@@ -1329,6 +1329,7 @@ async function enterApp(){
   gdHandleCallback(); // OAuth 콜백 처리 (Drive 연결 후 리디렉션 시)
   // 알림 권한 상태 UI 반영
   setTimeout(()=>{if(typeof renderAlarmSettings==='function')renderAlarmSettings();},500);
+  loadTabNames();
   const yr=document.getElementById('fmyear');yr.innerHTML='';
   for(let y=2024;y<=2029;y++){const o=document.createElement('option');o.value=y;o.textContent=y+'년';if(y===S.sy)o.selected=true;yr.appendChild(o);}
   // Google Drive 연결 상태 복원 (설정 탭 열 때 gdRefreshUI 호출됨)
@@ -1527,6 +1528,71 @@ document.addEventListener('click',hideCtx);
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  TABS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  탭 이름 직접 편집
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const TAB_DEFAULT_NAMES={notes:'클라이언트',work:'통합문서',sched:'월간스케줄',report:'월간보고서',settings:'설정'};
+
+function loadTabNames(){
+  const saved=JSON.parse(localStorage.getItem('mb_tab_names')||'{}');
+  Object.keys(TAB_DEFAULT_NAMES).forEach(t=>{
+    const el=document.getElementById('tbnm-'+t);
+    if(el) el.textContent=saved[t]||TAB_DEFAULT_NAMES[t];
+  });
+  // 모바일 탭바 이름도 동기화
+  updateMobTabNames();
+}
+
+function saveTabName(t, name){
+  const saved=JSON.parse(localStorage.getItem('mb_tab_names')||'{}');
+  saved[t]=name||TAB_DEFAULT_NAMES[t];
+  localStorage.setItem('mb_tab_names',JSON.stringify(saved));
+  updateMobTabNames();
+}
+
+function updateMobTabNames(){
+  const saved=JSON.parse(localStorage.getItem('mb_tab_names')||'{}');
+  // 모바일 탭바 텍스트 업데이트 (아이콘 뒤 텍스트만)
+  const MOB_ICONS={notes:'📝',work:'🗂',sched:'📅',report:'📁',settings:'⚙️'};
+  Object.keys(TAB_DEFAULT_NAMES).forEach(t=>{
+    const btn=document.getElementById('mob-tb-'+t);
+    if(!btn) return;
+    const name=saved[t]||TAB_DEFAULT_NAMES[t];
+    btn.innerHTML=`<span class="mob-tab-ico">${MOB_ICONS[t]}</span>${name}`;
+  });
+}
+
+function editTabName(btnEl, t){
+  if(t==='settings') return; // 설정 탭은 이름 변경 불가
+  const span=document.getElementById('tbnm-'+t);
+  if(!span) return;
+  const cur=span.textContent;
+  const inp=document.createElement('input');
+  inp.value=cur;
+  inp.style.cssText='font-size:12px;font-family:inherit;border:1px solid var(--ac);border-radius:3px;padding:1px 4px;width:'+(Math.max(60,cur.length*9))+'px;background:var(--surf);color:var(--tx);outline:none';
+  span.replaceWith(inp);
+  inp.focus();inp.select();
+  const commit=()=>{
+    const val=inp.value.trim()||cur;
+    const newSpan=document.createElement('span');
+    newSpan.className='tbnm';newSpan.id='tbnm-'+t;
+    newSpan.textContent=val;
+    inp.replaceWith(newSpan);
+    saveTabName(t,val);
+  };
+  inp.addEventListener('blur',commit,{once:true});
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();inp.removeEventListener('blur',commit);commit();}
+    if(e.key==='Escape'){
+      const newSpan=document.createElement('span');
+      newSpan.className='tbnm';newSpan.id='tbnm-'+t;
+      newSpan.textContent=cur;inp.replaceWith(newSpan);
+    }
+    e.stopPropagation();
+  });
+}
+
 function switchTab(t){
   ['notes','work','sched','report','settings'].forEach(x=>{
     document.getElementById('p'+x).classList.toggle('on',x===t);
@@ -1535,8 +1601,10 @@ function switchTab(t){
   if(t==='settings'){renderClients();loadTheme();updateStorageInfo();gdRefreshUI();renderAppStats();loadEditorDefaults();loadClockoutSettings();}
   if(t==='sched')updateTracker();
   if(t==='report'){renderFmClients();renderFiles();setTimeout(updateRptSyncBtn,300);}
-  const _TL={'notes':'클라이언트','work':'통합문서','sched':'월간스케줄','report':'월간보고서','settings':'설정'};
-  const _ct=document.getElementById('mob-curtab');if(_ct)_ct.textContent=_TL[t]||'';
+  // 모바일 현재 탭명 업데이트 (저장된 커스텀 이름 반영)
+  const _saved=JSON.parse(localStorage.getItem('mb_tab_names')||'{}');
+  const _def={'notes':'클라이언트','work':'통합문서','sched':'월간스케줄','report':'월간보고서','settings':'설정'};
+  const _ct=document.getElementById('mob-curtab');if(_ct)_ct.textContent=_saved[t]||_def[t]||'';
   ['notes','work','sched','report','settings'].forEach(x=>{const b=document.getElementById('mob-tb-'+x);if(b)b.classList.toggle('on',x===t);});
 }
 
@@ -4034,19 +4102,34 @@ function renderAppStats(){
   const el=document.getElementById('app-stats');if(!el)return;
   const noteCount=S.notes.filter(n=>n.t==='D'&&n.mt!=='meeting').length;
   const meetingCount=S.notes.filter(n=>n.mt==='meeting').length;
-  const folderCount=S.notes.filter(n=>n.t==='F').length;
-  const workCount=S.work.filter(n=>n.t==='D').length;
   const clientCount=S.clients.length;
-  const schedMonths=Object.keys(S.scheds).length;
-  const totalCells=Object.values(S.scheds).reduce((sum,m)=>sum+Object.values(m.cells||{}).filter(v=>v&&v.trim()).length,0);
+  // 기록된 월: 실제 셀 데이터가 있는 달만 카운트
+  const schedMonths=Object.values(S.scheds).filter(m=>
+    Object.values(m.cells||{}).some(v=>v&&v.trim())
+  ).length;
+  const reportCount=(S.reports||[]).length;
+  // 출판 탭 통계 (S.pub 있을 때만)
+  let pubTumblbukCount=0, pubPublisherCount=0, pubWritingCount=0;
+  if(S.pub&&S.pub.length){
+    // 텀블벅 폴더 바로 아래 항목 수
+    const tumblbukF=S.pub.find(n=>n.t==='F'&&n.p===null&&n.n&&n.n.includes('텀블벅'));
+    if(tumblbukF) pubTumblbukCount=S.pub.filter(n=>n.p===tumblbukF.id&&n.t==='I').length;
+    // 출판사 정산 폴더 바로 아래 항목 수
+    const publishF=S.pub.find(n=>n.t==='F'&&n.p===null&&n.n&&n.n.includes('출판사'));
+    if(publishF) pubPublisherCount=S.pub.filter(n=>n.p===publishF.id&&n.t==='I').length;
+    // 집필 폴더 바로 아래 항목 수
+    const writingF=S.pub.find(n=>n.t==='F'&&n.p===null&&n.n&&n.n.includes('집필'));
+    if(writingF) pubWritingCount=S.pub.filter(n=>n.p===writingF.id&&n.t==='I').length;
+  }
   const stats=[
-    {icon:'📝',label:'클라이언트 문서',val:noteCount+'개'},
-    {icon:'📁',label:'클라이언트 폴더',val:folderCount+'개'},
-    {icon:'🗂',label:'통합문서',val:workCount+'개'},
     {icon:'🏥',label:'클라이언트',val:clientCount+'개'},
-    {icon:'📅',label:'기록된 월',val:schedMonths+'개월'},
+    {icon:'📝',label:'클라이언트 문서',val:noteCount+'개'},
     {icon:'📋',label:'회의록',val:(meetingCount||0)+'개'},
-    {icon:'✏️',label:'스케줄 입력 셀',val:totalCells+'개'},
+    {icon:'📅',label:'기록된 월',val:schedMonths+'개월'},
+    {icon:'📁',label:'보고서 파일',val:reportCount+'개'},
+    {icon:'📖',label:'텀블벅 프로젝트',val:pubTumblbukCount+'개'},
+    {icon:'🏢',label:'정산 관리 작가',val:pubPublisherCount+'명'},
+    {icon:'✍',label:'집필 작품',val:pubWritingCount+'편'},
   ];
   el.innerHTML=stats.map(s=>`
     <div style="background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px">
