@@ -578,6 +578,7 @@ input[type=number]{-moz-appearance:textfield}
       <button class="tbtn" id="tb-work" onclick="switchTab('work')" ondblclick="editTabName(this,'work')">🗂 <span class="tbnm" id="tbnm-work">통합문서</span></button>
       <button class="tbtn" id="tb-sched" onclick="switchTab('sched')" ondblclick="editTabName(this,'sched')">📅 <span class="tbnm" id="tbnm-sched">월간스케줄</span></button>
       <button class="tbtn" id="tb-report" onclick="switchTab('report')" ondblclick="editTabName(this,'report')">📁 <span class="tbnm" id="tbnm-report">월간보고서</span></button>
+      <button class="tbtn" id="tb-pub" onclick="switchTab('pub')" ondblclick="editTabName(this,'pub')">📖 <span class="tbnm" id="tbnm-pub">출판</span></button>
       <button class="tbtn" id="tb-settings" onclick="switchTab('settings')" ondblclick="editTabName(this,'settings')">⚙️ <span class="tbnm" id="tbnm-settings">설정</span></button>
     </div>
     <div class="hsp"></div>
@@ -757,6 +758,47 @@ input[type=number]{-moz-appearance:textfield}
           <span style="font-size:11px;color:var(--tx3)">PDF · PPTX</span>
         </div>
         <div id="fmgrid" class="fmgrid"></div>
+      </div>
+    </div>
+
+    <!-- ── PUB ── -->
+    <div class="panel" id="ppub">
+      <div class="sidebar" id="pubsidebar">
+        <div class="sbhdr">
+          <span class="sblabel">출판</span>
+          <div style="display:flex;gap:4px">
+            <button class="icobtn" title="폴더 추가" onclick="pubAddFolder()">📁</button>
+            <button class="icobtn" title="항목 추가" onclick="pubAddItem()">🔵</button>
+            <button class="icobtn" title="문서 추가" onclick="pubAddDoc()">📄</button>
+          </div>
+        </div>
+        <div class="treewrap" id="pubtreewrap"></div>
+      </div>
+      <div class="editors" id="pubeditors">
+        <div class="epane" id="pub-ep1">
+          <div class="etbar">
+            <span class="etitle empty" id="pub-et1">← 항목을 선택하세요</span>
+            <div id="pub-file-wrap" style="display:none">
+              <select class="fmsel" id="pub-year" onchange="pubRenderFiles()" style="font-size:11px"></select>
+              <select class="fmsel" id="pub-month" onchange="pubRenderFiles()" style="font-size:11px">
+                <option value="0">전체</option>
+                <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+                <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+                <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+                <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+              </select>
+              <button class="fmbtn" onclick="pubUploadFile()" style="font-size:11px;padding:3px 10px">＋ 파일 업로드</button>
+              <span style="font-size:10px;color:var(--tx3)">PDF·PPTX·XLSX·DOCX·HWP·JPG·PNG</span>
+            </div>
+          </div>
+          <div id="pub-content">
+            <div class="fmgrid" id="pub-fmgrid" style="display:none"></div>
+            <div class="equill-wrap hidden" id="pub-eqwrap">
+              <div id="pub-eqtoolbar"></div>
+              <div id="pub-eq" class="mbedit"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1164,7 +1206,7 @@ const IDB={
 //  STATE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const S={
-  notes:[],clients:[],scheds:{},work:[],reports:[],
+  notes:[],clients:[],scheds:{},work:[],reports:[],pub:[],pubFiles:[],
   p1:null,p2:null,p2on:false,ap:1,
   wsel:null,
   sy:2026,sm:3,
@@ -1217,6 +1259,16 @@ async function load(){
     S.scheds = data.scheds  || {};
     S.work   = data.work    || makeDefWork();
     S.reports= data.reports || [];
+    S.pub = data.pub || [];
+    S.pubFiles = data.pubFiles || [];
+    // pub 기본 폴더 초기화 (최초 1회)
+    if(!S.pub.length){
+      S.pub=[
+        {id:'pubf1',t:'F',n:'텀블벅',p:null,o:0,open:true,driveName:'마케팅허브_텀블벅',driveId:null},
+        {id:'pubf2',t:'F',n:'출판사 정산',p:null,o:1,open:true,driveName:'마케팅허브_출판사정산',driveId:null},
+        {id:'pubf3',t:'F',n:'집필',p:null,o:2,open:true,driveName:'마케팅허브_집필',driveId:null},
+      ];
+    }
     // IDB → S.reports 마이그레이션 (구버전 데이터 복원)
     if(!S.reports.length){
       try{
@@ -1548,7 +1600,7 @@ document.addEventListener('click',hideCtx);
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  탭 이름 직접 편집
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const TAB_DEFAULT_NAMES={notes:'클라이언트',work:'통합문서',sched:'월간스케줄',report:'월간보고서',settings:'설정'};
+const TAB_DEFAULT_NAMES={notes:'클라이언트',work:'통합문서',sched:'월간스케줄',report:'월간보고서',pub:'출판',settings:'설정'};
 
 function loadTabNames(){
   const saved=JSON.parse(localStorage.getItem('mb_tab_names')||'{}');
@@ -1570,7 +1622,7 @@ function saveTabName(t, name){
 function updateMobTabNames(){
   const saved=JSON.parse(localStorage.getItem('mb_tab_names')||'{}');
   // 모바일 탭바 텍스트 업데이트 (아이콘 뒤 텍스트만)
-  const MOB_ICONS={notes:'📝',work:'🗂',sched:'📅',report:'📁',settings:'⚙️'};
+  const MOB_ICONS={notes:'📝',work:'🗂',sched:'📅',report:'📁',pub:'📖',settings:'⚙️'};
   Object.keys(TAB_DEFAULT_NAMES).forEach(t=>{
     const btn=document.getElementById('mob-tb-'+t);
     if(!btn) return;
@@ -1609,19 +1661,308 @@ function editTabName(btnEl, t){
   });
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  출판 탭 (PUB)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _pubSel = null;  // 현재 선택된 노드 id
+let _pubDragId = null, _pubDropPos = null;
+let _pubQuill = null; // 에디터 인스턴스
+
+// 헬퍼: 자식 노드
+function pubKids(pid){ return S.pub.filter(n=>n.p===pid).sort((a,b)=>a.o-b.o); }
+// 헬퍼: 최상위 폴더 찾기 (노드의 루트 F)
+function pubRootFolder(nodeId){
+  let cur = S.pub.find(n=>n.id===nodeId);
+  while(cur && cur.p !== null){ cur = S.pub.find(n=>n.id===cur.p); }
+  return cur;
+}
+// 헬퍼: 순환 방지
+function pubIsDesc(anc,id){
+  let cur=anc; const vis=new Set();
+  while(cur){if(vis.has(cur))break;vis.add(cur);if(cur===id)return true;cur=S.pub.find(n=>n.id===cur)?.p;}return false;
+}
+// 헬퍼: drag drop 클래스 초기화
+function pubClearDC(wrap){wrap.querySelectorAll('.drop-before,.drop-after,.drop-inside').forEach(el=>el.classList.remove('drop-before','drop-after','drop-inside'));}
+
+// ── 트리 렌더링 ──
+function renderPubTree(){
+  const wrap=document.getElementById('pubtreewrap');if(!wrap)return;
+  wrap.innerHTML='';
+  buildPubTree(wrap,null,0);
+}
+
+function buildPubTree(wrap,pid,depth){
+  pubKids(pid).forEach(node=>{
+    const isF=node.t==='F';
+    const isI=node.t==='I'; // 항목 (파일 업로드 단위)
+    const isD=node.t==='D'; // 에디터 문서
+
+    const item=document.createElement('div');
+    item.style.paddingLeft=(depth*14)+'px';
+    item.className='titem'+(_pubSel===node.id?' sel':'');
+    item.dataset.id=node.id;
+    item.draggable=true;
+
+    // 화살표 (폴더만)
+    const arr=document.createElement('span');
+    arr.className='tarrow'+(isF?(node.open?' open':''):' open');
+    arr.style.visibility=isF?'visible':'hidden';
+    arr.textContent='▶';
+
+    // 아이콘
+    const ico=document.createElement('span');ico.className='ticon';
+    if(isF){ ico.textContent=node.open?'📂':'📁'; }
+    else if(isD){ ico.textContent='📄'; }
+    else { // 항목 (I) — 색깔 동그라미
+      ico.innerHTML=`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${node.color||'#888'};flex-shrink:0;vertical-align:middle;margin-right:2px"></span>`;
+    }
+
+    const lbl=document.createElement('span');lbl.className='tlabel';lbl.textContent=node.n;
+    item.append(arr,ico,lbl);
+
+    // ── Drag & Drop ──
+    item.addEventListener('dragstart',e=>{
+      _pubDragId=node.id;
+      e.dataTransfer.setData('text/plain',node.id);
+      e.dataTransfer.effectAllowed='move';
+      setTimeout(()=>item.classList.add('dragging'),0);
+    });
+    item.addEventListener('dragend',()=>{
+      _pubDragId=null;_pubDropPos=null;
+      item.classList.remove('dragging');pubClearDC(wrap);
+    });
+    item.addEventListener('dragover',e=>{
+      e.preventDefault();e.stopPropagation();
+      if(!_pubDragId||_pubDragId===node.id)return;
+      const rect=item.getBoundingClientRect();const y=e.clientY-rect.top;const h=rect.height;
+      pubClearDC(wrap);
+      if(isF&&y>h*0.25&&y<h*0.75){_pubDropPos='inside';item.classList.add('drop-inside');}
+      else if(y<h*0.5){_pubDropPos='before';item.classList.add('drop-before');}
+      else{_pubDropPos='after';item.classList.add('drop-after');}
+    });
+    item.addEventListener('dragleave',e=>{if(!item.contains(e.relatedTarget))item.classList.remove('drop-before','drop-after','drop-inside');});
+    item.addEventListener('drop',e=>{
+      e.preventDefault();e.stopPropagation();
+      if(!_pubDragId||_pubDragId===node.id)return;
+      const dn=S.pub.find(n=>n.id===_pubDragId);
+      if(!dn||pubIsDesc(_pubDragId,node.id))return;
+      if(_pubDropPos==='inside'&&node.t==='F'){
+        dn.p=node.id;node.open=true;
+        const existing=pubKids(node.id).filter(n=>n.id!==_pubDragId);dn.o=existing.length;
+      }else{
+        dn.p=node.p;
+        const siblings=pubKids(node.p).filter(n=>n.id!==_pubDragId);
+        const ti=siblings.findIndex(n=>n.id===node.id);
+        const ins=_pubDropPos==='before'?ti:ti+1;
+        siblings.splice(ins,0,dn);siblings.forEach((n,i)=>n.o=i);
+      }
+      _pubDragId=null;_pubDropPos=null;dsave();renderPubTree();
+    });
+
+    // ── 클릭 ──
+    item.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(isF){node.open=!node.open;dsave();renderPubTree();}
+      else{_pubSel=node.id;pubOpenNode(node);}
+    });
+    item.addEventListener('dblclick',e=>{e.stopPropagation();pubStartRename(item,node);});
+    item.addEventListener('contextmenu',e=>{
+      const menu=[];
+      if(isF){
+        menu.push({l:'🔵 항목 추가',a:()=>pubAddItemTo(node.id)});
+        menu.push({l:'📄 문서 추가',a:()=>pubAddDocTo(node.id)});
+        menu.push('sep');
+      }
+      if(isI){
+        // 색상 변경 (항목만)
+        menu.push({l:'🎨 색상 변경',a:()=>pubChangeColor(node)});
+        menu.push('sep');
+      }
+      menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)pubStartRename(el,node);}});
+      menu.push({l:'🗑 삭제',d:true,a:()=>pubDelNode(node.id)});
+      showCtx(e,menu);
+    });
+
+    wrap.appendChild(item);
+    if(isF&&node.open)buildPubTree(wrap,node.id,depth+1);
+  });
+}
+
+// ── 노드 열기 ──
+function pubOpenNode(node){
+  renderPubTree();
+  const etEl=document.getElementById('pub-et1');
+  const fwrap=document.getElementById('pub-file-wrap');
+  const fgrid=document.getElementById('pub-fmgrid');
+  const eqwrap=document.getElementById('pub-eqwrap');
+
+  if(etEl) etEl.textContent=node.n;
+
+  if(node.t==='I'){
+    // 파일 항목 — 파일 목록 표시
+    if(fwrap) fwrap.style.display='flex';
+    if(fgrid) fgrid.style.display='';
+    if(eqwrap){ eqwrap.classList.add('hidden'); }
+    // 연도/월 필터: 루트 폴더가 '출판사 정산'이면 표시
+    const root=pubRootFolder(node.id);
+    const hasFilter=root&&root.n==='출판사 정산';
+    const yrSel=document.getElementById('pub-year');
+    const moSel=document.getElementById('pub-month');
+    if(yrSel) yrSel.style.display=hasFilter?'':'none';
+    if(moSel) moSel.style.display=hasFilter?'':'none';
+    // 연도 옵션 초기화
+    if(hasFilter&&yrSel&&!yrSel.options.length){
+      for(let y=2024;y<=2029;y++){const o=document.createElement('option');o.value=y;o.textContent=y+'년';if(y===new Date().getFullYear())o.selected=true;yrSel.appendChild(o);}
+    }
+    pubRenderFiles();
+  } else if(node.t==='D'){
+    // 에디터 문서
+    if(fwrap) fwrap.style.display='none';
+    if(fgrid) fgrid.style.display='none';
+    if(eqwrap) eqwrap.classList.remove('hidden');
+    pubOpenEditor(node);
+  }
+}
+
+// ── 파일 목록 렌더링 (항목 선택 시) ──
+function pubRenderFiles(){
+  const grid=document.getElementById('pub-fmgrid');if(!grid)return;
+  grid.innerHTML='';
+  const node=S.pub.find(n=>n.id===_pubSel);if(!node||node.t!=='I')return;
+  const root=pubRootFolder(node.id);
+  const hasFilter=root&&root.n==='출판사 정산';
+  const yr=hasFilter?parseInt(document.getElementById('pub-year')?.value||'0'):0;
+  const mo=hasFilter?parseInt(document.getElementById('pub-month')?.value||'0'):0;
+  let files=(S.pubFiles||[]).filter(f=>f.itemId===_pubSel&&(yr===0||f.year===yr)&&(mo===0||f.month===mo));
+  files.sort((a,b)=>(a.uploadDate||'').localeCompare(b.uploadDate||''));
+  if(!files.length){
+    grid.innerHTML='<div class="fmempty"><span style="font-size:28px">📭</span><br>파일이 없습니다<br><span style="font-size:11px;color:var(--tx3)">파일 업로드 버튼으로 추가하세요</span></div>';
+    return;
+  }
+  files.forEach(f=>{
+    const ext=(f.name||'').split('.').pop().toLowerCase();
+    const ico={'pdf':'📕','pptx':'📊','ppt':'📊','xlsx':'📗','xls':'📗','docx':'📝','doc':'📝','hwp':'📝','jpg':'🖼','jpeg':'🖼','png':'🖼','gif':'🖼'}[ext]||'📎';
+    const card=document.createElement('div');card.className='fcard';
+    const syncBadge=f.synced?'<span style="color:var(--gn);font-size:9px">☁</span>':'<span style="color:var(--tx3);font-size:9px">💾</span>';
+    card.innerHTML=`<div class="fcico">${ico}</div><div class="fcname">${f.name}</div><div class="fcmeta">${f.year||''}${f.month?'년 '+f.month+'월':''} · ${fmtSize(f.size||0)} ${syncBadge}</div><div class="fcmeta" style="font-size:9px">${f.uploadDate?new Date(f.uploadDate).toLocaleDateString('ko-KR'):''}</div><div class="fcbtns"><button class="fcbtn" onclick="pubDlFile('${f.id}')">다운로드</button><button class="fcbtn d" onclick="pubRmFile('${f.id}')">삭제</button></div>`;
+    grid.appendChild(card);
+  });
+}
+
+// 파일 업로드 stub (3단계에서 구현)
+function pubUploadFile(){toast('3단계에서 구현됩니다.');}
+function pubDlFile(id){toast('3단계에서 구현됩니다.');}
+async function pubRmFile(id){
+  if(!confirm('파일을 삭제하시겠습니까?'))return;
+  S.pubFiles=(S.pubFiles||[]).filter(f=>f.id!==id);
+  dsave();pubRenderFiles();
+}
+
+// ── 에디터 ──
+function pubOpenEditor(node){
+  // Quill이 없으면 초기화
+  if(!_pubQuill){
+    const toolbar=document.getElementById('pub-eqtoolbar');
+    const edEl=document.getElementById('pub-eq');
+    if(!toolbar||!edEl)return;
+    _pubQuill=new Quill(edEl,{
+      theme:'snow',
+      modules:{toolbar:toolbar.id?{container:'#'+toolbar.id}:{container:[[{'header':[1,2,3,false]},{'list':'ordered'},{'list':'bullet'}],['bold','italic','underline'],['link'],['clean']]}},
+    });
+  }
+  _pubQuill.setContents(node.content?JSON.parse(node.content):{ops:[]});
+  _pubQuill.off('text-change');
+  let _qt;
+  _pubQuill.on('text-change',()=>{
+    clearTimeout(_qt);
+    _qt=setTimeout(()=>{
+      node.content=JSON.stringify(_pubQuill.getContents());
+      dsave();
+    },400);
+  });
+}
+
+// ── CRUD ──
+function pubAddFolder(){
+  const mo=pubKids(null).reduce((m,n)=>Math.max(m,n.o),-1);
+  const fn='마케팅허브_새폴더'+Date.now();
+  S.pub.push({id:uid(),t:'F',n:'새 폴더',p:null,o:mo+1,open:true,driveName:fn,driveId:null});
+  dsave();renderPubTree();
+}
+function pubAddItem(){
+  const sel=_pubSel?S.pub.find(n=>n.id===_pubSel):null;
+  const pid=sel?(sel.t==='F'?sel.id:sel.p||null):null;
+  if(!pid){toast('먼저 폴더를 선택하세요.');return;}
+  pubAddItemTo(pid);
+}
+function pubAddItemTo(pid){
+  const par=S.pub.find(n=>n.id===pid);if(par)par.open=true;
+  const mo=pubKids(pid).reduce((m,n)=>Math.max(m,n.o),-1);
+  S.pub.push({id:uid(),t:'I',n:'새 항목',p:pid,o:mo+1,color:'#888888'});
+  dsave();renderPubTree();
+}
+function pubAddDoc(){
+  const sel=_pubSel?S.pub.find(n=>n.id===_pubSel):null;
+  const pid=sel?(sel.t==='F'?sel.id:(sel.p||null)):null;
+  if(!pid){toast('먼저 폴더 또는 항목을 선택하세요.');return;}
+  pubAddDocTo(pid);
+}
+function pubAddDocTo(pid){
+  const par=S.pub.find(n=>n.id===pid);if(par)par.open=true;
+  const mo=pubKids(pid).reduce((m,n)=>Math.max(m,n.o),-1);
+  S.pub.push({id:uid(),t:'D',n:'새 문서',p:pid,o:mo+1,content:''});
+  dsave();renderPubTree();
+}
+function pubDelNode(id){
+  if(!confirm('삭제하시겠습니까? 하위 항목도 모두 삭제됩니다.'))return;
+  const collect=i=>{const ids=[i];S.pub.filter(n=>n.p===i).forEach(c=>ids.push(...collect(c.id)));return ids;};
+  const del=collect(id);
+  S.pub=S.pub.filter(n=>!del.includes(n.id));
+  S.pubFiles=(S.pubFiles||[]).filter(f=>!del.includes(f.itemId));
+  if(del.includes(_pubSel)){_pubSel=null;pubResetView();}
+  dsave();renderPubTree();
+}
+function pubResetView(){
+  const et=document.getElementById('pub-et1');if(et){et.textContent='← 항목을 선택하세요';et.className='etitle empty';}
+  const fw=document.getElementById('pub-file-wrap');if(fw)fw.style.display='none';
+  const fg=document.getElementById('pub-fmgrid');if(fg)fg.style.display='none';
+  const eq=document.getElementById('pub-eqwrap');if(eq)eq.classList.add('hidden');
+}
+function pubStartRename(itemEl,node){
+  const lbl=itemEl.querySelector('.tlabel');
+  const inp=document.createElement('input');inp.className='rnminput';inp.value=node.n;lbl.replaceWith(inp);inp.focus();inp.select();
+  const done=()=>{
+    const v=inp.value.trim();if(v)node.n=v;
+    // 폴더이름 변경 시 driveName도 업데이트
+    if(node.t==='F'&&node.p===null&&v) node.driveName='마케팅허브_'+v;
+    dsave();renderPubTree();
+  };
+  inp.onblur=done;
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();done();}if(e.key==='Escape')renderPubTree();};
+}
+function pubChangeColor(node){
+  const inp=document.createElement('input');inp.type='color';inp.value=node.color||'#888888';
+  inp.style.cssText='position:fixed;left:-9999px;opacity:0';
+  document.body.appendChild(inp);
+  inp.click();
+  inp.oninput=()=>{node.color=inp.value;dsave();renderPubTree();};
+  inp.onchange=()=>{node.color=inp.value;dsave();renderPubTree();inp.remove();};
+  inp.onblur=()=>setTimeout(()=>inp.remove(),300);
+}
 function switchTab(t){
-  ['notes','work','sched','report','settings'].forEach(x=>{
+  ['notes','work','sched','report','pub','settings'].forEach(x=>{
     document.getElementById('p'+x).classList.toggle('on',x===t);
     document.getElementById('tb-'+x).classList.toggle('on',x===t);
   });
   if(t==='settings'){renderClients();loadTheme();updateStorageInfo();gdRefreshUI();renderAppStats();loadEditorDefaults();loadClockoutSettings();}
+  if(t==='pub'){renderPubTree();}
   if(t==='sched')updateTracker();
   if(t==='report'){renderFmClients();renderFiles();setTimeout(updateRptSyncBtn,300);}
   // 모바일 현재 탭명 업데이트 (저장된 커스텀 이름 반영)
   const _saved=JSON.parse(localStorage.getItem('mb_tab_names')||'{}');
-  const _def={'notes':'클라이언트','work':'통합문서','sched':'월간스케줄','report':'월간보고서','settings':'설정'};
+  const _def={'notes':'클라이언트','work':'통합문서','sched':'월간스케줄','report':'월간보고서','pub':'출판','settings':'설정'};
   const _ct=document.getElementById('mob-curtab');if(_ct)_ct.textContent=_saved[t]||_def[t]||'';
-  ['notes','work','sched','report','settings'].forEach(x=>{const b=document.getElementById('mob-tb-'+x);if(b)b.classList.toggle('on',x===t);});
+  ['notes','work','sched','report','pub','settings'].forEach(x=>{const b=document.getElementById('mob-tb-'+x);if(b)b.classList.toggle('on',x===t);});
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3730,7 +4071,7 @@ async function gdPush(auto=false){
   if(!auto) gdBar('💾 Google Drive에 저장 중...','ing',0);
   gdLog('저장 중...');
   try{
-    const payload = JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,reports:S.reports,v:3,date:new Date().toISOString()});
+    const payload = JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,reports:S.reports,pub:S.pub,pubFiles:S.pubFiles,v:3,date:new Date().toISOString()});
     const blob = new Blob([payload], {type:'application/json'});
     const existing = await gdFindFile(token, GD_FNAME);
     const boundary = '-------mbhub_boundary';
@@ -3775,6 +4116,16 @@ async function gdPull(){
     if(d.notes)S.notes=d.notes; if(d.clients)S.clients=d.clients;
     if(d.scheds)S.scheds=d.scheds; if(d.work)S.work=d.work;
     if(d.reports)S.reports=d.reports;
+    if(d.pub)S.pub=d.pub;
+    if(d.pubFiles)S.pubFiles=d.pubFiles;
+    // pub 기본 폴더 초기화 (최초 1회)
+    if(!S.pub||!S.pub.length){
+      S.pub=[
+        {id:'pubf1',t:'F',n:'텀블벅',p:null,o:0,open:true,driveName:'마케팅허브_텀블벅',driveId:null},
+        {id:'pubf2',t:'F',n:'출판사 정산',p:null,o:1,open:true,driveName:'마케팅허브_출판사정산',driveId:null},
+        {id:'pubf3',t:'F',n:'집필',p:null,o:2,open:true,driveName:'마케팅허브_집필',driveId:null},
+      ];
+    }
     await save();
     _gdDirty=false; clearTimeout(_gdAutoT);
     renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
