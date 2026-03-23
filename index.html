@@ -1217,6 +1217,22 @@ async function load(){
     S.scheds = data.scheds  || {};
     S.work   = data.work    || makeDefWork();
     S.reports= data.reports || [];
+    // IDB → S.reports 마이그레이션 (구버전 데이터 복원)
+    if(!S.reports.length){
+      try{
+        const idbFiles=await IDB.fgetAll();
+        if(idbFiles&&idbFiles.length){
+          S.reports=idbFiles.map(f=>({
+            id:f.id, name:f.name, type:f.type||'',
+            clientId:f.clientId, year:f.year, month:f.month,
+            uploadDate:f.uploadDate||new Date().toISOString(),
+            size:f.size||0, driveId:null, driveUrl:null, synced:false
+          }));
+          // 마이그레이션 완료 후 저장
+          if(S.reports.length) dsave();
+        }
+      }catch(e){ console.warn('IDB 마이그레이션 실패:', e); }
+    }
     // 구버전 localStorage 데이터 마이그레이션 (최초 1회)
     if(!data.notes && !data.work){
       await migrateFromLocalStorage();
