@@ -472,9 +472,9 @@ input[type="color"]{width:30px;height:30px;border:1px solid var(--bdr);border-ra
 .mob-tabbar{
   display:none;position:fixed;bottom:0;left:0;right:0;height:60px;
   background:var(--surf);border-top:1px solid var(--bdr);
-  z-index:400;align-items:stretch;
+  z-index:400;align-items:stretch;overflow-x:auto;-webkit-overflow-scrolling:touch;
 }
-.mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+.mob-tab{flex:0 0 auto;min-width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:2px;cursor:pointer;color:var(--tx3);font-size:9px;font-weight:600;
   border:none;background:none;font-family:inherit;transition:color .15s;padding:4px 0}
 .mob-tab.on{color:var(--ac)}
@@ -898,6 +898,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <div class="ssec">
         <div class="sstitle">👥 클라이언트 관리 <span style="font-size:11px;color:var(--tx3);font-weight:400">(할당량 변경 → 트래커 즉시 반영)</span></div>
+        <div style="font-size:11px;color:var(--tx3);background:var(--surf2);padding:8px 12px;border-radius:6px;border-left:3px solid var(--ac);margin-bottom:10px;line-height:1.7">💡 여기서 추가/삭제한 클라이언트는 <b>보고서 탭</b>에 자동 반영됩니다.<br>텀블벅·집필·출판사 정산 등 다른 항목은 <b>출판 탭</b> 안에서 직접 관리해주세요.</div>
         <div id="cleditor"></div>
         <button class="btn btng" style="margin-top:4px" onclick="addClient()">＋ 클라이언트 추가</button>
       </div>
@@ -1072,6 +1073,7 @@ input[type=number]{-moz-appearance:textfield}
   <button class="mob-tab" id="mob-tb-work" onclick="mobSwitchTab('work')"><span class="mob-tab-ico">🗂</span>통합문서</button>
   <button class="mob-tab" id="mob-tb-sched" onclick="mobSwitchTab('sched')"><span class="mob-tab-ico">📅</span>스케줄</button>
   <button class="mob-tab" id="mob-tb-report" onclick="mobSwitchTab('report')"><span class="mob-tab-ico">📁</span>보고서</button>
+  <button class="mob-tab" id="mob-tb-pub" onclick="mobSwitchTab('pub')"><span class="mob-tab-ico">📖</span>출판</button>
   <button class="mob-tab" id="mob-tb-settings" onclick="mobSwitchTab('settings')"><span class="mob-tab-ico">⚙️</span>설정</button>
 </div>
 <!-- 모바일 사이드바 오버레이 -->
