@@ -1841,20 +1841,130 @@ function pubRenderFiles(){
   files.forEach(f=>{
     const ext=(f.name||'').split('.').pop().toLowerCase();
     const ico={'pdf':'📕','pptx':'📊','ppt':'📊','xlsx':'📗','xls':'📗','docx':'📝','doc':'📝','hwp':'📝','jpg':'🖼','jpeg':'🖼','png':'🖼','gif':'🖼'}[ext]||'📎';
+    const isPdf=ext==='pdf';
+    const syncBadge=f.synced?'<span style="color:var(--gn);font-size:9px">☁ Drive</span>':'<span style="color:var(--tx3);font-size:9px">💾 로컬</span>';
+    const dateMeta=f.uploadDate?new Date(f.uploadDate).toLocaleDateString('ko-KR'):'';
+    const yearMonth=f.year?(f.year+'년'+(f.month?' '+f.month+'월':'')):'';
     const card=document.createElement('div');card.className='fcard';
-    const syncBadge=f.synced?'<span style="color:var(--gn);font-size:9px">☁</span>':'<span style="color:var(--tx3);font-size:9px">💾</span>';
-    card.innerHTML=`<div class="fcico">${ico}</div><div class="fcname">${f.name}</div><div class="fcmeta">${f.year||''}${f.month?'년 '+f.month+'월':''} · ${fmtSize(f.size||0)} ${syncBadge}</div><div class="fcmeta" style="font-size:9px">${f.uploadDate?new Date(f.uploadDate).toLocaleDateString('ko-KR'):''}</div><div class="fcbtns"><button class="fcbtn" onclick="pubDlFile('${f.id}')">다운로드</button><button class="fcbtn d" onclick="pubRmFile('${f.id}')">삭제</button></div>`;
+    card.innerHTML=`<div class="fcico">${ico}</div><div class="fcname">${f.name}</div><div class="fcmeta">${yearMonth?yearMonth+' · ':''}${fmtSize(f.size||0)} ${syncBadge}</div><div class="fcmeta" style="font-size:9px">${dateMeta}</div><div class="fcbtns">${isPdf?`<button class="fcbtn" onclick="pubPreviewPdf('${f.id}')">미리보기</button>`:''}<button class="fcbtn" onclick="pubDlFile('${f.id}')">다운로드</button><button class="fcbtn d" onclick="pubRmFile('${f.id}')">삭제</button></div>`;
     grid.appendChild(card);
   });
 }
 
 // 파일 업로드 stub (3단계에서 구현)
-function pubUploadFile(){toast('3단계에서 구현됩니다.');}
-function pubDlFile(id){toast('3단계에서 구현됩니다.');}
+function pubUploadFile(){
+  if(!_pubSel){toast('항목을 먼저 선택하세요.');return;}
+  const node=S.pub.find(n=>n.id===_pubSel);
+  if(!node||node.t!=='I'){toast('파일 항목을 선택해야 업로드할 수 있습니다.');return;}
+  // 루트 폴더 확인
+  const root=pubRootFolder(_pubSel);
+  if(!root){toast('폴더를 찾을 수 없습니다.',true);return;}
+  // 출판사 정산은 월 선택 필수
+  const hasFilter=root.n==='출판사 정산';
+  const yr=hasFilter?parseInt(document.getElementById('pub-year')?.value||'0'):new Date().getFullYear();
+  const mo=hasFilter?parseInt(document.getElementById('pub-month')?.value||'0'):0;
+  if(hasFilter&&mo===0){toast('월을 선택해주세요.');return;}
+  const inp=document.createElement('input');
+  inp.type='file';
+  inp.accept='.pdf,.pptx,.ppt,.xlsx,.xls,.docx,.doc,.hwp,.jpg,.jpeg,.png,.gif';
+  inp.onchange=async e=>{
+    const file=e.target.files[0];if(!file)return;
+    const ab=await file.arrayBuffer();
+    const id=uid();
+    // IDB 캐시
+    try{
+      await IDB.fput({id,name:file.name,type:file.type||'',data:ab,
+        itemId:_pubSel,folderId:root.id,year:yr,month:mo,
+        uploadDate:new Date().toISOString(),size:file.size});
+    }catch(err){toast('로컬 저장 실패: 파일이 너무 클 수 있습니다.',true);return;}
+    // 메타데이터 S.pubFiles에 저장
+    const meta={id,name:file.name,type:file.type||'',
+      itemId:_pubSel,folderId:root.id,year:yr,month:mo,
+      uploadDate:new Date().toISOString(),size:file.size,
+      driveId:null,driveUrl:null,synced:false};
+    if(!S.pubFiles)S.pubFiles=[];
+    S.pubFiles.push(meta);
+    dsave();
+    toast(`"${file.name}" 업로드 완료`);
+    pubRenderFiles();
+    // Drive 업로드 (백그라운드)
+    const token=await gdGetValidToken();
+    if(token){
+      try{
+        toast(`"${file.name}" Drive 업로드 중...`);
+        // 루트 폴더의 driveName으로 Drive 폴더 보장
+        const folderId=await gdEnsureRptFolder(token,root.driveName||('마케팅허브_'+root.n));
+        if(folderId) root.driveId=folderId;
+        const res=await gdUploadReport(token,folderId,file,ab);
+        if(res&&res.id){
+          meta.driveId=res.id;meta.driveUrl=res.webViewLink||null;meta.synced=true;
+          dsave();pubRenderFiles();
+          toast(`"${file.name}" Drive 저장 완료 ☁`);
+        }
+      }catch(err){toast(`Drive 업로드 실패 (로컬 저장됨): ${err.message}`,true);}
+    }
+  };
+  inp.click();
+}
+async function pubDlFile(id){
+  const meta=(S.pubFiles||[]).find(f=>f.id===id);
+  let ab=null;
+  try{const f=await IDB.fget(id);if(f&&f.data)ab=f.data;}catch(e){}
+  if(!ab&&meta&&meta.driveId){
+    const token=await gdGetValidToken();
+    if(token){
+      try{
+        toast('Drive에서 다운로드 중...');
+        ab=await gdDownloadReport(token,meta.driveId);
+        try{await IDB.fput({id,name:meta.name,type:meta.type||'',data:ab,
+          itemId:meta.itemId,folderId:meta.folderId,
+          year:meta.year,month:meta.month,uploadDate:meta.uploadDate,size:meta.size});}catch(e){}
+      }catch(err){toast('다운로드 실패: '+err.message,true);return;}
+    }else{toast('Drive에 연결해야 다운로드 가능합니다.',true);return;}
+  }
+  if(!ab){toast('파일을 찾을 수 없습니다.',true);return;}
+  const fname=meta?meta.name:'파일';
+  const ftype=meta?meta.type:'application/octet-stream';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ab],{type:ftype}));
+  a.download=fname;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+async function pubPreviewPdf(id){
+  const meta=(S.pubFiles||[]).find(f=>f.id===id);
+  let url=null;
+  try{const f=await IDB.fget(id);if(f&&f.data)url=URL.createObjectURL(new Blob([f.data],{type:'application/pdf'}));}catch(e){}
+  if(!url&&meta&&meta.driveId){
+    const token=await gdGetValidToken();
+    if(token){
+      try{
+        toast('Drive에서 불러오는 중...');
+        const ab=await gdDownloadReport(token,meta.driveId);
+        url=URL.createObjectURL(new Blob([ab],{type:'application/pdf'}));
+        try{await IDB.fput({id,name:meta.name,type:meta.type||'',data:ab,
+          itemId:meta.itemId,folderId:meta.folderId,
+          year:meta.year,month:meta.month,uploadDate:meta.uploadDate,size:meta.size});}catch(e){}
+      }catch(err){toast('미리보기 실패: '+err.message,true);return;}
+    }else{toast('Drive에 연결해야 미리보기 가능합니다.',true);return;}
+  }
+  if(!url){toast('파일을 찾을 수 없습니다.',true);return;}
+  const bg=document.createElement('div');bg.className='modal-bg';
+  bg.innerHTML=`<div class="modal-box"><div class="modal-hdr"><span class="modal-title">${meta?meta.name:'PDF 미리보기'}</span><button onclick="this.closest('.modal-bg').remove()">✕</button></div><iframe src="${url}" style="flex:1;border:none;width:100%;min-height:60vh"></iframe></div>`;
+  document.body.appendChild(bg);
+}
+
 async function pubRmFile(id){
   if(!confirm('파일을 삭제하시겠습니까?'))return;
+  const meta=(S.pubFiles||[]).find(f=>f.id===id);
+  if(meta&&meta.driveId){
+    const token=await gdGetValidToken();
+    if(token){try{await gdDeleteReport(token,meta.driveId);}catch(e){console.warn('Drive 삭제 실패:',e.message);}}
+  }
   S.pubFiles=(S.pubFiles||[]).filter(f=>f.id!==id);
+  try{await IDB.fdel(id);}catch(e){}
   dsave();pubRenderFiles();
+  toast('삭제되었습니다.');
 }
 
 // ── 에디터 ──
@@ -3658,21 +3768,24 @@ const GD_RPT_FOLDER = '마케팅허브_보고서'; // Drive 폴더명
 let _gdRptFolderId = null; // 폴더 ID 캐시
 
 // Drive에 보고서 폴더 생성 또는 기존 폴더 ID 반환
-async function gdEnsureRptFolder(token){
-  if(_gdRptFolderId) return _gdRptFolderId;
-  // 폴더 검색
-  const q = `name='${GD_RPT_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`;
-  const r = await gdApiCall('GET', url, token);
-  if(r.files && r.files.length>0){
-    _gdRptFolderId = r.files[0].id;
-    return _gdRptFolderId;
+async function gdEnsureRptFolder(token, folderName){
+  const fname = folderName || GD_RPT_FOLDER;
+  // 캐시 확인 (폴더명별로)
+  if(!gdEnsureRptFolder._cache) gdEnsureRptFolder._cache={};
+  if(gdEnsureRptFolder._cache[fname]) return gdEnsureRptFolder._cache[fname];
+  // Drive에서 폴더 검색
+  const q=`name='${fname}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  const url=`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`;
+  const r=await gdApiCall('GET',url,token);
+  if(r.files&&r.files.length>0){
+    gdEnsureRptFolder._cache[fname]=r.files[0].id;
+    return gdEnsureRptFolder._cache[fname];
   }
   // 없으면 생성
-  const meta = JSON.stringify({name:GD_RPT_FOLDER, mimeType:'application/vnd.google-apps.folder'});
-  const cr = await gdApiCall('POST','https://www.googleapis.com/drive/v3/files',token,meta,'application/json');
-  _gdRptFolderId = cr.id;
-  return _gdRptFolderId;
+  const meta=JSON.stringify({name:fname,mimeType:'application/vnd.google-apps.folder'});
+  const cr=await gdApiCall('POST','https://www.googleapis.com/drive/v3/files',token,meta,'application/json');
+  gdEnsureRptFolder._cache[fname]=cr.id;
+  return cr.id;
 }
 
 // Drive에 보고서 파일 업로드 (multipart)
