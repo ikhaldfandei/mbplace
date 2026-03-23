@@ -778,7 +778,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="epane" id="pub-ep1">
           <div class="etbar">
             <span class="etitle empty" id="pub-et1">← 항목을 선택하세요</span>
-            <div id="pub-file-wrap" style="display:none">
+            <div id="pub-file-wrap" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
               <select class="fmsel" id="pub-year" onchange="pubRenderFiles()" style="font-size:11px"></select>
               <select class="fmsel" id="pub-month" onchange="pubRenderFiles()" style="font-size:11px">
                 <option value="0">전체</option>
@@ -1666,7 +1666,6 @@ function editTabName(btnEl, t){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _pubSel = null;  // 현재 선택된 노드 id
 let _pubDragId = null, _pubDropPos = null;
-let _pubQuill = null; // 에디터 인스턴스
 
 // 헬퍼: 자식 노드
 function pubKids(pid){ return S.pub.filter(n=>n.p===pid).sort((a,b)=>a.o-b.o); }
@@ -1860,26 +1859,21 @@ async function pubRmFile(id){
 
 // ── 에디터 ──
 function pubOpenEditor(node){
-  // Quill이 없으면 초기화
-  if(!_pubQuill){
-    const toolbar=document.getElementById('pub-eqtoolbar');
-    const edEl=document.getElementById('pub-eq');
-    if(!toolbar||!edEl)return;
-    _pubQuill=new Quill(edEl,{
-      theme:'snow',
-      modules:{toolbar:toolbar.id?{container:'#'+toolbar.id}:{container:[[{'header':[1,2,3,false]},{'list':'ordered'},{'list':'bullet'}],['bold','italic','underline'],['link'],['clean']]}},
+  const et=document.getElementById('pub-et1');
+  if(et){et.textContent=node.n;et.className='etitle';}
+  // MBEditor 초기화 (최초 1회)
+  if(!window._pubEditor){
+    window._pubEditor=new MBEditor('pub-eqtoolbar','pub-eq','내용을 입력하세요...',html=>{
+      const nd=S.pub.find(n=>n.id===_pubSel);if(nd){nd.content=html;dsave();}
     });
+  } else {
+    // 콜백 교체 (다른 노드 열릴 때)
+    window._pubEditor.cb=html=>{
+      const nd=S.pub.find(n=>n.id===_pubSel);if(nd){nd.content=html;dsave();}
+    };
   }
-  _pubQuill.setContents(node.content?JSON.parse(node.content):{ops:[]});
-  _pubQuill.off('text-change');
-  let _qt;
-  _pubQuill.on('text-change',()=>{
-    clearTimeout(_qt);
-    _qt=setTimeout(()=>{
-      node.content=JSON.stringify(_pubQuill.getContents());
-      dsave();
-    },400);
-  });
+  // 내용 로드
+  window._pubEditor.html=node.content||'';
 }
 
 // ── CRUD ──
