@@ -2009,8 +2009,12 @@ function pubAddItemTo(pid){
 }
 function pubAddDoc(){
   const sel=_pubSel?S.pub.find(n=>n.id===_pubSel):null;
-  const pid=sel?(sel.t==='F'?sel.id:(sel.p||null)):null;
-  if(!pid){toast('먼저 폴더 또는 항목을 선택하세요.');return;}
+  let pid=null;
+  if(!sel){toast('먼저 폴더 또는 항목을 선택하세요.');return;}
+  if(sel.t==='F') pid=sel.id;           // 폴더 선택 → 그 폴더 아래
+  else if(sel.t==='I') pid=sel.p||null;  // 항목 선택 → 항목의 부모 폴더 아래
+  else if(sel.t==='D') pid=sel.p||null;  // 문서 선택 → 같은 부모 아래
+  if(!pid){toast('폴더를 선택해주세요.');return;}
   pubAddDocTo(pid);
 }
 function pubAddDocTo(pid){
@@ -3755,10 +3759,26 @@ function updateRptSyncBtn(){
 
 function renderFmClients(){
   const el=document.getElementById('fmclientlist');el.innerHTML='';
-  S.clients.forEach(c=>{
+  // 현재 클라이언트 목록
+  const activeClients=S.clients||[];
+  // S.reports에만 있는 (삭제된) 클라이언트 ID 추출
+  const activeIds=new Set(activeClients.map(c=>c.id));
+  const ghostIds=[...new Set((S.reports||[]).map(f=>f.clientId).filter(id=>id&&!activeIds.has(id)))];
+  // 현재 클라이언트 렌더
+  activeClients.forEach(c=>{
     const item=document.createElement('div');item.className='fmclientitem'+(S.fmCl===c.id?' sel':'');
     item.innerHTML=`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0"></span><span class="fmclabel">${c.name}</span>`;
     item.onclick=()=>{S.fmCl=c.id;renderFmClients();renderFiles();};
+    el.appendChild(item);
+  });
+  // 삭제된 클라이언트 렌더 (회색 처리)
+  ghostIds.forEach(id=>{
+    const files=(S.reports||[]).filter(f=>f.clientId===id);
+    const name=files[0]?.name?.split('_')[0]||id;
+    const item=document.createElement('div');item.className='fmclientitem'+(S.fmCl===id?' sel':'');
+    item.style.opacity='0.5';
+    item.innerHTML=`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#888;flex-shrink:0"></span><span class="fmclabel">${name} <span style="font-size:9px">(삭제됨)</span></span>`;
+    item.onclick=()=>{S.fmCl=id;renderFmClients();renderFiles();};
     el.appendChild(item);
   });
 }
@@ -4011,6 +4031,7 @@ function importData(){
         await save();
         _gdDirty=false; clearTimeout(_gdAutoT);
         renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
+    if(typeof renderPubTree==='function')renderPubTree();
         toast('데이터를 불러왔습니다.');
       }catch(e){alert('파일 형식이 올바르지 않습니다.');}
     };r.readAsText(f);
@@ -4238,6 +4259,7 @@ async function gdPull(){
     await save();
     _gdDirty=false; clearTimeout(_gdAutoT);
     renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
+    if(typeof renderPubTree==='function')renderPubTree();
     const timeStr = new Date().toLocaleString('ko-KR');
     gdLog(`✓ ${timeStr} 불러오기 완료`, true);
     gdBar(`✓ Drive 불러오기 완료 — ${new Date().toLocaleTimeString('ko-KR')}`, 'ok');
