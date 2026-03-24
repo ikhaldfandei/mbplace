@@ -2419,7 +2419,6 @@ function _preloadLibs(){
     if(document.querySelector(`script[src="${src}"]`)){res();return;}
     const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);
   });
-  load('https://cdnjs.cloudflare.com/ajax/libs/html-docx-js/0.3.1/html-docx.js').catch(()=>{});
   load('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js').catch(()=>{});
 }
 
@@ -5388,35 +5387,79 @@ function exportDoc(type){
   const{html,title,el}=getActiveEditorContent();
   if(!html){toast('내보낼 내용이 없습니다.',true);return;}
   if(type==='word'){
-    // html-docx-js 라이브러리로 실제 docx 생성
-    const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
-    const doWord=()=>{
-      try{
-        const docHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:"맑은 고딕",sans-serif;font-size:11pt;line-height:1.8}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px}img{max-width:100%}</style></head><body>'+html+'</body></html>';
-        const blob=window.htmlDocx.asBlob(docHtml,{orientation:'portrait',margins:{top:720,right:720,bottom:720,left:720}});
-        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.docx';a.click();
-        setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Word 파일 저장 완료!');
-      }catch(e){toast('Word 변환 실패: '+e.message,true);}
-    };
-    if(window.htmlDocx)doWord();
-    else loadScript('https://cdnjs.cloudflare.com/ajax/libs/html-docx-js/0.3.1/html-docx.js').then(doWord).catch(()=>toast('라이브러리 로드 실패. 오프라인 상태를 확인하세요.',true));
+    // Word XML 방식 - 외부 라이브러리 불필요, Word 2007+ 완벽 지원
+    const docXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<?mso-application progid="Word.Document"?>
+<w:wordDocument xmlns:w="http://schemas.microsoft.com/office/word/2003/wordml"
+  xmlns:wx="http://schemas.microsoft.com/office/word/2003/auxHint"
+  xmlns:wsp="http://schemas.microsoft.com/office/word/2003/wordml/sp2"
+  w:macrosPresent="no" w:embeddedObjPresent="no" w:ocxPresent="no">
+<w:body>
+<wx:sect>
+<wx:sub-section>
+</wx:sub-section>
+</wx:sect>
+</w:body>
+</w:wordDocument>`;
+    // RTF 대신 HTML 기반 doc (Word HTML format) - 가장 호환성 높음
+    const style=`
+      body{font-family:'맑은 고딕',Arial,sans-serif;font-size:11pt;line-height:1.8;margin:2cm}
+      table{border-collapse:collapse;width:100%}
+      td,th{border:1px solid #999;padding:6px 8px}
+      img{max-width:100%}
+      h1{font-size:18pt}h2{font-size:15pt}h3{font-size:13pt}
+    `;
+    const docContent=`<html xmlns:o='urn:schemas-microsoft-com:office:office'
+      xmlns:w='urn:schemas-microsoft-com:office:word'
+      xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset='UTF-8'>
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content='Microsoft Word 15'>
+<meta name=Originator content='Microsoft Word 15'>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View>
+<w:Zoom>90</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+<style>${style}</style>
+</head>
+<body lang=KO>
+<div class=WordSection1>
+${html}
+</div>
+</body>
+</html>`;
+    const blob=new Blob(['﻿'+docContent],{type:'application/msword;charset=utf-8'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=title+'.doc';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+    toast('Word 파일 저장 완료! (.doc)');
   }else if(type==='pdf'){
     const win=window.open('','_blank','width=800,height=600');
     if(!win){toast('팝업이 차단됐습니다. 팝업을 허용해주세요.',true);return;}
-    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title><style>@page{margin:20mm}body{font-family:"맑은 고딕",sans-serif;font-size:11pt;line-height:1.8}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 8px}img{max-width:100%}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>'+html+'</body></html>');
-    win.document.close();setTimeout(()=>{win.focus();win.print();},600);
-    toast('인쇄 창에서 "PDF로 저장"을 선택하세요.');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset='UTF-8'><style>
+      @media print{body{margin:1.5cm}button{display:none}}
+      body{font-family:'맑은 고딕',sans-serif;font-size:11pt;line-height:1.8;margin:2cm}
+      table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px}
+      img{max-width:100%}
+    </style></head><body>
+    <button onclick="window.print();window.close()" style="margin-bottom:16px;padding:6px 16px;cursor:pointer">🖨 인쇄 / PDF 저장</button>
+    ${html}
+    </body></html>`);
+    win.document.close();
   }else if(type==='png'){
-    toast('PNG 변환 중...');
-    const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+    if(!el){toast('에디터를 찾을 수 없습니다.',true);return;}
     const doImg=()=>{
-      if(!el){toast('에디터를 찾을 수 없습니다.',true);return;}
       window.html2canvas(el,{backgroundColor:'#ffffff',scale:2,useCORS:true,logging:false}).then(canvas=>{
         canvas.toBlob(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('PNG 저장 완료!');});
       }).catch(e=>toast('PNG 변환 실패: '+e.message,true));
     };
     if(window.html2canvas)doImg();
-    else loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js').then(doImg).catch(()=>toast('라이브러리 로드 실패',true));
+    else{
+      const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload=doImg;s.onerror=()=>toast('라이브러리 로드 실패. 네트워크를 확인하세요.',true);
+      document.head.appendChild(s);
+    }
   }
 }
 
