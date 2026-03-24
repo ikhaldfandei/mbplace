@@ -3891,21 +3891,39 @@ function exportSchedJpg(){
   if(!el){toast('스케줄 영역을 찾을 수 없습니다.',true);return;}
   toast('스케줄 이미지 생성 중...');
   const label=document.getElementById('mlabel')?.textContent||'스케줄';
-  window.html2canvas(el,{backgroundColor:'#ffffff',scale:2,useCORS:true,logging:false,
-    onclone:(doc)=>{
-      // 복제본에서 contentEditable 스타일 정리
-      doc.querySelectorAll('[contenteditable]').forEach(el=>{el.style.outline='none';});
-    }
-  }).then(canvas=>{
-    canvas.toBlob(blob=>{
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download=label+'_스케줄.jpg';
-      a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-      toast('JPG 저장 완료!');
-    },'image/jpeg',0.92);
-  }).catch(e=>{toast('이미지 생성 실패: '+e.message,true);});
+  // 스크롤 컨테이너 일시 확장 후 캡처
+  const parent=el.parentElement;
+  const origOverflow=parent?parent.style.overflow:'';
+  const origHeight=parent?parent.style.height:'';
+  if(parent){parent.style.overflow='visible';parent.style.height='auto';}
+  // 짧은 딜레이 후 캡처 (렌더링 안정화)
+  setTimeout(()=>{
+    window.html2canvas(el,{
+      backgroundColor:'#ffffff',
+      scale:2,useCORS:true,logging:false,
+      scrollX:0,scrollY:0,
+      windowWidth:el.scrollWidth,
+      windowHeight:el.scrollHeight,
+      onclone:(doc)=>{
+        doc.querySelectorAll('[contenteditable]').forEach(e=>{e.style.outline='none';});
+      }
+    }).then(canvas=>{
+      // 스크롤 컨테이너 복원
+      if(parent){parent.style.overflow=origOverflow;parent.style.height=origHeight;}
+      canvas.toBlob(blob=>{
+        if(!blob){toast('이미지 생성 실패',true);return;}
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download=label+'_스케줄.jpg';
+        document.body.appendChild(a);a.click();
+        setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+        toast('JPG 저장 완료! 📥');
+      },'image/jpeg',0.92);
+    }).catch(e=>{
+      if(parent){parent.style.overflow=origOverflow;parent.style.height=origHeight;}
+      toast('이미지 생성 실패: '+e.message,true);
+    });
+  },100);
 }
 
 function getSchedNotes(y, m){
@@ -4054,52 +4072,63 @@ function applyLockToEditor(ceId, badgeId, locked){
 }
 
 
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  5. 셀 다중 선택 (Ctrl+클릭)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-let _multiSelCells = new Set(); // {wi_chi_di} 키 세트
-let _multiSelEls = new Set();   // DOM 요소 세트
+let _multiSelCells = new Set();
+let _multiSelEls = new Set();
+let _multiSelInitVals = new Map(); // el → 입력 시작 전 초기값
 
 function clearMultiSel(){
   _multiSelEls.forEach(el=>el.classList.remove('multi-sel'));
-  _multiSelCells.clear();_multiSelEls.clear();
+  _multiSelCells.clear();_multiSelEls.clear();_multiSelInitVals.clear();
 }
 function multiSelKey(wi,chi,di){return wi+'_'+chi+'_'+di;}
 
-// renderSched 내 셀 click 이벤트에 Ctrl 감지 추가
-// → 별도 함수로 분리해서 셀 생성 시 호출
 function handleCellClick(e, cell, y, m, wi, chi, di){
   if(e.ctrlKey||e.metaKey){
     e.preventDefault();e.stopPropagation();
     const k=multiSelKey(wi,chi,di);
     if(_multiSelCells.has(k)){
       _multiSelCells.delete(k);_multiSelEls.delete(cell);
+      _multiSelInitVals.delete(cell);
       cell.classList.remove('multi-sel');
     } else {
       _multiSelCells.add(k);_multiSelEls.add(cell);
       cell.classList.add('multi-sel');
     }
   } else {
-    // 일반 클릭 시 다중 선택 해제
     if(_multiSelCells.size>0) clearMultiSel();
   }
 }
 
-function handleCellInput(cell, y, m, wi, ch, di){
-  const val=cell.innerText;
-  setCell(y,m,wi,ch,di,val);
-  // 다중 선택 셀에도 동일 입력 (추가 방식)
+function handleCellFocus(cell, y, m, wi, ch, di){
+  // 포커스 시 다른 선택된 셀들의 초기값 스냅샷
   if(_multiSelCells.size>1){
     _multiSelEls.forEach(el=>{
-      if(el===cell)return;
+      if(el===cell) return;
       const ewi=parseInt(el.dataset.wi),echi=parseInt(el.dataset.chi),edi=parseInt(el.dataset.di);
       const ech=CH[echi];
       const cur=getCell(y,m,ewi,ech,edi)||'';
-      // 추가 방식: 이미 같은 내용 있으면 스킵
-      const newPart=val.trim();
-      if(!newPart){el.innerText='';setCell(y,m,ewi,ech,edi,'');return;}
-      const merged=cur?cur+' '+newPart:newPart;
-      el.innerText=merged;setCell(y,m,ewi,ech,edi,merged);
+      _multiSelInitVals.set(el, cur);
+    });
+  }
+}
+
+function handleCellInput(cell, y, m, wi, ch, di){
+  const val=cell.innerText.trim();
+  setCell(y,m,wi,ch,di,cell.innerText);
+  // 다중 선택: 초기값 + 새 입력값으로 설정 (누적 방지)
+  if(_multiSelCells.size>1&&val){
+    _multiSelEls.forEach(el=>{
+      if(el===cell) return;
+      const ewi=parseInt(el.dataset.wi),echi=parseInt(el.dataset.chi),edi=parseInt(el.dataset.di);
+      const ech=CH[echi];
+      const initVal=_multiSelInitVals.get(el)??getCell(y,m,ewi,ech,edi)??'';
+      const merged=initVal?initVal+' '+val:val;
+      el.innerText=merged;
+      setCell(y,m,ewi,ech,edi,merged);
     });
   }
 }
@@ -4371,7 +4400,8 @@ function renderSched(){clearMultiSel&&clearMultiSel();
             cell.className='scell'+(isToday?' today-col':'');cell.contentEditable='true';
             cell.dataset.wi=wi;cell.dataset.chi=CH.indexOf(ch);cell.dataset.di=di;
             cell.innerText=getCell(y,m,wi,ch,di);
-            let ct;cell.addEventListener('input',()=>{handleCellInput(cell,y,m,wi,CH.indexOf(ch),di);clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
+            let ct;cell.addEventListener('focus',()=>{handleCellFocus(cell,y,m,wi,ch,CH.indexOf(ch));});
+            cell.addEventListener('input',()=>{handleCellInput(cell,y,m,wi,ch,CH.indexOf(ch));clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
             cell.addEventListener('keydown',e=>{schedCellKey(e,cell);});
             cell.addEventListener('click',e=>{handleCellClick(e,cell,y,m,wi,CH.indexOf(ch),di);});
           }
