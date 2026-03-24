@@ -4400,8 +4400,8 @@ function renderSched(){clearMultiSel&&clearMultiSel();
             cell.className='scell'+(isToday?' today-col':'');cell.contentEditable='true';
             cell.dataset.wi=wi;cell.dataset.chi=CH.indexOf(ch);cell.dataset.di=di;
             cell.innerText=getCell(y,m,wi,ch,di);
-            let ct;cell.addEventListener('focus',()=>{handleCellFocus(cell,y,m,wi,ch,CH.indexOf(ch));});
-            cell.addEventListener('input',()=>{handleCellInput(cell,y,m,wi,ch,CH.indexOf(ch));clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
+            let ct;cell.addEventListener('focus',()=>{handleCellFocus(cell,y,m,wi,ch,di);});
+            cell.addEventListener('input',()=>{handleCellInput(cell,y,m,wi,ch,di);clearTimeout(ct);ct=setTimeout(()=>{save();updateTracker();},350);});
             cell.addEventListener('keydown',e=>{schedCellKey(e,cell);});
             cell.addEventListener('click',e=>{handleCellClick(e,cell,y,m,wi,CH.indexOf(ch),di);});
           }
