@@ -581,6 +581,38 @@ input[type=number]{-moz-appearance:textfield}
 .sched-modal{background:var(--surf);border-radius:12px;padding:20px 22px;width:360px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.4);overflow:hidden}
 .sched-modal-body{overflow-y:auto;flex:1}
 
+
+/* ── 전역 플로팅 메모 ── */
+#float-memo{
+  position:fixed;z-index:99999;
+  background:var(--surf);border:1.5px solid var(--bdr);
+  border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.35);
+  display:none;flex-direction:column;
+  min-width:200px;min-height:160px;
+  resize:both;overflow:hidden;
+  font-family:inherit;
+}
+#float-memo.visible{display:flex;}
+#float-memo-hdr{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 10px;background:var(--surf2);
+  border-bottom:1px solid var(--bdr);border-radius:9px 9px 0 0;
+  cursor:move;user-select:none;flex-shrink:0;
+}
+#float-memo-title{font-size:11px;font-weight:600;color:var(--tx2);flex:1}
+#float-memo-copy{background:none;border:none;cursor:pointer;font-size:13px;color:var(--tx3);padding:2px 4px;border-radius:4px}
+#float-memo-copy:hover{background:var(--surf3,var(--bdr));color:var(--tx)}
+#float-memo-close{background:none;border:none;cursor:pointer;font-size:14px;color:var(--tx3);padding:2px 4px;border-radius:4px;line-height:1}
+#float-memo-close:hover{background:#ef444420;color:#ef4444}
+#float-memo-bold{background:none;border:1px solid var(--bdr);cursor:pointer;font-size:11px;font-weight:700;color:var(--tx2);padding:1px 6px;border-radius:4px}
+#float-memo-bold:hover,#float-memo-bold.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+#float-memo-body{
+  flex:1;padding:10px 12px;
+  font-size:12px;line-height:1.7;color:var(--tx);
+  outline:none;overflow-y:auto;word-break:break-word;
+  min-height:100px;
+}
+
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
@@ -1460,6 +1492,7 @@ async function enterApp(){
   setTimeout(()=>{if(typeof renderAlarmSettings==='function')renderAlarmSettings();},500);
   loadTabNames();
   await restoreLastSession();
+  _fmInitDrag();
   // 내보내기 라이브러리 프리로드 (네트워크 연결 시 미리 로드)
   _preloadLibs();
   const yr=document.getElementById('fmyear');yr.innerHTML='';
@@ -2420,6 +2453,116 @@ function _preloadLibs(){
     const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);
   });
   load('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js').catch(()=>{});
+}
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  전역 플로팅 메모 (Ctrl+M)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const FM_KEY = 'mb_float_memo';
+let _fmDragging = false, _fmDx = 0, _fmDy = 0;
+
+function _fmEl(){ return document.getElementById('float-memo'); }
+function _fmBody(){ return document.getElementById('float-memo-body'); }
+
+// 열기/닫기 토글
+function toggleFloatMemo(forceOpen){
+  const el=_fmEl();if(!el)return;
+  const open = forceOpen===true ? true : forceOpen===false ? false : !el.classList.contains('visible');
+  if(open){
+    // 저장된 위치/크기 복원
+    const saved=JSON.parse(localStorage.getItem(FM_KEY+'_pos')||'{}');
+    if(saved.top){el.style.top=saved.top;el.style.left=saved.left;}
+    else{el.style.bottom='80px';el.style.right='20px';el.style.top='';el.style.left='';}
+    if(saved.width){el.style.width=saved.width;el.style.height=saved.height;}
+    else{el.style.width='320px';el.style.height='240px';}
+    // 저장된 내용 복원
+    const content=localStorage.getItem(FM_KEY+'_content')||'';
+    _fmBody().innerHTML=content;
+    el.classList.add('visible');
+    setTimeout(()=>_fmBody().focus(),50);
+  }else{
+    // 내용 저장 후 닫기
+    _fmSave();
+    el.classList.remove('visible');
+  }
+}
+
+// 내용 저장
+function _fmSave(){
+  const body=_fmBody();if(!body)return;
+  localStorage.setItem(FM_KEY+'_content', body.innerHTML);
+}
+
+// 위치/크기 저장
+function _fmSavePos(){
+  const el=_fmEl();if(!el)return;
+  const r=el.getBoundingClientRect();
+  localStorage.setItem(FM_KEY+'_pos', JSON.stringify({
+    top:el.style.top||r.top+'px', left:el.style.left||r.left+'px',
+    width:el.offsetWidth+'px', height:el.offsetHeight+'px'
+  }));
+}
+
+// 굵기 토글
+function floatMemoBold(){
+  _fmBody().focus();
+  document.execCommand('bold');
+  const btn=document.getElementById('float-memo-bold');
+  if(btn)btn.classList.toggle('on', document.queryCommandState('bold'));
+}
+
+// 복사
+function floatMemoCopy(){
+  const body=_fmBody();if(!body)return;
+  const text=body.innerText||body.textContent||'';
+  navigator.clipboard.writeText(text).then(()=>toast('메모 내용이 복사되었습니다.')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('메모 내용이 복사되었습니다.');
+  });
+}
+
+// 드래그 이동
+function _fmInitDrag(){
+  const hdr=document.getElementById('float-memo-hdr');
+  const el=_fmEl();
+  if(!hdr||!el)return;
+  hdr.addEventListener('mousedown',e=>{
+    if(e.target.tagName==='BUTTON')return;
+    _fmDragging=true;
+    const r=el.getBoundingClientRect();
+    el.style.top=r.top+'px';el.style.left=r.left+'px';
+    el.style.bottom='';el.style.right='';
+    _fmDx=e.clientX-r.left;_fmDy=e.clientY-r.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!_fmDragging)return;
+    let nx=e.clientX-_fmDx, ny=e.clientY-_fmDy;
+    // 뷰포트 범위 내로 제한 (모서리는 30px까지 허용)
+    nx=Math.max(-el.offsetWidth+30, Math.min(window.innerWidth-30, nx));
+    ny=Math.max(0, Math.min(window.innerHeight-30, ny));
+    el.style.left=nx+'px';el.style.top=ny+'px';
+  });
+  document.addEventListener('mouseup',()=>{
+    if(_fmDragging){_fmDragging=false;_fmSavePos();}
+  });
+  // 크기 조절 후 저장 (ResizeObserver)
+  if(window.ResizeObserver){
+    new ResizeObserver(()=>{ if(el.classList.contains('visible'))_fmSavePos(); }).observe(el);
+  }
+  // 메모 내용 자동저장 (input)
+  _fmBody().addEventListener('input',()=>_fmSave());
+  // Esc로 닫기 (메모장 포커스 시)
+  _fmBody().addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();toggleFloatMemo(false);}
+    if((e.ctrlKey||e.metaKey)&&e.key==='b'){e.preventDefault();floatMemoBold();}
+  });
+  // selectionchange로 굵기 버튼 상태 동기화
+  document.addEventListener('selectionchange',()=>{
+    const btn=document.getElementById('float-memo-bold');
+    if(!btn)return;
+    try{btn.classList.toggle('on',document.queryCommandState('bold'));}catch(e){}
+  });
 }
 
 function saveLastSession(){
@@ -5425,6 +5568,18 @@ function exportDoc(type){
 <div class=WordSection1>
 ${html}
 </div>
+
+<!-- 전역 플로팅 메모 -->
+<div id="float-memo">
+  <div id="float-memo-hdr">
+    <span id="float-memo-title">📝 메모</span>
+    <button id="float-memo-bold" title="굵게 (Ctrl+B)" onclick="floatMemoBold()">B</button>
+    <button id="float-memo-copy" title="내용 복사" onclick="floatMemoCopy()">📋</button>
+    <button id="float-memo-close" title="닫기 (Esc)" onclick="toggleFloatMemo(false)">✕</button>
+  </div>
+  <div id="float-memo-body" contenteditable="true" spellcheck="false"></div>
+</div>
+
 </body>
 </html>`;
     const blob=new Blob(['﻿'+docContent],{type:'application/msword;charset=utf-8'});
@@ -5445,7 +5600,19 @@ ${html}
     </style></head><body>
     <button onclick="window.print();window.close()" style="margin-bottom:16px;padding:6px 16px;cursor:pointer">🖨 인쇄 / PDF 저장</button>
     ${html}
-    </body></html>`);
+    
+<!-- 전역 플로팅 메모 -->
+<div id="float-memo">
+  <div id="float-memo-hdr">
+    <span id="float-memo-title">📝 메모</span>
+    <button id="float-memo-bold" title="굵게 (Ctrl+B)" onclick="floatMemoBold()">B</button>
+    <button id="float-memo-copy" title="내용 복사" onclick="floatMemoCopy()">📋</button>
+    <button id="float-memo-close" title="닫기 (Esc)" onclick="toggleFloatMemo(false)">✕</button>
+  </div>
+  <div id="float-memo-body" contenteditable="true" spellcheck="false"></div>
+</div>
+
+</body></html>`);
     win.document.close();
   }else if(type==='png'){
     if(!el){toast('에디터를 찾을 수 없습니다.',true);return;}
@@ -5470,6 +5637,7 @@ ${html}
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();if(_srchOpen)closeSearch();else openSearch();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='m'){e.preventDefault();toggleFloatMemo();}
   if(e.key==='Escape'&&_srchOpen){closeSearch();}
 });
 document.getElementById('srch-input')?.addEventListener('input',e=>doSearch(e.target.value));
@@ -5578,7 +5746,7 @@ function renderAppStats(){
   // 단축키 그리드
   const sg=document.getElementById('shortcut-grid');if(sg&&!sg.innerHTML){
     const shortcuts=[
-      ['Ctrl+K','전체 검색'],['Ctrl+S','Drive에 저장'],['Ctrl+B','굵게'],['Ctrl+I','기울임'],
+      ['Ctrl+K','전체 검색'],['Ctrl+M','플로팅 메모 열기/닫기'],['Ctrl+S','Drive에 저장'],['Ctrl+B','굵게'],['Ctrl+I','기울임'],
       ['Ctrl+U','밑줄'],['Ctrl+Z','실행 취소'],['Ctrl+Y','다시 실행'],['Tab','들여쓰기'],
       ['Esc','검색창 닫기'],['Ctrl+클릭','링크 새 탭'],
     ];
@@ -5654,5 +5822,17 @@ function loadTheme(){applyTheme(localStorage.getItem('mb_theme')||'dark');}
   pi.focus();
 })();
 </script>
+
+<!-- 전역 플로팅 메모 -->
+<div id="float-memo">
+  <div id="float-memo-hdr">
+    <span id="float-memo-title">📝 메모</span>
+    <button id="float-memo-bold" title="굵게 (Ctrl+B)" onclick="floatMemoBold()">B</button>
+    <button id="float-memo-copy" title="내용 복사" onclick="floatMemoCopy()">📋</button>
+    <button id="float-memo-close" title="닫기 (Esc)" onclick="toggleFloatMemo(false)">✕</button>
+  </div>
+  <div id="float-memo-body" contenteditable="true" spellcheck="false"></div>
+</div>
+
 </body>
 </html>
