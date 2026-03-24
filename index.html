@@ -613,6 +613,19 @@ input[type=number]{-moz-appearance:textfield}
   min-height:100px;
 }
 
+
+/* ── 인수인계 패킷 모달 ── */
+.ho-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:flex;align-items:center;justify-content:center}
+.ho-modal{background:var(--surf);border-radius:12px;padding:22px 24px;width:380px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.ho-modal-title{font-size:15px;font-weight:700;color:var(--tx)}
+.ho-modal-sub{font-size:11px;color:var(--tx3);margin-top:-8px}
+.ho-section-label{font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:4px;padding-top:4px;border-top:1px solid var(--bdr)}
+.ho-check-row{display:flex;align-items:center;gap:8px;padding:3px 0}
+.ho-check-row input[type=checkbox]{flex-shrink:0;cursor:pointer;width:14px;height:14px}
+.ho-check-row label{font-size:12px;color:var(--tx2);cursor:pointer;flex:1;user-select:none}
+.ho-scroll{overflow-y:auto;flex:1;max-height:320px;padding-right:4px}
+.ho-btns{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-shrink:0}
+
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
@@ -2466,6 +2479,222 @@ function _fmEl(){ return document.getElementById('float-memo'); }
 function _fmBody(){ return document.getElementById('float-memo-body'); }
 
 // 열기/닫기 토글
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  인수인계 패킷 생성
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 폴더 내 모든 문서 노드 수집 (재귀)
+function _hoCollectDocs(nodes, pid, arr){
+  nodes.filter(n=>n.p===pid).sort((a,b)=>a.o-b.o).forEach(n=>{
+    if(n.t==='D') arr.push(n);
+    else if(n.t==='F') _hoCollectDocs(nodes, n.id, arr);
+  });
+  return arr;
+}
+
+// 스케줄 현황 텍스트 생성 (클라이언트 키워드 기반)
+function _hoSchedSummary(clientKw){
+  const y=S.sy, m=S.sm;
+  const weeks=getWeeks(y,m);
+  const lines=[];
+  weeks.forEach((wk,wi)=>{
+    const dayLines=[];
+    wk.forEach((d,di)=>{
+      if(!d) return;
+      CH.filter(ch=>ch!=='월간보고서').forEach(ch=>{
+        const val=getCell(y,m,wi,ch,di)||'';
+        if(val && new RegExp(clientKw,'i').test(val)){
+          dayLines.push(`    ${ch}: ${val.trim()}`);
+        }
+      });
+    });
+    if(dayLines.length){
+      const days=wk.filter(d=>d);
+      lines.push(`  ${wi+1}주차 (${days[0]}일~${days[days.length-1]}일)`);
+      lines.push(...dayLines);
+    }
+  });
+  return lines.length ? lines.join('\n') : '  입력된 스케줄 없음';
+}
+
+// 클라이언트 탭 인수인계 모달 열기
+function openHandoverModal(folderId, isWork){
+  const nodes = isWork ? S.work : S.notes;
+  const folder = nodes.find(n=>n.id===folderId);
+  if(!folder) return;
+
+  // 해당 폴더의 최상위 여부 확인 (p===null)
+  if(folder.p !== null){ toast('최상위 폴더에서만 인수인계 패킷을 생성할 수 있습니다.',true); return; }
+
+  // 문서 목록 수집
+  const docs = _hoCollectDocs(nodes, folderId, []);
+
+  // 클라이언트 정보 (클라이언트 탭만)
+  const clientInfo = !isWork ? S.clients.find(cl=>cl.name===folder.n||folder.n.includes(cl.kw)) : null;
+
+  // 기존 모달 제거
+  document.querySelector('.ho-modal-bg')?.remove();
+
+  const bg=document.createElement('div');
+  bg.className='ho-modal-bg';
+  bg.onclick=e=>{if(e.target===bg)bg.remove();};
+
+  const box=document.createElement('div');box.className='ho-modal';
+
+  // 제목
+  const title=document.createElement('div');title.className='ho-modal-title';
+  title.textContent='📦 인수인계 패킷 생성';
+  const sub=document.createElement('div');sub.className='ho-modal-sub';
+  sub.textContent=folder.n;
+
+  // 스크롤 영역
+  const scroll=document.createElement('div');scroll.className='ho-scroll';
+
+  // ── 기본 정보 (항상 포함, 비활성 체크박스) ──
+  const mkSection=(label)=>{
+    const d=document.createElement('div');d.className='ho-section-label';d.textContent=label;return d;
+  };
+  const mkCheck=(id,label,checked,disabled)=>{
+    const row=document.createElement('div');row.className='ho-check-row';
+    const chk=document.createElement('input');chk.type='checkbox';chk.id='ho-'+id;chk.checked=checked;if(disabled)chk.disabled=true;
+    const lbl=document.createElement('label');lbl.htmlFor='ho-'+id;lbl.textContent=label;
+    row.append(chk,lbl);return row;
+  };
+
+  scroll.appendChild(mkSection('기본 정보'));
+  scroll.appendChild(mkCheck('basic','기본 정보 (항상 포함)',true,true));
+
+  if(!isWork){
+    scroll.appendChild(mkCheck('sched','이번 달 스케줄 현황',true,false));
+    scroll.appendChild(mkCheck('reports','보고서 파일 목록',true,false));
+  }
+
+  // ── 문서 목록 ──
+  if(docs.length){
+    scroll.appendChild(mkSection(`문서 (${docs.length}개)`));
+    const allRow=document.createElement('div');allRow.className='ho-check-row';
+    const allChk=document.createElement('input');allChk.type='checkbox';allChk.id='ho-all';allChk.checked=true;
+    const allLbl=document.createElement('label');allLbl.htmlFor='ho-all';allLbl.style.fontWeight='600';allLbl.textContent='전체 선택/해제';
+    allChk.onchange=()=>{ scroll.querySelectorAll('.ho-doc-chk').forEach(c=>c.checked=allChk.checked); };
+    allRow.append(allChk,allLbl);scroll.appendChild(allRow);
+    docs.forEach((doc,i)=>{
+      const row=document.createElement('div');row.className='ho-check-row';
+      const chk=document.createElement('input');chk.type='checkbox';chk.id='ho-doc-'+i;chk.checked=true;chk.className='ho-doc-chk';chk.dataset.docId=doc.id;
+      const lbl=document.createElement('label');lbl.htmlFor='ho-doc-'+i;
+      lbl.textContent=(doc.mt==='meeting'?'📋 ':'📄 ')+doc.n;
+      row.append(chk,lbl);scroll.appendChild(row);
+    });
+  } else {
+    scroll.appendChild(mkSection('문서'));
+    const empty=document.createElement('div');empty.style.cssText='font-size:11px;color:var(--tx3);padding:4px 0';empty.textContent='문서 없음';
+    scroll.appendChild(empty);
+  }
+
+  // ── 버튼 ──
+  const btns=document.createElement('div');btns.className='ho-btns';
+  const cancelBtn=document.createElement('button');cancelBtn.className='btn btng';cancelBtn.textContent='취소';cancelBtn.onclick=()=>bg.remove();
+  const genBtn=document.createElement('button');genBtn.className='btn';genBtn.style.background='var(--ac)';genBtn.textContent='📄 Word 생성';
+  genBtn.onclick=()=>{
+    // 선택된 항목 수집
+    const inclSched=!isWork&&document.getElementById('ho-sched')?.checked;
+    const inclReports=!isWork&&document.getElementById('ho-reports')?.checked;
+    const selDocIds=new Set([...scroll.querySelectorAll('.ho-doc-chk:checked')].map(c=>c.dataset.docId));
+    bg.remove();
+    _generateHandoverDoc(folder, isWork, clientInfo, docs.filter(d=>selDocIds.has(d.id)), inclSched, inclReports);
+  };
+  btns.append(cancelBtn,genBtn);
+
+  box.append(title,sub,scroll,btns);
+  bg.appendChild(box);
+  document.body.appendChild(bg);
+}
+
+// Word 문서 생성
+function _generateHandoverDoc(folder, isWork, clientInfo, selectedDocs, inclSched, inclReports){
+  const today=new Date();
+  const dateStr=`${today.getFullYear()}. ${today.getMonth()+1}. ${today.getDate()}`;
+  const fname=`[${folder.n}] 인수인계 패킷`;
+
+  let html=`<h1 style="color:#1e3a5f;border-bottom:3px solid #2563eb;padding-bottom:8px">${fname}</h1>`;
+  html+=`<p style="color:#64748b;font-size:10pt">생성일: ${dateStr}</p>`;
+
+  // ── 기본 정보 ──
+  html+=`<h2 style="color:#1e3a5f;margin-top:24px">1. 기본 정보</h2>`;
+  if(clientInfo){
+    html+=`<table style="border-collapse:collapse;width:100%;margin-bottom:12px">`;
+    html+=`<tr><td style="border:1px solid #ccc;padding:6px 10px;background:#f1f5f9;width:120px;font-weight:600">클라이언트명</td><td style="border:1px solid #ccc;padding:6px 10px">${clientInfo.name}</td></tr>`;
+    html+=`<tr><td style="border:1px solid #ccc;padding:6px 10px;background:#f1f5f9;font-weight:600">키워드</td><td style="border:1px solid #ccc;padding:6px 10px">${clientInfo.kw||'-'}</td></tr>`;
+    html+=`<tr><td style="border:1px solid #ccc;padding:6px 10px;background:#f1f5f9;font-weight:600">마감일</td><td style="border:1px solid #ccc;padding:6px 10px">${clientInfo.deadline?clientInfo.deadline+'일':'-'}</td></tr>`;
+    if(clientInfo.q){
+      const qStr=Object.entries(clientInfo.q).filter(([,v])=>v>0).map(([k,v])=>`${k} ${v}건`).join(', ');
+      html+=`<tr><td style="border:1px solid #ccc;padding:6px 10px;background:#f1f5f9;font-weight:600">월 할당량</td><td style="border:1px solid #ccc;padding:6px 10px">${qStr||'-'}</td></tr>`;
+    }
+    html+=`</table>`;
+  } else {
+    html+=`<p>폴더명: ${folder.n}</p>`;
+  }
+
+  // ── 스케줄 현황 ──
+  if(inclSched && clientInfo){
+    const S_=S; // 스코프 명시
+    const kw=clientInfo.kw||clientInfo.name;
+    const summary=_hoSchedSummary(kw);
+    html+=`<h2 style="color:#1e3a5f;margin-top:24px">2. 이번 달 스케줄 현황 (${S_.sy}년 ${S_.sm}월)</h2>`;
+    html+=`<pre style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:6px;font-size:10pt;line-height:1.8;white-space:pre-wrap">${summary}</pre>`;
+  }
+
+  // ── 보고서 목록 ──
+  if(inclReports && clientInfo){
+    const reports=(S.reports||[]).filter(r=>r.clientId===clientInfo.id).sort((a,b)=>b.year-a.year||b.month-a.month);
+    const secNum=inclSched?3:2;
+    html+=`<h2 style="color:#1e3a5f;margin-top:24px">${secNum}. 보고서 파일 목록</h2>`;
+    if(reports.length){
+      html+=`<table style="border-collapse:collapse;width:100%">`;
+      html+=`<tr><th style="border:1px solid #ccc;padding:6px 10px;background:#1e3a5f;color:#fff;text-align:left">파일명</th><th style="border:1px solid #ccc;padding:6px 10px;background:#1e3a5f;color:#fff">연도/월</th><th style="border:1px solid #ccc;padding:6px 10px;background:#1e3a5f;color:#fff">Drive</th></tr>`;
+      reports.forEach((r,i)=>{
+        const bg=i%2===0?'#f8fafc':'#ffffff';
+        html+=`<tr><td style="border:1px solid #ccc;padding:6px 10px;background:${bg}">${r.name}</td><td style="border:1px solid #ccc;padding:6px 10px;background:${bg};text-align:center">${r.year}년 ${r.month||'-'}월</td><td style="border:1px solid #ccc;padding:6px 10px;background:${bg};text-align:center">${r.synced?'✅':'❌'}</td></tr>`;
+      });
+      html+=`</table>`;
+    } else {
+      html+=`<p style="color:#64748b">보고서 파일 없음</p>`;
+    }
+  }
+
+  // ── 문서 내용 (각각 새 페이지) ──
+  selectedDocs.forEach((doc,i)=>{
+    const secOffset=(inclSched?1:0)+(inclReports?1:0)+(clientInfo?1:0);
+    const secNum=secOffset+1+i;
+    html+=`<div style="page-break-before:always"></div>`;
+    html+=`<h2 style="color:#1e3a5f;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:0">${secNum}. ${doc.n}</h2>`;
+    if(doc.mt==='meeting'){
+      html+=`<p style="color:#64748b;font-size:10pt">[회의록 — 캔버스 기반 문서, 텍스트 추출 불가]</p>`;
+    } else {
+      const content=doc.c||doc.content||'';
+      html+=content ? `<div style="line-height:1.8">${content}</div>` : `<p style="color:#aaa">내용 없음</p>`;
+    }
+  });
+
+  // Word 파일 생성
+  const docContent=`<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset='UTF-8'>
+<meta name=ProgId content=Word.Document>
+<style>
+  body{font-family:'맑은 고딕',Arial,sans-serif;font-size:11pt;line-height:1.8;margin:2cm}
+  h1{font-size:18pt;color:#1e3a5f}h2{font-size:14pt;color:#1e3a5f}
+  table{border-collapse:collapse;width:100%}td,th{padding:6px 10px}
+</style></head><body lang=KO><div class=WordSection1>${html}</div></body></html>`;
+
+  const blob=new Blob(['\ufeff'+docContent],{type:'application/msword;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname+'.doc';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+  toast(`"${fname}.doc" 저장 완료!`);
+}
+
 function toggleFloatMemo(forceOpen){
   const el=_fmEl();if(!el)return;
   const open = forceOpen===true ? true : forceOpen===false ? false : !el.classList.contains('visible');
@@ -2703,6 +2932,7 @@ function buildTree(wrap,pid,depth,selId){
     item.addEventListener('contextmenu',e=>{
       const menu=[];
       if(isF){menu.push({l:'📄 문서 추가',a:()=>addDocTo(node.id)});menu.push({l:'📋 회의록 추가',a:()=>addMeetingDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addSubFolder(node.id)});menu.push('sep');}
+      if(isF&&node.p===null){menu.push({l:'📦 인수인계 패킷 생성',a:()=>openHandoverModal(node.id,false)});menu.push('sep');}
       menu.push({l:node.locked?'🔓 잠금 해제':'🔒 잠금',a:()=>toggleNodeLock(node,renderNoteTree)});
       menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)startRename(el,node);}});
       menu.push({l:'🗑 삭제',d:true,a:()=>delNode(node.id)});
@@ -3949,6 +4179,7 @@ function buildWorkTree(wrap,pid,depth){
     item.addEventListener('contextmenu',e=>{
       const menu=[];
       if(isF){menu.push({l:'📄 문서 추가',a:()=>addWorkDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addWorkSubFolder(node.id)});menu.push('sep');}
+      if(isF&&node.p===null){menu.push({l:'📦 인수인계 패킷 생성',a:()=>openHandoverModal(node.id,true)});menu.push('sep');}
       menu.push({l:node.locked?'🔓 잠금 해제':'🔒 잠금',a:()=>toggleNodeLock(node,renderWorkBar)});
       menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)startWorkRename(el,node);}});
       menu.push({l:'🗑 삭제',d:true,a:()=>delWork(node.id)});
