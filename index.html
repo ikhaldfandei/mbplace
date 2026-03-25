@@ -1539,6 +1539,9 @@ async function save(){
       clients: S.clients,
       scheds: S.scheds,
       work: S.work,
+      reports: S.reports,
+      pub: S.pub,
+      pubFiles: S.pubFiles,
       ts: new Date().toISOString(),
     });
     // localStorage에도 타임스탬프만 기록 (GitHub 동기화 판단용)
