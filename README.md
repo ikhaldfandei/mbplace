@@ -18,39 +18,6 @@
 
 ---
 
-## 🚀 빠른 시작
-
-### 1. GitHub Pages 배포
-
-```
-1. 이 저장소를 Fork 하거나, 새 저장소를 만들고 index.html 업로드
-2. Settings → Pages → Source: Deploy from a branch → main / (root) → Save
-3. 배포 URL: https://[GitHub아이디].github.io/[저장소명]/
-```
-
-### 2. Google Drive 연동 설정
-
-```
-1. console.cloud.google.com → 새 프로젝트 생성
-2. API 및 서비스 → OAuth 동의 화면 설정
-3. 사용자 인증 정보 → OAuth 클라이언트 ID 생성 (웹 애플리케이션)
-4. 승인된 JavaScript 원본: https://[GitHub아이디].github.io
-5. 승인된 리디렉션 URI: https://[GitHub아이디].github.io/[저장소명]/
-6. Google Drive API 사용 설정
-7. 발급된 클라이언트 ID를 앱 설정 탭에 입력
-```
-
-### 3. 첫 실행
-
-```
-1. 배포 URL 접속
-2. 설정 탭 → Google Drive 연동 → 클라이언트 ID 입력 → Drive 연결
-3. 설정 탭 → 클라이언트 관리 → 담당 업체 추가
-4. 설정 탭 → 알림 설정 → 브라우저 알림 권한 허용
-```
-
----
-
 ## 📦 기술 스택
 
 - **프론트엔드**: Vanilla JS · HTML · CSS (프레임워크 없음)
@@ -110,4 +77,4 @@ README.md         ← 이 문서
 
 ## 📄 라이선스
 
-개인 사용 목적으로 자유롭게 사용 가능합니다.
+개인 사용 목적으로 현재 라이선스 배포 예정 없음.
