@@ -845,7 +845,6 @@ input[type=number]{-moz-appearance:textfield}
             <span id="readonly-badge1" class="readonly-badge">읽기전용</span>
             <button class="splitbtn" id="rdonly-btn1" onclick="toggleReadonly(1)" title="읽기 전용 잠금" style="display:none">🔓</button>
             <button class="splitbtn" id="rank-check-btn" onclick="openRankCheck()" title="📊 순위 체크">📊 순위체크</button>
-            <div class="rank-hint" id="rank-hint">📌 작성: <code>블로그(키워드) 작성 및 업로드</code> &nbsp;|&nbsp; 수정: <code>블로그(키워드) 수정 작업</code></div>
             <div class="export-wrap" id="export-wrap" style="display:none">
               <button class="splitbtn" onclick="toggleExportMenu('export-menu')">⬇ 내보내기</button>
               <div class="export-menu" id="export-menu">
@@ -863,6 +862,7 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <button class="splitbtn" id="splitbtn" onclick="toggleSplit()">분할 보기</button>
           </div>
+          <div class="rank-hint" id="rank-hint">📌 작성: <code>블로그(키워드) 작성 및 업로드</code> &nbsp;|&nbsp; 수정: <code>블로그(키워드) 수정 작업</code></div>
           <div class="eempty" id="ee1"><span style="font-size:28px">📄</span>문서를 선택하세요</div>
           <div class="equill-wrap hidden" id="ew1">
             <div id="eq1toolbar"></div>
@@ -1052,7 +1052,7 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label" style="background:#e8e8e8;color:#888">☀️ 화이트</div>
           </div>
-          <div class="theme-opt" id="th-opt-gray" onclick="applyTheme('gray')" title="회색">
+          <div class="theme-opt" id="th-opt-gray" onclick="applyTheme('gray')" title="그레이">
             <div class="theme-swatch" style="background:#e8e9eb">
               <div style="height:8px;border-radius:2px;background:#f2f3f5;border:1px solid #b8bcc4"></div>
               <div style="height:5px;border-radius:2px;background:#2563eb;width:60%"></div>
@@ -1060,7 +1060,7 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label" style="background:#d5d7db;color:#72788a">🩶 그레이</div>
           </div>
-          <div class="theme-opt" id="th-opt-warm" onclick="applyTheme('warm')" title="따뜻한 화이트">
+          <div class="theme-opt" id="th-opt-warm" onclick="applyTheme('warm')" title="웜화이트">
             <div class="theme-swatch" style="background:#fdf6ee">
               <div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #d9c8b0"></div>
               <div style="height:5px;border-radius:2px;background:#b85c00;width:60%"></div>
@@ -1112,6 +1112,10 @@ input[type=number]{-moz-appearance:textfield}
             <div class="theme-swatch" style="background:#0d1f12">
               <div style="height:8px;border-radius:2px;background:#132819"></div>
               <div style="height:5px;border-radius:2px;background:#4caf6e;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#2d5c38"></div>
+            </div>
+            <div class="theme-label" style="background:#1a3420;color:#5a8a64">🌲 포레스트</div>
+          </div>
           <div class="theme-opt" id="th-opt-obsidian" onclick="applyTheme('obsidian')" title="옵시디언">
             <div class="theme-swatch" style="background:#0a0a0f">
               <div style="height:8px;border-radius:2px;background:#12121a"></div>
@@ -1160,9 +1164,6 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label">☕ 모카</div>
           </div>
-              <div style="height:5px;border-radius:2px;background:#2d5c38"></div>
-            </div>
-            <div class="theme-label" style="background:#1a3420;color:#5a8a64">🌲 포레스트</div>
           <div class="theme-opt" id="th-opt-cyber" onclick="applyTheme('cyber')" title="사이버">
             <div class="theme-swatch" style="background:#0a0a0f">
               <div style="height:8px;border-radius:2px;background:#0f0f1a"></div>
@@ -1170,22 +1171,6 @@ input[type=number]{-moz-appearance:textfield}
               <div style="height:5px;border-radius:2px;background:#2a2a60"></div>
             </div>
             <div class="theme-label">⚡ 사이버</div>
-          </div>
-          <div class="theme-opt" id="th-opt-aurora" onclick="applyTheme('aurora')" title="오로라">
-            <div class="theme-swatch" style="background:#080c18">
-              <div style="height:8px;border-radius:2px;background:#0d1224"></div>
-              <div style="height:5px;border-radius:2px;background:#a78bfa;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#34d399;width:40%"></div>
-            </div>
-            <div class="theme-label">🌌 오로라</div>
-          </div>
-          <div class="theme-opt" id="th-opt-sunset" onclick="applyTheme('sunset')" title="선셋">
-            <div class="theme-swatch" style="background:#1a0a12">
-              <div style="height:8px;border-radius:2px;background:#26101c"></div>
-              <div style="height:5px;border-radius:2px;background:#ff6b9d;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#fbbf24;width:40%"></div>
-            </div>
-            <div class="theme-label">🌇 선셋</div>
           </div>
           <div class="theme-opt" id="th-opt-gold" onclick="applyTheme('gold')" title="골드">
             <div class="theme-swatch" style="background:#0e0a00">
@@ -1202,7 +1187,6 @@ input[type=number]{-moz-appearance:textfield}
               <div style="height:5px;border-radius:2px;background:#4a2e80"></div>
             </div>
             <div class="theme-label">🍇 그레이프</div>
-          </div>
           </div>
         </div>
       </div>
@@ -2764,7 +2748,7 @@ function _updateRankCheckUI(nodeId){
   const hint=document.getElementById('rank-hint');
   if(!btn||!hint) return;
   const inDL=nodeId&&_isInDailyLogFolder(nodeId);
-  btn.style.display=inDL?'':'none';
+  btn.style.display=inDL?'flex':'none';
   hint.style.display=inDL?'flex':'none';
 }
 
@@ -6429,7 +6413,7 @@ async function updateStorageInfo(){
   }catch(e){el.innerHTML='<span style="font-size:11px;color:var(--tx3)">로딩 중...</span>';}
 }
 
-const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest','obsidian','aurora','sunset','sakura','matrix','mocha'];
+const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest','obsidian','aurora','sunset','sakura','matrix','mocha','cyber','gold','grape'];
 function applyTheme(t){
   if(!THEMES.includes(t))t='dark';
   document.body.className=t==='dark'?'':'th-'+t;
