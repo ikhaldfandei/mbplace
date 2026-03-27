@@ -757,6 +757,31 @@ input[type=number]{-moz-appearance:textfield}
 .rank-section-label{font-size:11px;font-weight:700;color:var(--tx3);margin-top:6px}
 .rank-keyword{font-size:14px;color:var(--tx);padding:3px 0;font-weight:500}
 
+
+/* ── Drive 최신 데이터 경고 배너 ── */
+#drive-newer-banner{
+  display:none;position:fixed;top:48px;left:0;right:0;z-index:8000;
+  background:#b45309;color:#fff;
+  padding:8px 16px;font-size:12px;
+  flex-direction:row;align-items:center;gap:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,.3);
+}
+#drive-newer-banner.show{display:flex;}
+#drive-newer-banner b{font-weight:700;}
+#drive-newer-banner .dnb-btns{display:flex;gap:8px;margin-left:auto;flex-shrink:0;}
+#drive-newer-banner button{
+  padding:3px 12px;border-radius:5px;font-size:11px;cursor:pointer;border:none;font-family:inherit;
+}
+#dnb-pull{background:#fff;color:#b45309;font-weight:700;}
+#dnb-ignore{background:rgba(255,255,255,0.2);color:#fff;}
+
+
+/* ── 출판 탭 에디터 스크롤 ── */
+#pub-ep1{display:flex;flex-direction:column;overflow:hidden}
+#pub-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#pub-eqwrap{flex:1;overflow-y:auto}
+#pub-eq.mbedit{min-height:100%;overflow:visible}
+
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
@@ -785,6 +810,14 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- APP -->
 <div id="app">
+  <div id="drive-newer-banner">
+    <span>⚠️ <b>Drive에 더 최신 데이터가 있습니다.</b> 불러오기 없이 작업하면 덮어씌워질 수 있어요.</span>
+    <span id="dnb-times" style="font-size:11px;opacity:.85"></span>
+    <div class="dnb-btns">
+      <button id="dnb-pull" onclick="dnbPull()">↓ 불러오기</button>
+      <button id="dnb-ignore" onclick="dnbIgnore()">무시</button>
+    </div>
+  </div>
   <div class="hdr">
     <button class="mob-sidebar-btn" id="mob-sidebar-btn" onclick="mobToggleSidebar()">☰</button>
     <div class="hlogo">MB</div>
@@ -1019,7 +1052,7 @@ input[type=number]{-moz-appearance:textfield}
           </div>
           <div id="pub-content">
             <div class="fmgrid" id="pub-fmgrid" style="display:none"></div>
-            <div class="equill-wrap hidden" id="pub-eqwrap">
+            <div class="equill-wrap hidden" id="pub-eqwrap" style="overflow-y:auto;flex:1">
               <div id="pub-eqtoolbar"></div>
               <div id="pub-eq" class="mbedit"></div>
             </div>
@@ -1715,6 +1748,8 @@ async function enterApp(){
   loadTabNames();
   await restoreLastSession();
   _fmInitDrag();
+  // Drive 최신 데이터 감지 (로그인 후 백그라운드 체크)
+  setTimeout(checkDriveNewer, 2000);
   // 내보내기 라이브러리 프리로드 (네트워크 연결 시 미리 로드)
   _preloadLibs();
   const yr=document.getElementById('fmyear');yr.innerHTML='';
@@ -2670,6 +2705,45 @@ function updateWC(wcId, html){
 
 
 // 내보내기 라이브러리 미리 로드 (앱 시작 시)
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Drive 최신 데이터 감지 배너
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _dnbIgnored = false;
+
+async function checkDriveNewer(){
+  if(_dnbIgnored) return;
+  const token = await gdGetValidToken();
+  if(!token) return;
+  try{
+    const file = await gdFindFile(token, GD_FNAME);
+    if(!file || !file.modifiedTime) return;
+    const driveTime = new Date(file.modifiedTime).getTime();
+    const localTs = localStorage.getItem('mb_ts');
+    const localTime = localTs ? new Date(localTs).getTime() : 0;
+    // Drive가 로컬보다 2분 이상 최신이면 배너 표시
+    if(driveTime > localTime + 120000){
+      const fmt = t => new Date(t).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const timesEl = document.getElementById('dnb-times');
+      if(timesEl) timesEl.textContent = `Drive: ${fmt(driveTime)}  /  로컬: ${localTime ? fmt(localTime) : '없음'}`;
+      document.getElementById('drive-newer-banner')?.classList.add('show');
+    }
+  }catch(e){
+    // 조회 실패 시 조용히 무시
+    console.warn('[Drive 감지] 조회 실패:', e.message);
+  }
+}
+
+function dnbPull(){
+  document.getElementById('drive-newer-banner')?.classList.remove('show');
+  gdPull();
+}
+
+function dnbIgnore(){
+  _dnbIgnored = true;
+  document.getElementById('drive-newer-banner')?.classList.remove('show');
+}
+
 function _preloadLibs(){
   const load=src=>new Promise((res,rej)=>{
     if(document.querySelector(`script[src="${src}"]`)){res();return;}
