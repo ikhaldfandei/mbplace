@@ -782,6 +782,19 @@ input[type=number]{-moz-appearance:textfield}
 #pub-eqwrap{flex:1;overflow-y:auto}
 #pub-eq.mbedit{min-height:100%;overflow:visible}
 
+
+/* ── 아이콘 피커 ── */
+.icon-picker-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center}
+.icon-picker{background:var(--surf);border-radius:12px;padding:16px 18px;width:320px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.icon-picker-title{font-size:13px;font-weight:700;color:var(--tx)}
+.icon-picker-search{width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--surf2);color:var(--tx);font-size:12px;outline:none;font-family:inherit}
+.icon-picker-cats{display:flex;gap:4px;flex-wrap:wrap}
+.icon-cat-btn{padding:3px 8px;border-radius:5px;border:1px solid var(--bdr);background:var(--surf2);color:var(--tx3);font-size:11px;cursor:pointer}
+.icon-cat-btn.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.icon-picker-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;overflow-y:auto;flex:1;padding:2px}
+.icon-cell{font-size:20px;text-align:center;padding:4px;border-radius:6px;cursor:pointer;line-height:1.4}
+.icon-cell:hover{background:var(--surf2);transform:scale(1.15)}
+
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
@@ -3331,7 +3344,7 @@ function buildTree(wrap,pid,depth,selId){
     item.draggable=true;
 
     const arr=document.createElement('span');arr.className='tarrow'+(isF?(node.open?' open':''):' open');arr.style.visibility=isF?'visible':'hidden';arr.textContent='▶';
-    const ico=document.createElement('span');ico.className='ticon';ico.textContent=isF?(node.open?'📂':'📁'):(node.mt==='meeting'?'📋':'📄');
+    const ico=document.createElement('span');ico.className='ticon';ico.textContent=node.icon||(isF?(node.open?'📂':'📁'):(node.mt==='meeting'?'📋':'📄'));
     const lbl=document.createElement('span');lbl.className='tlabel';lbl.textContent=node.n;
     item.append(arr,ico,lbl);
 
@@ -3371,7 +3384,9 @@ function buildTree(wrap,pid,depth,selId){
       if(isF){menu.push({l:'📄 문서 추가',a:()=>addDocTo(node.id)});menu.push({l:'📋 회의록 추가',a:()=>addMeetingDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addSubFolder(node.id)});menu.push('sep');}
       if(isF&&node.p===null){menu.push({l:'📦 인수인계 패킷 생성',a:()=>openHandoverModal(node.id,false)});menu.push('sep');}
       if(isF){menu.push({l:node.dailyLog?'📊 일간보고 폴더 해제':'📊 일간보고 폴더로 지정',a:()=>{node.dailyLog=!node.dailyLog;dsave();renderNoteTree();toast(node.dailyLog?'일간보고 폴더로 지정됐습니다.':'지정이 해제됐습니다.');}});menu.push('sep');}
+      menu.push({l:'🎨 아이콘 변경',a:()=>openIconPicker(node,renderNoteTree)});
       menu.push({l:node.locked?'🔓 잠금 해제':'🔒 잠금',a:()=>toggleNodeLock(node,renderNoteTree)});
+      menu.push({l:'🎨 아이콘 변경',a:()=>openIconPicker(node,renderNoteTree)});
       menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)startRename(el,node);}});
       menu.push({l:'🗑 삭제',d:true,a:()=>delNode(node.id)});
       showCtx(e,menu);
@@ -4625,7 +4640,9 @@ function buildWorkTree(wrap,pid,depth){
       const menu=[];
       if(isF){menu.push({l:'📄 문서 추가',a:()=>addWorkDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addWorkSubFolder(node.id)});menu.push('sep');}
       if(isF&&node.p===null){menu.push({l:'📦 인수인계 패킷 생성',a:()=>openHandoverModal(node.id,true)});menu.push('sep');}
+      menu.push({l:'🎨 아이콘 변경',a:()=>openIconPicker(node,renderWorkBar)});
       menu.push({l:node.locked?'🔓 잠금 해제':'🔒 잠금',a:()=>toggleNodeLock(node,renderWorkBar)});
+      menu.push({l:'🎨 아이콘 변경',a:()=>openIconPicker(node,renderWorkBar)});
       menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)startWorkRename(el,node);}});
       menu.push({l:'🗑 삭제',d:true,a:()=>delWork(node.id)});
       showCtx(e,menu);
@@ -4888,6 +4905,110 @@ function openSchedNoteEdit(y, m, d, cvEl){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  문서 잠금/해제 (클라이언트/통합문서/출판 탭)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  아이콘 피커
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const ICON_CATS = {
+  '📁 기본':    ['📁','📂','📄','📋','📌','📍','🗂','🗒','🗃','📑','📊','📈','📉','📝','✏️','🖊','🖋','📎','🔗','📏'],
+  '🏥 병원':   ['🏥','💊','💉','🩺','🩻','🫀','🦷','👁','🧬','🩹','🫁','🧪','🔬','💆','🧘','🏃','🚑','⚕️','🩴','🫶'],
+  '📣 마케팅': ['📣','📢','📡','🎯','🎨','🖼','🎬','🎥','📸','🎙','📱','💻','🌐','🔍','💡','✨','⚡','🔥','💥','🌟'],
+  '💼 업무':   ['💼','🗓','📅','⏰','⏱','🔔','🔕','📬','📮','🗳','🖥','⌨','🖱','🖨','💾','📀','💿','🔧','🔨','⚙️'],
+  '✍️ 기획':   ['✍️','💭','🗺','🧭','🎯','🏆','🥇','⭐','🌠','🎖','🏅','🎗','🎀','🎁','💝','💎','👑','🔑','🗝','🧩'],
+  '😊 기타':   ['😊','👍','👏','🙌','🤝','💪','🧠','👀','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🌈','🌸','🌺','🍀'],
+};
+let _iconPickerCat = '📁 기본';
+
+function openIconPicker(node, renderFn){
+  document.querySelector('.icon-picker-bg')?.remove();
+
+  const bg = document.createElement('div');
+  bg.className = 'icon-picker-bg';
+  bg.onclick = e => { if(e.target === bg) bg.remove(); };
+
+  const box = document.createElement('div');
+  box.className = 'icon-picker';
+
+  // 제목
+  const title = document.createElement('div');
+  title.className = 'icon-picker-title';
+  title.textContent = '🎨 아이콘 선택';
+
+  // 검색
+  const search = document.createElement('input');
+  search.className = 'icon-picker-search';
+  search.placeholder = '이모지 직접 입력 또는 붙여넣기...';
+  search.maxLength = 4;
+
+  // 카테고리 버튼
+  const cats = document.createElement('div');
+  cats.className = 'icon-picker-cats';
+  Object.keys(ICON_CATS).forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'icon-cat-btn' + (cat === _iconPickerCat ? ' on' : '');
+    btn.textContent = cat;
+    btn.onclick = () => {
+      _iconPickerCat = cat;
+      cats.querySelectorAll('.icon-cat-btn').forEach(b => b.classList.toggle('on', b === btn));
+      renderGrid();
+    };
+    cats.appendChild(btn);
+  });
+
+  // 그리드
+  const grid = document.createElement('div');
+  grid.className = 'icon-picker-grid';
+
+  const renderGrid = () => {
+    grid.innerHTML = '';
+    const icons = ICON_CATS[_iconPickerCat] || [];
+    icons.forEach(icon => {
+      const cell = document.createElement('div');
+      cell.className = 'icon-cell';
+      cell.textContent = icon;
+      cell.title = icon;
+      cell.onclick = () => {
+        node.icon = icon;
+        dsave();
+        renderFn();
+        bg.remove();
+      };
+      grid.appendChild(cell);
+    });
+  };
+  renderGrid();
+
+  // 직접 입력 적용
+  search.addEventListener('input', () => {
+    const v = search.value.trim();
+    if(v) { node.icon = v; dsave(); renderFn(); bg.remove(); }
+  });
+
+  // 초기화 버튼
+  const resetRow = document.createElement('div');
+  resetRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'btn btng';
+  resetBtn.style.cssText = 'font-size:11px;padding:3px 10px';
+  resetBtn.textContent = '기본값으로 초기화';
+  resetBtn.onclick = () => {
+    node.icon = null;
+    dsave();
+    renderFn();
+    bg.remove();
+  };
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'btn btng';
+  closeBtn.style.cssText = 'font-size:11px;padding:3px 10px';
+  closeBtn.textContent = '닫기';
+  closeBtn.onclick = () => bg.remove();
+  resetRow.append(resetBtn, closeBtn);
+
+  box.append(title, search, cats, grid, resetRow);
+  bg.appendChild(box);
+  document.body.appendChild(bg);
+}
+
 function toggleNodeLock(node, renderFn){
   node.locked = !node.locked;
   dsave();
