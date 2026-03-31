@@ -3384,7 +3384,6 @@ function buildTree(wrap,pid,depth,selId){
       if(isF){menu.push({l:'📄 문서 추가',a:()=>addDocTo(node.id)});menu.push({l:'📋 회의록 추가',a:()=>addMeetingDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addSubFolder(node.id)});menu.push('sep');}
       if(isF&&node.p===null){menu.push({l:'📦 인수인계 패킷 생성',a:()=>openHandoverModal(node.id,false)});menu.push('sep');}
       if(isF){menu.push({l:node.dailyLog?'📊 일간보고 폴더 해제':'📊 일간보고 폴더로 지정',a:()=>{node.dailyLog=!node.dailyLog;dsave();renderNoteTree();toast(node.dailyLog?'일간보고 폴더로 지정됐습니다.':'지정이 해제됐습니다.');}});menu.push('sep');}
-      menu.push({l:'🎨 아이콘 변경',a:()=>openIconPicker(node,renderNoteTree)});
       menu.push({l:node.locked?'🔓 잠금 해제':'🔒 잠금',a:()=>toggleNodeLock(node,renderNoteTree)});
       menu.push({l:'🎨 아이콘 변경',a:()=>openIconPicker(node,renderNoteTree)});
       menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)startRename(el,node);}});
@@ -4640,7 +4639,6 @@ function buildWorkTree(wrap,pid,depth){
       const menu=[];
       if(isF){menu.push({l:'📄 문서 추가',a:()=>addWorkDocTo(node.id)});menu.push({l:'📁 하위 폴더 추가',a:()=>addWorkSubFolder(node.id)});menu.push('sep');}
       if(isF&&node.p===null){menu.push({l:'📦 인수인계 패킷 생성',a:()=>openHandoverModal(node.id,true)});menu.push('sep');}
-      menu.push({l:'🎨 아이콘 변경',a:()=>openIconPicker(node,renderWorkBar)});
       menu.push({l:node.locked?'🔓 잠금 해제':'🔒 잠금',a:()=>toggleNodeLock(node,renderWorkBar)});
       menu.push({l:'🎨 아이콘 변경',a:()=>openIconPicker(node,renderWorkBar)});
       menu.push({l:'✏️ 이름 변경',a:()=>{const el=wrap.querySelector(`[data-id="${node.id}"]`);if(el)startWorkRename(el,node);}});
