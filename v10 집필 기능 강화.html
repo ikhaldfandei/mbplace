@@ -924,6 +924,56 @@ input[type=number]{-moz-appearance:textfield}
 .tl-add-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border:2px dashed var(--bdr);border-radius:8px;color:var(--tx3);cursor:pointer;font-size:12px;background:none;width:100%;margin-top:4px}
 .tl-add-btn:hover{border-color:var(--ac);color:var(--ac)}
 
+
+/* ── 관계도 ── */
+.rm-container{flex:1;display:flex;overflow:hidden}
+.rm-canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--surf);cursor:default}
+.rm-canvas{position:absolute;inset:0;pointer-events:none}
+.rm-char-card{
+  position:absolute;width:110px;
+  background:var(--surf2);border:2px solid var(--bdr);border-radius:10px;
+  padding:10px 8px 8px;text-align:center;cursor:move;user-select:none;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:10;
+}
+.rm-char-card:hover{border-color:var(--ac)}
+.rm-char-card.selected{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}
+.rm-char-img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--surf3);display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;flex-shrink:0}
+.rm-char-img img{width:100%;height:100%;object-fit:cover}
+.rm-char-name{font-size:11px;font-weight:700;color:var(--tx);word-break:break-all;line-height:1.3}
+.rm-char-summary{font-size:9px;color:var(--tx3);word-break:break-all;line-height:1.3;max-height:28px;overflow:hidden}
+/* 연결 포인트 */
+.rm-connect-dot{
+  position:absolute;width:14px;height:14px;border-radius:50%;
+  background:var(--ac);border:2px solid var(--surf);
+  cursor:crosshair;opacity:0;transition:opacity .15s;z-index:20;
+}
+.rm-char-card:hover .rm-connect-dot{opacity:1}
+.rm-connect-dot.top{top:-8px;left:50%;transform:translateX(-50%)}
+.rm-connect-dot.bottom{bottom:-8px;left:50%;transform:translateX(-50%)}
+.rm-connect-dot.left{left:-8px;top:50%;transform:translateY(-50%)}
+.rm-connect-dot.right{right:-8px;top:50%;transform:translateY(-50%)}
+/* 사이드패널 */
+.rm-side{width:200px;background:var(--surf2);border-left:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.rm-side-hdr{padding:10px 12px;font-size:12px;font-weight:700;color:var(--tx);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.rm-side-list{flex:1;overflow-y:auto;padding:8px}
+.rm-side-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:11px;color:var(--tx2)}
+.rm-side-item:hover{background:var(--surf)}
+.rm-side-item.added{color:var(--tx3)}
+.rm-side-add-btn{padding:4px 8px;font-size:10px;border-radius:4px;border:1px solid var(--bdr);background:var(--surf);color:var(--ac);cursor:pointer;flex-shrink:0}
+.rm-side-add-btn.remove{color:var(--rd)}
+/* 관계선 라벨 팝업 */
+.rm-rel-popup{
+  position:fixed;background:var(--surf);border:1px solid var(--bdr);border-radius:10px;
+  padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:9999;
+  display:flex;flex-direction:column;gap:10px;min-width:220px;
+}
+.rm-rel-popup input,.rm-rel-popup select{
+  background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;
+  padding:6px 10px;color:var(--tx);font-size:12px;font-family:inherit;outline:none;width:100%;box-sizing:border-box;
+}
+.rm-rel-popup input:focus{border-color:var(--ac)}
+
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
@@ -3700,7 +3750,7 @@ function _tlAddEvent(node, container){
 }
 
 
-function renderWritingRM(node, container){ container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--tx3)">🚧 관계도 — 7단계에서 구현</div>'; }
+// renderWritingRM → 7단계에서 구현됨 (아래)
 
 function pubRootFolder(nodeId){
   let cur = S.pub.find(n=>n.id===nodeId);
@@ -6413,6 +6463,370 @@ function openIconPicker(node, renderFn){
   bg.appendChild(box);
   document.body.appendChild(bg);
 }
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  7단계: 관계도 (WRM)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _rmDragCard = null;
+let _rmDragOffX = 0, _rmDragOffY = 0;
+let _rmConnecting = null; // {fromId, startX, startY}
+let _rmNode = null;
+
+// 관계선 색상 팔레트
+const RM_REL_COLORS = ['#388bfd','#3fb950','#f85149','#d29922','#bc8cff','#ff7b72','#56d364','#58a6ff'];
+
+function renderWritingRM(node, container){
+  container.innerHTML = '';
+  _rmNode = node;
+  const d = node.data || {};
+  if(!d.chars) d.chars = [];   // [{id, csNodeId, x, y}]
+  if(!d.rels)  d.rels  = [];   // [{id, from, to, label, color, dir}]
+
+  // 툴바
+  const tb = document.createElement('div');
+  tb.className = 'writing-toolbar';
+  tb.innerHTML = `<span class="writing-toolbar-title">🕸 관계도</span>
+    <span style="font-size:10px;color:var(--tx3)">카드 가장자리 ⊕에서 드래그 → 연결선 추가 &nbsp;|&nbsp; 선 클릭 → 편집/삭제</span>`;
+  container.appendChild(tb);
+
+  // 메인 영역
+  const main = document.createElement('div');
+  main.className = 'rm-container';
+
+  // ── SVG 캔버스 + 카드 영역 ──
+  const cvWrap = document.createElement('div');
+  cvWrap.className = 'rm-canvas-wrap';
+  cvWrap.id = 'rm-wrap-'+node.id;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.className = 'rm-canvas';
+  svg.id = 'rm-svg-'+node.id;
+  svg.style.pointerEvents = 'none';
+  cvWrap.appendChild(svg);
+
+  // 카드들 렌더
+  d.chars.forEach(ch=>_rmRenderCard(ch, cvWrap, node, d));
+  // 선들 렌더
+  _rmDrawAllLines(svg, d);
+
+  // 캔버스 클릭 (연결 해제)
+  cvWrap.addEventListener('click', e=>{
+    if(e.target===cvWrap || e.target===svg){ _rmCancelConnect(node,d); }
+  });
+  // 마우스무브: 연결선 드래그 미리보기
+  cvWrap.addEventListener('mousemove', e=>{
+    if(!_rmConnecting) return;
+    const rect=cvWrap.getBoundingClientRect();
+    _rmDrawPreviewLine(svg, _rmConnecting.startX, _rmConnecting.startY, e.clientX-rect.left, e.clientY-rect.top);
+  });
+
+  main.appendChild(cvWrap);
+
+  // ── 사이드 패널 (캐릭터 추가) ──
+  const side = document.createElement('div');
+  side.className = 'rm-side';
+  const sideHdr = document.createElement('div');
+  sideHdr.className = 'rm-side-hdr';
+  sideHdr.textContent = '👥 캐릭터';
+  side.appendChild(sideHdr);
+  const sideList = document.createElement('div');
+  sideList.className = 'rm-side-list';
+  sideList.id = 'rm-side-'+node.id;
+  _rmRenderSide(sideList, node, d, cvWrap, svg);
+  side.appendChild(sideList);
+  main.appendChild(side);
+
+  container.appendChild(main);
+}
+
+// ── 사이드 패널: 캐릭터 목록 ──
+function _rmRenderSide(sideEl, node, d, cvWrap, svg){
+  sideEl.innerHTML = '';
+  const itemId = node.p;
+  // 이 작품의 WCS 노드 목록
+  const csNodes = S.pub.filter(n=>n.p===itemId && n.t==='WCS');
+  if(!csNodes.length){
+    sideEl.innerHTML = '<div style="font-size:11px;color:var(--tx3);padding:8px">캐릭터 시트가 없습니다.<br>먼저 캐릭터 시트를 추가하세요.</div>';
+    return;
+  }
+  csNodes.forEach(cs=>{
+    const already = d.chars.find(c=>c.csNodeId===cs.id);
+    const row = document.createElement('div');
+    row.className = 'rm-side-item' + (already?' added':'');
+    const ico = document.createElement('span');
+    ico.style.cssText='font-size:16px;flex-shrink:0';
+    ico.textContent = cs.data?.image ? '' : '👤';
+    if(cs.data?.image){ const img=document.createElement('img'); img.src=cs.data.image; img.style.cssText='width:22px;height:22px;border-radius:50%;object-fit:cover'; ico.appendChild(img); }
+    const name = document.createElement('span');
+    name.style.cssText='flex:1;font-size:11px;color:var(--tx2)';
+    name.textContent = cs.data?.name || cs.n;
+    const btn = document.createElement('button');
+    btn.className = 'rm-side-add-btn' + (already?' remove':'');
+    btn.textContent = already ? '제거' : '추가';
+    btn.onclick = e=>{
+      e.stopPropagation();
+      if(already){
+        d.chars = d.chars.filter(c=>c.csNodeId!==cs.id);
+        d.rels  = d.rels.filter(r=>r.from!==already.id && r.to!==already.id);
+      } else {
+        const cx = 80 + Math.random()*300;
+        const cy = 60 + Math.random()*200;
+        d.chars.push({id:'rc'+Date.now(), csNodeId:cs.id, x:cx, y:cy});
+      }
+      _saveWritingData(node.id, {chars:[...d.chars], rels:[...d.rels]});
+      renderWritingRM(node, document.getElementById('rm-wrap-'+node.id)?.closest('.writing-view')?.parentElement || document.getElementById('pub-writing-content'));
+    };
+    row.append(ico, name, btn);
+    sideEl.appendChild(row);
+  });
+}
+
+// ── 캐릭터 카드 렌더 ──
+function _rmRenderCard(ch, cvWrap, node, d){
+  const csNode = S.pub.find(n=>n.id===ch.csNodeId);
+  if(!csNode) return;
+  const card = document.createElement('div');
+  card.className = 'rm-char-card';
+  card.id = 'rm-card-'+ch.id;
+  card.style.left = ch.x+'px';
+  card.style.top  = ch.y+'px';
+
+  // 이미지
+  const imgDiv = document.createElement('div');
+  imgDiv.className = 'rm-char-img';
+  if(csNode.data?.image){ const img=document.createElement('img'); img.src=csNode.data.image; imgDiv.appendChild(img); }
+  else imgDiv.textContent='👤';
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'rm-char-name';
+  nameEl.textContent = csNode.data?.name || csNode.n;
+
+  const summEl = document.createElement('div');
+  summEl.className = 'rm-char-summary';
+  summEl.textContent = csNode.data?.summary || '';
+
+  card.append(imgDiv, nameEl, summEl);
+
+  // 연결 포인트 4방향
+  ['top','bottom','left','right'].forEach(pos=>{
+    const dot = document.createElement('div');
+    dot.className = 'rm-connect-dot '+pos;
+    dot.title = '드래그하여 관계 연결';
+    dot.addEventListener('mousedown', e=>{
+      e.stopPropagation(); e.preventDefault();
+      const rect = cvWrap.getBoundingClientRect();
+      const cx = ch.x + 55; // 카드 중심 x
+      const cy = ch.y + 55; // 카드 중심 y
+      _rmConnecting = {fromId: ch.id, startX: cx, startY: cy};
+      document.body.style.cursor='crosshair';
+    });
+    card.appendChild(dot);
+  });
+
+  // 카드 드래그 이동
+  card.addEventListener('mousedown', e=>{
+    if(e.target.classList.contains('rm-connect-dot')) return;
+    e.preventDefault();
+    _rmDragCard = ch;
+    const rect = cvWrap.getBoundingClientRect();
+    _rmDragOffX = e.clientX - rect.left - ch.x;
+    _rmDragOffY = e.clientY - rect.top  - ch.y;
+    card.style.zIndex = '30';
+  });
+
+  cvWrap.appendChild(card);
+
+  // 전역 mousemove/mouseup
+  if(!cvWrap._rmBound){
+    cvWrap._rmBound = true;
+    document.addEventListener('mousemove', e=>{
+      if(_rmDragCard){
+        const rect=cvWrap.getBoundingClientRect();
+        const nx=Math.max(0,Math.min(rect.width-110,e.clientX-rect.left-_rmDragOffX));
+        const ny=Math.max(0,Math.min(rect.height-120,e.clientY-rect.top-_rmDragOffY));
+        _rmDragCard.x=nx; _rmDragCard.y=ny;
+        const el=document.getElementById('rm-card-'+_rmDragCard.id);
+        if(el){el.style.left=nx+'px';el.style.top=ny+'px';}
+        _rmDrawAllLines(document.getElementById('rm-svg-'+node.id), d);
+      }
+    });
+    document.addEventListener('mouseup', e=>{
+      if(_rmDragCard){
+        _saveWritingData(node.id,{chars:[...d.chars]});
+        _rmDragCard=null;
+      }
+      if(_rmConnecting){
+        // 어떤 카드 위에서 손을 뗐는지 확인
+        const rect=cvWrap.getBoundingClientRect();
+        const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+        const target=d.chars.find(c=>{
+          if(c.id===_rmConnecting.fromId) return false;
+          return mx>=c.x&&mx<=c.x+110&&my>=c.y&&my<=c.y+120;
+        });
+        if(target) _rmOpenRelPopup(e, _rmConnecting.fromId, target.id, node, d, cvWrap);
+        _rmCancelConnect(node, d);
+      }
+    });
+  }
+}
+
+// ── 관계선 전체 그리기 ──
+function _rmDrawAllLines(svg, d){
+  if(!svg) return;
+  // preview 선 제외하고 지우기
+  Array.from(svg.children).forEach(el=>{ if(!el.id||!el.id.startsWith('rm-prev')) el.remove(); });
+  (d.rels||[]).forEach(rel=>{
+    const from=d.chars.find(c=>c.id===rel.from);
+    const to=d.chars.find(c=>c.id===rel.to);
+    if(!from||!to) return;
+    const x1=from.x+55, y1=from.y+60, x2=to.x+55, y2=to.y+60;
+    _rmDrawLine(svg, x1,y1,x2,y2, rel, d);
+  });
+}
+
+function _rmDrawLine(svg, x1,y1,x2,y2, rel, d){
+  const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+  line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+  line.setAttribute('stroke', rel.color||'#388bfd');
+  line.setAttribute('stroke-width', rel.dir==='none'?'1.5':'2');
+  line.setAttribute('stroke-dasharray', rel.dashed?'6,4':'');
+  if(rel.dir==='to'||rel.dir==='both'){
+    line.setAttribute('marker-end','url(#arrow-'+rel.id+')');
+  }
+  line.style.cursor='pointer';
+  line.style.pointerEvents='stroke';
+  line.addEventListener('click', e=>{ e.stopPropagation(); _rmEditRelPopup(e, rel, d, svg); });
+
+  // 화살표 마커
+  if(rel.dir==='to'||rel.dir==='both'){
+    const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+    const marker=document.createElementNS('http://www.w3.org/2000/svg','marker');
+    marker.setAttribute('id','arrow-'+rel.id); marker.setAttribute('markerWidth','8'); marker.setAttribute('markerHeight','8');
+    marker.setAttribute('refX','6'); marker.setAttribute('refY','3'); marker.setAttribute('orient','auto');
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d','M0,0 L0,6 L8,3 z'); path.setAttribute('fill',rel.color||'#388bfd');
+    marker.appendChild(path); defs.appendChild(marker); svg.appendChild(defs);
+  }
+
+  // 라벨
+  if(rel.label){
+    const mx=(x1+x2)/2, my=(y1+y2)/2;
+    const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',mx); text.setAttribute('y',my-6);
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('font-size','10'); text.setAttribute('fill',rel.color||'#388bfd');
+    text.setAttribute('pointer-events','none');
+    text.textContent=rel.label;
+    g.appendChild(text);
+  }
+  g.appendChild(line);
+  svg.appendChild(g);
+}
+
+function _rmDrawPreviewLine(svg, x1,y1,x2,y2){
+  let prev=svg.querySelector('#rm-preview-line');
+  if(!prev){ prev=document.createElementNS('http://www.w3.org/2000/svg','line'); prev.id='rm-preview-line'; svg.appendChild(prev); }
+  prev.setAttribute('x1',x1); prev.setAttribute('y1',y1);
+  prev.setAttribute('x2',x2); prev.setAttribute('y2',y2);
+  prev.setAttribute('stroke','var(--ac)'); prev.setAttribute('stroke-width','1.5');
+  prev.setAttribute('stroke-dasharray','4,4'); prev.style.pointerEvents='none';
+}
+
+function _rmCancelConnect(node,d){
+  _rmConnecting=null; document.body.style.cursor='';
+  const svg=document.getElementById('rm-svg-'+node.id);
+  if(svg) svg.querySelector('#rm-preview-line')?.remove();
+}
+
+// ── 관계선 추가 팝업 ──
+function _rmOpenRelPopup(e, fromId, toId, node, d, cvWrap){
+  document.querySelector('.rm-rel-popup')?.remove();
+  const pop=document.createElement('div'); pop.className='rm-rel-popup';
+  pop.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--tx)">🔗 관계 추가</div>`;
+
+  const labelInp=document.createElement('input'); labelInp.placeholder='관계 설명 (예: 진짜 사랑하는 사이)'; labelInp.style.width='100%';
+
+  const dirSel=document.createElement('select'); dirSel.style.width='100%';
+  [['to','→ 단방향'],['both','↔ 양방향'],['none','─ 연결선만']].forEach(([v,l])=>{ const o=document.createElement('option');o.value=v;o.textContent=l;dirSel.appendChild(o); });
+
+  const dashedChk=document.createElement('input'); dashedChk.type='checkbox';
+  const dashedLbl=document.createElement('label'); dashedLbl.style.fontSize='11px'; dashedLbl.textContent='점선';
+
+  const colorRow=document.createElement('div'); colorRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap';
+  let selColor=RM_REL_COLORS[0];
+  RM_REL_COLORS.forEach(col=>{
+    const sw=document.createElement('div');
+    sw.style.cssText=`width:22px;height:22px;border-radius:50%;background:${col};cursor:pointer;border:2px solid transparent`;
+    sw.onclick=()=>{ colorRow.querySelectorAll('div').forEach(s=>s.style.borderColor='transparent'); sw.style.borderColor='var(--tx)'; selColor=col; };
+    colorRow.appendChild(sw);
+  });
+  colorRow.firstChild.style.borderColor='var(--tx)';
+
+  const btnRow=document.createElement('div'); btnRow.style.cssText='display:flex;gap:8px;justify-content:flex-end';
+  const okBtn=document.createElement('button'); okBtn.className='wt-btn'; okBtn.style.cssText='background:var(--ac);color:#fff'; okBtn.textContent='추가';
+  const cancelBtn=document.createElement('button'); cancelBtn.className='wt-btn'; cancelBtn.textContent='취소';
+  cancelBtn.onclick=()=>pop.remove();
+  okBtn.onclick=()=>{
+    const rel={id:'rel'+Date.now(), from:fromId, to:toId, label:labelInp.value.trim(), color:selColor, dir:dirSel.value, dashed:dashedChk.checked};
+    d.rels.push(rel);
+    _saveWritingData(node.id,{rels:[...d.rels]});
+    _rmDrawAllLines(document.getElementById('rm-svg-'+node.id), d);
+    pop.remove();
+  };
+  btnRow.append(cancelBtn,okBtn);
+
+  const dashedRow=document.createElement('div'); dashedRow.style.cssText='display:flex;align-items:center;gap:6px';
+  dashedRow.append(dashedChk, dashedLbl);
+
+  pop.append(pop.firstChild, labelInp, dirSel, dashedRow, colorRow, btnRow);
+  document.body.appendChild(pop);
+  pop.style.left=Math.min(e.clientX,window.innerWidth-240)+'px';
+  pop.style.top=Math.min(e.clientY,window.innerHeight-240)+'px';
+  labelInp.focus();
+  setTimeout(()=>document.addEventListener('click',function h(ev){if(!pop.contains(ev.target)){pop.remove();document.removeEventListener('click',h);}},100));
+}
+
+// ── 관계선 편집/삭제 팝업 ──
+function _rmEditRelPopup(e, rel, d, svg){
+  document.querySelector('.rm-rel-popup')?.remove();
+  const pop=document.createElement('div'); pop.className='rm-rel-popup';
+  pop.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--tx)">✏️ 관계 편집</div>`;
+
+  const labelInp=document.createElement('input'); labelInp.value=rel.label||''; labelInp.placeholder='관계 설명';
+  const dirSel=document.createElement('select');
+  [['to','→ 단방향'],['both','↔ 양방향'],['none','─ 연결선만']].forEach(([v,l])=>{ const o=document.createElement('option');o.value=v;o.textContent=l;if(v===rel.dir)o.selected=true;dirSel.appendChild(o); });
+  const dashedChk=document.createElement('input'); dashedChk.type='checkbox'; dashedChk.checked=rel.dashed||false;
+  const dashedLbl=document.createElement('label'); dashedLbl.style.fontSize='11px'; dashedLbl.textContent='점선';
+  const dashedRow=document.createElement('div'); dashedRow.style.cssText='display:flex;align-items:center;gap:6px'; dashedRow.append(dashedChk,dashedLbl);
+
+  const btnRow=document.createElement('div'); btnRow.style.cssText='display:flex;gap:8px;justify-content:flex-end';
+  const delBtn=document.createElement('button'); delBtn.className='wt-btn'; delBtn.style.color='var(--rd)'; delBtn.textContent='삭제';
+  const okBtn=document.createElement('button'); okBtn.className='wt-btn'; okBtn.style.cssText='background:var(--ac);color:#fff'; okBtn.textContent='저장';
+  const cancelBtn=document.createElement('button'); cancelBtn.className='wt-btn'; cancelBtn.textContent='취소';
+  delBtn.onclick=()=>{
+    d.rels=d.rels.filter(r=>r.id!==rel.id);
+    _saveWritingData(_rmNode.id,{rels:[...d.rels]});
+    _rmDrawAllLines(svg,d); pop.remove();
+  };
+  okBtn.onclick=()=>{
+    rel.label=labelInp.value.trim(); rel.dir=dirSel.value; rel.dashed=dashedChk.checked;
+    _saveWritingData(_rmNode.id,{rels:[...d.rels]});
+    _rmDrawAllLines(svg,d); pop.remove();
+  };
+  cancelBtn.onclick=()=>pop.remove();
+  btnRow.append(delBtn,cancelBtn,okBtn);
+
+  pop.append(pop.firstChild,labelInp,dirSel,dashedRow,btnRow);
+  document.body.appendChild(pop);
+  pop.style.left=Math.min(e.clientX,window.innerWidth-240)+'px';
+  pop.style.top=Math.min(e.clientY,window.innerHeight-240)+'px';
+  labelInp.focus();
+  setTimeout(()=>document.addEventListener('click',function h(ev){if(!pop.contains(ev.target)){pop.remove();document.removeEventListener('click',h);}},100));
+}
+
 
 function toggleNodeLock(node, renderFn){
   node.locked = !node.locked;
