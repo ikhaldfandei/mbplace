@@ -1480,14 +1480,6 @@ input[type=number]{-moz-appearance:textfield}
                 <div class="export-item" onclick="mtgExportImg('png')">🖼 PNG</div>
               </div>
             </div>
-            <div id="pub-writing-export" style="display:none;align-items:center;gap:4px;position:relative">
-              <button class="splitbtn" onclick="_toggleWritingExportMenu(null)">⬇ 내보내기</button>
-              <div id="pub-writing-export-menu" class="export-menu" style="display:none;position:absolute;right:0;top:110%;z-index:2000;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.25)">
-                <div class="export-item" onclick="_doWritingExport('word')">📝 Word (.doc)</div>
-                <div class="export-item" onclick="_doWritingExport('pdf')">📄 PDF</div>
-                <div class="export-item" onclick="_doWritingExport('png')">🖼 PNG</div>
-              </div>
-            </div>
             <button class="splitbtn" id="splitbtn" onclick="toggleSplit()">분할 보기</button>
           </div>
           <div class="rank-hint" id="rank-hint">📌 입력 규칙: 블로그(키워드) 작성 및 업로드 &nbsp;/&nbsp; 블로그(키워드) 수정 작업</div>
@@ -1632,6 +1624,14 @@ input[type=number]{-moz-appearance:textfield}
         <div class="epane" id="pub-ep1">
           <div class="etbar">
             <span class="etitle empty" id="pub-et1">← 항목을 선택하세요</span>
+            <div id="pub-writing-export" style="display:none;align-items:center;gap:4px;position:relative">
+              <button class="splitbtn" onclick="_toggleWritingExportMenu(null)" title="집필 시트 내보내기">⬇ 내보내기</button>
+              <div id="pub-writing-export-menu" class="export-menu" style="display:none;position:absolute;right:0;top:110%;z-index:2000;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.25)">
+                <div class="export-item" onclick="_doWritingExport('word')">📝 Word (.doc)</div>
+                <div class="export-item" onclick="_doWritingExport('pdf')">📄 PDF</div>
+                <div class="export-item" onclick="_doWritingExport('png')">🖼 PNG</div>
+              </div>
+            </div>
             <div id="pub-file-wrap" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
               <select class="fmsel" id="pub-year" onchange="pubRenderFiles()" style="font-size:11px"></select>
               <select class="fmsel" id="pub-month" onchange="pubRenderFiles()" style="font-size:11px">
@@ -7805,7 +7805,7 @@ function renderWritingRM(node, container){
   // 전역 이벤트 단일 등록
   _rmBindGlobalEvents();
   // 카드들 렌더
-  d.chars.forEach(ch=>_rmRenderCard(ch, cvWrap, node, d));
+  d.chars.forEach(ch=>_rmRenderCard(ch, cvWrap, node, d, svg));
   // 선들 렌더
   _rmDrawAllLinesV2(svg, d, cvWrap);
 
@@ -7876,7 +7876,7 @@ function _rmRenderSide(sideEl, node, d, cvWrap, svg){
       _saveWritingData(node.id, {chars:[...d.chars], rels:[...d.rels]});
       (function(){
         const cont=document.getElementById('pub-writing-content');
-        if(cont){cont.innerHTML='';renderWritingRM(node,cont);}
+        if(cont){cont.innerHTML='';_rmGlobalBound=false;renderWritingRM(node,cont);}
       })();
     };
     row.append(ico, name, btn);
@@ -7885,7 +7885,7 @@ function _rmRenderSide(sideEl, node, d, cvWrap, svg){
 }
 
 // ── 캐릭터 카드 렌더 ──
-function _rmRenderCard(ch, cvWrap, node, d){
+function _rmRenderCard(ch, cvWrap, node, d, svg){
   const csNode = S.pub.find(n=>n.id===ch.csNodeId);
   if(!csNode) return;
   const card = document.createElement('div');
@@ -8296,11 +8296,11 @@ function _rmCardContextMenu(e, ch, node, d, cvWrap, svg){
   showCtx(e,[
     {l:'🔗 이 캐릭터의 관계선 보기', a:()=>{
       // 이 캐릭터와 연결된 관계선만 하이라이트
-      svg.querySelectorAll('g').forEach(g=>{
+      const _svg=_rmSvg;if(_svg)_svg.querySelectorAll('g').forEach(g=>{
         const rel=d.rels.find(r=>r.from===ch.id||r.to===ch.id);
         g.style.opacity = rel ? '1':'0.25';
       });
-      setTimeout(()=>svg.querySelectorAll('g').forEach(g=>g.style.opacity='1'),2000);
+      setTimeout(()=>(_rmSvg)&&_rmSvg.querySelectorAll('g').forEach(g=>g.style.opacity='1'),2000);
     }},
     'sep',
     {l:'🗑 캐릭터 제거', d:true, a:()=>{
