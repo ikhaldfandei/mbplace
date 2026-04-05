@@ -1288,7 +1288,7 @@ input[type=number]{-moz-appearance:textfield}
 .mb-pin.selected{border-color:var(--ac);box-shadow:0 0 0 3px rgba(56,139,253,.25);z-index:25}
 .mb-pin img{
   width:100%;max-height:160px;object-fit:cover;
-  border-radius:6px;display:block;pointer-events:none;
+  border-radius:6px;display:block;cursor:zoom-in;
 }
 .mb-pin-caption{
   font-size:10px;color:var(--tx3);text-align:center;
@@ -2997,6 +2997,7 @@ function pubAddWritingNode(itemId, type){
 function pubOpenWritingNode(node){
   _writingSel = node.id;
   _pubSel = node.id;
+  _currentWritingNode = node; // 내보내기 대상 노드
   renderPubTree();
   // 다른 영역 숨기기
   const fwrap = document.getElementById('pub-file-wrap');
@@ -7052,8 +7053,12 @@ function openIconPicker(node, renderFn){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _rmDragCard = null;
 let _rmDragOffX = 0, _rmDragOffY = 0;
-let _rmConnecting = null; // {fromId, startX, startY}
+let _rmConnecting = null;
 let _rmNode = null;
+let _rmCvWrap = null;
+let _rmSvg = null;
+let _rmD_global = null;
+let _rmGlobalBound = false;
 
 // 관계선 색상 팔레트
 const RM_REL_COLORS = ['#388bfd','#3fb950','#f85149','#d29922','#bc8cff','#ff7b72','#56d364','#58a6ff'];
@@ -7795,6 +7800,10 @@ function renderWritingRM(node, container){
   svg.style.pointerEvents = 'none';
   cvWrap.appendChild(svg);
 
+  // 전역 변수 업데이트 (단일 핸들러에서 사용)
+  _rmNode = node; _rmD_global = d; _rmCvWrap = cvWrap; _rmSvg = svg;
+  // 전역 이벤트 단일 등록
+  _rmBindGlobalEvents();
   // 카드들 렌더
   d.chars.forEach(ch=>_rmRenderCard(ch, cvWrap, node, d));
   // 선들 렌더
@@ -7912,6 +7921,7 @@ function _rmRenderCard(ch, cvWrap, node, d){
       const cx = ch.x + 55; // 카드 중심 x
       const cy = ch.y + 55; // 카드 중심 y
       _rmConnecting = {fromId: ch.id, startX: cx, startY: cy};
+      _rmNode = node; _rmD_global = d; _rmCvWrap = cvWrap; _rmSvg = svg;
       document.body.style.cursor='crosshair';
     });
     card.appendChild(dot);
@@ -7926,6 +7936,7 @@ function _rmRenderCard(ch, cvWrap, node, d){
     if(e.target.classList.contains('rm-connect-dot')) return;
     e.preventDefault();
     _rmDragCard = ch;
+    _rmNode = node; _rmD_global = d; _rmCvWrap = cvWrap; _rmSvg = svg;
     const rect = cvWrap.getBoundingClientRect();
     _rmDragOffX = e.clientX - rect.left - ch.x;
     _rmDragOffY = e.clientY - rect.top  - ch.y;
@@ -7935,37 +7946,7 @@ function _rmRenderCard(ch, cvWrap, node, d){
   cvWrap.appendChild(card);
 
   // 전역 mousemove/mouseup
-  if(!cvWrap._rmBound){
-    cvWrap._rmBound = true;
-    document.addEventListener('mousemove', e=>{
-      if(_rmDragCard){
-        const rect=cvWrap.getBoundingClientRect();
-        const nx=Math.max(0,Math.min(rect.width-110,e.clientX-rect.left-_rmDragOffX));
-        const ny=Math.max(0,Math.min(rect.height-120,e.clientY-rect.top-_rmDragOffY));
-        _rmDragCard.x=nx; _rmDragCard.y=ny;
-        const el=document.getElementById('rm-card-'+_rmDragCard.id);
-        if(el){el.style.left=nx+'px';el.style.top=ny+'px';}
-        _rmDrawAllLinesV2(document.getElementById('rm-svg-'+node.id), d, cvWrap);
-      }
-    });
-    document.addEventListener('mouseup', e=>{
-      if(_rmDragCard){
-        _saveWritingData(node.id,{chars:[...d.chars]});
-        _rmDragCard=null;
-      }
-      if(_rmConnecting){
-        // 어떤 카드 위에서 손을 뗐는지 확인
-        const rect=cvWrap.getBoundingClientRect();
-        const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-        const target=d.chars.find(c=>{
-          if(c.id===_rmConnecting.fromId) return false;
-          return mx>=c.x&&mx<=c.x+110&&my>=c.y&&my<=c.y+120;
-        });
-        if(target) _rmOpenRelPopupV2(e, _rmConnecting.fromId, target.id, node, d, cvWrap);
-        _rmCancelConnect(node, d);
-      }
-    });
-  }
+  // 전역 이벤트는 renderWritingRM에서 _rmBindGlobalEvents()로 단일 등록
 }
 
 // ── 관계선 전체 그리기 ──
@@ -8030,6 +8011,51 @@ function _rmDrawPreviewLine(svg, x1,y1,x2,y2){
   prev.setAttribute('x2',x2); prev.setAttribute('y2',y2);
   prev.setAttribute('stroke','var(--ac)'); prev.setAttribute('stroke-width','1.5');
   prev.setAttribute('stroke-dasharray','4,4'); prev.style.pointerEvents='none';
+}
+
+
+// 관계도 전역 이벤트 단일 등록
+function _rmBindGlobalEvents(){
+  if(_rmGlobalBound) return;
+  _rmGlobalBound = true;
+
+  document.addEventListener('mousemove', e=>{
+    if(!_rmCvWrap) return;
+    // 카드 드래그
+    if(_rmDragCard){
+      const rect=_rmCvWrap.getBoundingClientRect();
+      const nx=Math.max(0,Math.min(rect.width-110,e.clientX-rect.left-_rmDragOffX));
+      const ny=Math.max(0,Math.min(rect.height-120,e.clientY-rect.top-_rmDragOffY));
+      _rmDragCard.x=nx; _rmDragCard.y=ny;
+      const el=document.getElementById('rm-card-'+_rmDragCard.id);
+      if(el){el.style.left=nx+'px';el.style.top=ny+'px';}
+      if(_rmSvg) _rmDrawAllLinesV2(_rmSvg, _rmD_global, _rmCvWrap);
+    }
+    // 연결선 미리보기
+    if(_rmConnecting && _rmSvg){
+      const rect=_rmCvWrap.getBoundingClientRect();
+      _rmDrawPreviewLine(_rmSvg, _rmConnecting.startX, _rmConnecting.startY, e.clientX-rect.left, e.clientY-rect.top);
+    }
+  });
+
+  document.addEventListener('mouseup', e=>{
+    // 카드 이동 완료
+    if(_rmDragCard && _rmNode){
+      _saveWritingData(_rmNode.id,{chars:[..._rmD_global.chars]});
+      _rmDragCard=null;
+    }
+    // 연결선 완료
+    if(_rmConnecting && _rmCvWrap){
+      const rect=_rmCvWrap.getBoundingClientRect();
+      const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+      const target=(_rmD_global.chars||[]).find(ch=>{
+        if(ch.id===_rmConnecting.fromId) return false;
+        return mx>=ch.x&&mx<=ch.x+110&&my>=ch.y&&my<=ch.y+120;
+      });
+      if(target) _rmOpenRelPopupV2(e, _rmConnecting.fromId, target.id, _rmNode, _rmD_global, _rmCvWrap);
+      _rmCancelConnect(_rmNode, _rmD_global);
+    }
+  });
 }
 
 function _rmCancelConnect(node,d){
