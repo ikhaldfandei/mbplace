@@ -1035,6 +1035,7 @@ input[type=number]{-moz-appearance:textfield}
 .writing-toolbar[data-type="WRM"]{border-bottom-color:var(--wrm-color)}
 .writing-toolbar[data-type="WMB"]{border-bottom-color:#e91e63}
 .writing-toolbar[data-type="WPT"]{border-bottom-color:#00b894}
+.writing-toolbar[data-type="WED"]{border-bottom-color:#6c5ce7}
 
 /* ── 섹션 타이틀 개선 ── */
 .writing-section-title{
@@ -1368,6 +1369,84 @@ input[type=number]{-moz-appearance:textfield}
 .pt-del-btn{background:none;border:none;cursor:pointer;color:var(--tx3);font-size:12px;opacity:0;padding:6px 8px}
 .pt-log-table tbody tr:hover .pt-del-btn{opacity:1}
 .pt-del-btn:hover{color:var(--rd)}
+
+
+/* ── 집필 에디터 (WED) ── */
+.wed-container{flex:1;display:flex;overflow:hidden}
+.wed-sidebar{
+  width:200px;min-width:140px;flex-shrink:0;
+  background:var(--surf2);border-right:1px solid var(--bdr);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.wed-sidebar-hdr{
+  padding:10px 12px;font-size:11px;font-weight:700;
+  color:var(--tx2);border-bottom:1px solid var(--bdr);
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+}
+.wed-ch-list{flex:1;overflow-y:auto;padding:4px 0}
+.wed-ch-item{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 12px;cursor:pointer;
+  font-size:12px;color:var(--tx2);
+  border-left:3px solid transparent;
+  transition:background .1s, border-color .1s;
+  position:relative;
+}
+.wed-ch-item:hover{background:var(--surf)}
+.wed-ch-item.active{
+  background:var(--surf);color:var(--tx);
+  border-left-color:var(--ac);font-weight:700;
+}
+.wed-ch-item.dragging{opacity:.4}
+.wed-ch-item.drag-over{border-top:2px solid var(--ac)}
+.wed-ch-num{
+  font-size:10px;font-weight:800;color:var(--tx3);
+  flex-shrink:0;min-width:22px;
+}
+.wed-ch-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wed-ch-wc{font-size:9px;color:var(--tx3);flex-shrink:0}
+.wed-add-ch{
+  padding:8px 12px;font-size:11px;color:var(--tx3);
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+  border-top:1px solid var(--bdr);flex-shrink:0;
+}
+.wed-add-ch:hover{color:var(--ac);background:var(--surf)}
+/* 에디터 영역 */
+.wed-editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.wed-editor-top{
+  padding:8px 16px;border-bottom:1px solid var(--bdr);
+  background:var(--surf2);display:flex;align-items:center;
+  gap:10px;flex-shrink:0;flex-wrap:wrap;
+}
+.wed-ch-title-input{
+  flex:1;font-size:14px;font-weight:700;
+  background:transparent;border:none;outline:none;
+  color:var(--tx);font-family:inherit;
+  border-bottom:1px dashed transparent;
+}
+.wed-ch-title-input:focus{border-bottom-color:var(--ac)}
+.wed-wc-badge{
+  font-size:10px;color:var(--tx3);white-space:nowrap;
+}
+.wed-nav-btn{
+  background:none;border:1px solid var(--bdr);border-radius:5px;
+  padding:3px 10px;font-size:11px;cursor:pointer;color:var(--tx2);
+}
+.wed-nav-btn:hover{background:var(--surf);color:var(--ac)}
+.wed-nav-btn:disabled{opacity:.35;cursor:default}
+.wed-toolbar-wrap{flex-shrink:0;border-bottom:1px solid var(--bdr)}
+.wed-body{flex:1;overflow-y:auto;padding:0}
+.wed-body .mbedit{
+  min-height:100%;padding:32px 48px;
+  font-family:'맑은 고딕',Georgia,serif;
+  font-size:13pt;line-height:2.0;
+  max-width:800px;margin:0 auto;
+}
+.wed-empty{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  color:var(--tx3);gap:10px;
+}
 
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
@@ -2963,6 +3042,7 @@ const WRITING_TYPES = {
   WIM: {label:'아이디어 메모',icon:'💡'},
   WWS: {label:'세계관/배경', icon:'🌍'},
   WSY: {label:'시놉시스',    icon:'📖'},
+  WED: {label:'집필 에디터',   icon:'✏️'},
 };
 
 // 현재 열린 집필 노드 ID
@@ -3043,6 +3123,7 @@ function pubOpenWritingNode(node){
     WGS: renderWritingGS,
     WMB: renderWritingMB,
     WPT: renderWritingPT,
+    WED: renderWritingED,
   };
   const fn = renderers[node.t];
   if(fn) fn(node, content);
@@ -7321,6 +7402,348 @@ function _mbCreatePin(pin, node, board){
 //  추가 기능: 집필 진행률 트래커 (WPT)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // data: { goal:0, logs:[{id,date,chars,memo}] }
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  집필 에디터 (WED)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// data: { chapters:[{id,title,content,order}], activeCh:id }
+
+let _wedEditor = null;  // 현재 활성 MBEditor 인스턴스
+let _wedNode   = null;  // 현재 WED 노드
+let _wedActiveCh = null; // 현재 회차 ID
+let _wedSaveTimer = null;
+
+function _wedInit(node){
+  if(!node.data) node.data={};
+  if(!node.data.chapters || !node.data.chapters.length){
+    node.data.chapters=[{id:'ch'+Date.now(),title:'1화',content:'',order:0}];
+  }
+  if(!node.data.activeCh) node.data.activeCh=node.data.chapters[0].id;
+  return node.data;
+}
+
+function renderWritingED(node, container){
+  container.innerHTML='';
+  _wedNode=node;
+  const d=_wedInit(node);
+
+  // 툴바
+  const tb=document.createElement('div');
+  tb.className='writing-toolbar';
+  tb.setAttribute('data-type','WED');
+  const tbTitle=document.createElement('span');
+  tbTitle.className='writing-toolbar-title';
+  tbTitle.textContent='✏️ 집필 에디터';
+  // 전체 글자수
+  const totalWc=document.createElement('span');
+  totalWc.id='wed-total-wc-'+node.id;
+  totalWc.style.cssText='font-size:10px;color:var(--tx3)';
+  tb.append(tbTitle,totalWc);
+  container.appendChild(tb);
+
+  // 본문 컨테이너
+  const main=document.createElement('div');
+  main.className='wed-container';
+
+  // ── 사이드바 ──
+  const sidebar=document.createElement('div');
+  sidebar.className='wed-sidebar';
+
+  const sideHdr=document.createElement('div');
+  sideHdr.className='wed-sidebar-hdr';
+  sideHdr.innerHTML='<span>📋 회차 목록</span>';
+  const addChBtn=document.createElement('button');
+  addChBtn.className='wt-btn';
+  addChBtn.style.cssText='font-size:10px;padding:2px 7px';
+  addChBtn.textContent='＋';
+  addChBtn.title='회차 추가';
+  addChBtn.onclick=()=>_wedAddChapter(node,d,chList,editorArea);
+  sideHdr.appendChild(addChBtn);
+  sidebar.appendChild(sideHdr);
+
+  const chList=document.createElement('div');
+  chList.className='wed-ch-list';
+  chList.id='wed-chlist-'+node.id;
+  sidebar.appendChild(chList);
+
+  const addChBottom=document.createElement('div');
+  addChBottom.className='wed-add-ch';
+  addChBottom.innerHTML='<span>＋</span> 회차 추가';
+  addChBottom.onclick=()=>_wedAddChapter(node,d,chList,editorArea);
+  sidebar.appendChild(addChBottom);
+
+  // ── 에디터 영역 ──
+  const editorArea=document.createElement('div');
+  editorArea.className='wed-editor-area';
+  editorArea.id='wed-editor-area-'+node.id;
+
+  // 빈 상태
+  const empty=document.createElement('div');
+  empty.className='wed-empty';
+  empty.innerHTML='<span style="font-size:36px">✏️</span><span>왼쪽에서 회차를 선택하세요</span>';
+  editorArea.appendChild(empty);
+
+  main.append(sidebar, editorArea);
+  container.appendChild(main);
+
+  // 회차 목록 렌더
+  _wedRenderChList(chList, node, d, editorArea);
+
+  // 마지막 활성 회차 열기
+  const activeCh=d.chapters.find(ch=>ch.id===d.activeCh) || d.chapters[0];
+  if(activeCh) _wedOpenChapter(activeCh, node, d, chList, editorArea);
+
+  _wedUpdateTotalWc(node,d);
+}
+
+function _wedRenderChList(chList, node, d, editorArea){
+  chList.innerHTML='';
+  const sorted=[...d.chapters].sort((a,b)=>a.order-b.order);
+  sorted.forEach((ch,idx)=>{
+    const item=document.createElement('div');
+    item.className='wed-ch-item'+(ch.id===_wedActiveCh?' active':'');
+    item.dataset.id=ch.id;
+    item.draggable=true;
+
+    const num=document.createElement('span');
+    num.className='wed-ch-num';
+    num.textContent=(idx+1)+'화';
+
+    const title=document.createElement('span');
+    title.className='wed-ch-title';
+    title.textContent=ch.title||((idx+1)+'화');
+
+    const wc=document.createElement('span');
+    wc.className='wed-ch-wc';
+    wc.textContent=((ch.content||'').replace(/<[^>]*>/g,'').replace(/\s/g,'').length||'')+'자';
+
+    item.append(num,title,wc);
+    item.onclick=()=>_wedOpenChapter(ch,node,d,chList,editorArea);
+
+    // 우클릭 메뉴
+    item.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      const menu=[
+        {l:'✏️ 이름 변경',a:()=>{
+          const nv=prompt('회차 이름:',ch.title);
+          if(nv===null) return;
+          ch.title=nv.trim()||ch.title;
+          _saveWritingData(node.id,{chapters:[...d.chapters]});
+          _wedRenderChList(chList,node,d,editorArea);
+          // 에디터 상단 제목도 갱신
+          const ti=document.getElementById('wed-ch-title-'+node.id);
+          if(ti&&_wedActiveCh===ch.id) ti.value=ch.title;
+        }},
+        'sep',
+      ];
+      if(d.chapters.length>1){
+        if(idx>0) menu.push({l:'⬆ 위로',a:()=>{
+          const prev=sorted[idx-1];
+          [ch.order,prev.order]=[prev.order,ch.order];
+          _saveWritingData(node.id,{chapters:[...d.chapters]});
+          _wedRenderChList(chList,node,d,editorArea);
+        }});
+        if(idx<sorted.length-1) menu.push({l:'⬇ 아래로',a:()=>{
+          const next=sorted[idx+1];
+          [ch.order,next.order]=[next.order,ch.order];
+          _saveWritingData(node.id,{chapters:[...d.chapters]});
+          _wedRenderChList(chList,node,d,editorArea);
+        }});
+        menu.push('sep');
+        menu.push({l:'🗑 회차 삭제',d:true,a:()=>{
+          if(!confirm(`"${ch.title||((idx+1)+'화')}" 회차를 삭제하시겠습니까?`)) return;
+          const di=d.chapters.findIndex(c=>c.id===ch.id);
+          d.chapters.splice(di,1);
+          _saveWritingData(node.id,{chapters:[...d.chapters]});
+          _wedRenderChList(chList,node,d,editorArea);
+          if(_wedActiveCh===ch.id){
+            _wedActiveCh=null;
+            if(d.chapters.length) _wedOpenChapter(d.chapters[0],node,d,chList,editorArea);
+            else _wedClearEditor(editorArea,node);
+          }
+          _wedUpdateTotalWc(node,d);
+        }});
+      }
+      showCtx(e,menu);
+    });
+
+    // 드래그 정렬
+    let _dragOver=null;
+    item.addEventListener('dragstart',e=>{
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain',ch.id);
+      setTimeout(()=>item.classList.add('dragging'),0);
+    });
+    item.addEventListener('dragend',()=>{
+      item.classList.remove('dragging');
+      chList.querySelectorAll('.wed-ch-item').forEach(el=>el.classList.remove('drag-over'));
+    });
+    item.addEventListener('dragover',e=>{
+      e.preventDefault();
+      chList.querySelectorAll('.wed-ch-item').forEach(el=>el.classList.remove('drag-over'));
+      item.classList.add('drag-over');
+    });
+    item.addEventListener('drop',e=>{
+      e.preventDefault();
+      const fromId=e.dataTransfer.getData('text/plain');
+      const fromCh=d.chapters.find(c=>c.id===fromId);
+      if(!fromCh||fromId===ch.id) return;
+      // 순서 교환
+      [fromCh.order,ch.order]=[ch.order,fromCh.order];
+      _saveWritingData(node.id,{chapters:[...d.chapters]});
+      _wedRenderChList(chList,node,d,editorArea);
+    });
+
+    chList.appendChild(item);
+  });
+}
+
+function _wedOpenChapter(ch, node, d, chList, editorArea){
+  // 현재 에디터 내용 저장
+  if(_wedEditor && _wedActiveCh){
+    const cur=d.chapters.find(c=>c.id===_wedActiveCh);
+    if(cur){ cur.content=_wedEditor.html; _saveWritingData(node.id,{chapters:[...d.chapters]}); }
+  }
+
+  _wedActiveCh=ch.id;
+  d.activeCh=ch.id;
+  _wedNode=node;
+
+  // 사이드바 active 갱신
+  chList.querySelectorAll('.wed-ch-item').forEach(el=>{
+    el.classList.toggle('active',el.dataset.id===ch.id);
+  });
+
+  // 에디터 영역 구성
+  editorArea.innerHTML='';
+
+  // 상단 (제목 + 탐색)
+  const top=document.createElement('div');
+  top.className='wed-editor-top';
+
+  const titleInp=document.createElement('input');
+  titleInp.type='text';
+  titleInp.className='wed-ch-title-input';
+  titleInp.id='wed-ch-title-'+node.id;
+  titleInp.value=ch.title||'';
+  titleInp.placeholder='회차 제목 입력...';
+  titleInp.addEventListener('input',()=>{
+    ch.title=titleInp.value;
+    // 사이드바 항목 제목 갱신
+    const si=chList.querySelector(`.wed-ch-item[data-id="${ch.id}"] .wed-ch-title`);
+    if(si) si.textContent=ch.title;
+    clearTimeout(_wedSaveTimer);
+    _wedSaveTimer=setTimeout(()=>_saveWritingData(node.id,{chapters:[...d.chapters]}),400);
+  });
+  titleInp.addEventListener('keydown',e=>e.stopPropagation());
+
+  // 글자수
+  const wcBadge=document.createElement('span');
+  wcBadge.className='wed-wc-badge';
+  wcBadge.id='wed-wc-'+node.id;
+
+  // 이전/다음 회차
+  const sorted=[...d.chapters].sort((a,b)=>a.order-b.order);
+  const curIdx=sorted.findIndex(c=>c.id===ch.id);
+
+  const prevBtn=document.createElement('button');
+  prevBtn.className='wed-nav-btn';
+  prevBtn.textContent='◀ 이전';
+  prevBtn.disabled=curIdx<=0;
+  if(curIdx>0) prevBtn.onclick=()=>_wedOpenChapter(sorted[curIdx-1],node,d,chList,editorArea);
+
+  const nextBtn=document.createElement('button');
+  nextBtn.className='wed-nav-btn';
+  nextBtn.textContent='다음 ▶';
+  nextBtn.disabled=curIdx>=sorted.length-1;
+  if(curIdx<sorted.length-1) nextBtn.onclick=()=>_wedOpenChapter(sorted[curIdx+1],node,d,chList,editorArea);
+
+  top.append(titleInp, wcBadge, prevBtn, nextBtn);
+  editorArea.appendChild(top);
+
+  // 툴바
+  const tbWrap=document.createElement('div');
+  tbWrap.className='wed-toolbar-wrap';
+  const tbDiv=document.createElement('div');
+  tbDiv.id='wed-toolbar-'+node.id+'-'+ch.id;
+  tbWrap.appendChild(tbDiv);
+  editorArea.appendChild(tbWrap);
+
+  // 에디터 본문
+  const bodyWrap=document.createElement('div');
+  bodyWrap.className='wed-body';
+  const ceDiv=document.createElement('div');
+  ceDiv.id='wed-ce-'+node.id+'-'+ch.id;
+  bodyWrap.appendChild(ceDiv);
+  editorArea.appendChild(bodyWrap);
+
+  // MBEditor 초기화
+  const editor=new MBEditor(
+    'wed-toolbar-'+node.id+'-'+ch.id,
+    'wed-ce-'+node.id+'-'+ch.id,
+    '이곳에 집필을 시작하세요...',
+    html=>{
+      ch.content=html;
+      // 글자수 갱신
+      const plain=html.replace(/<[^>]*>/g,'').replace(/\s/g,'').length;
+      const wb=document.getElementById('wed-wc-'+node.id);
+      if(wb) wb.textContent=plain.toLocaleString()+'자';
+      const si=chList.querySelector(`.wed-ch-item[data-id="${ch.id}"] .wed-ch-wc`);
+      if(si) si.textContent=plain.toLocaleString()+'자';
+      clearTimeout(_wedSaveTimer);
+      _wedSaveTimer=setTimeout(()=>{
+        _saveWritingData(node.id,{chapters:[...d.chapters]});
+        _wedUpdateTotalWc(node,d);
+      },400);
+    }
+  );
+  editor.html=ch.content||'';
+  _wedEditor=editor;
+
+  // 초기 글자수
+  const initPlain=(ch.content||'').replace(/<[^>]*>/g,'').replace(/\s/g,'').length;
+  const wb=document.getElementById('wed-wc-'+node.id);
+  if(wb) wb.textContent=initPlain.toLocaleString()+'자';
+
+  // Ctrl+Enter → 다음 회차
+  ceDiv.addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
+      e.preventDefault();
+      if(curIdx<sorted.length-1) _wedOpenChapter(sorted[curIdx+1],node,d,chList,editorArea);
+    }
+  });
+}
+
+function _wedClearEditor(editorArea, node){
+  editorArea.innerHTML='<div class="wed-empty"><span style="font-size:36px">✏️</span><span>회차를 추가하세요</span></div>';
+  _wedEditor=null;
+  const tw=document.getElementById('wed-total-wc-'+node.id);
+  if(tw) tw.textContent='';
+}
+
+function _wedAddChapter(node, d, chList, editorArea){
+  const maxOrder=d.chapters.reduce((m,ch)=>Math.max(m,ch.order),-1);
+  const newCh={
+    id:'ch'+Date.now(),
+    title:(d.chapters.length+1)+'화',
+    content:'',
+    order:maxOrder+1
+  };
+  d.chapters.push(newCh);
+  _saveWritingData(node.id,{chapters:[...d.chapters]});
+  _wedRenderChList(chList,node,d,editorArea);
+  _wedOpenChapter(newCh,node,d,chList,editorArea);
+}
+
+function _wedUpdateTotalWc(node, d){
+  const total=(d.chapters||[]).reduce((s,ch)=>{
+    return s+(ch.content||'').replace(/<[^>]*>/g,'').replace(/\s/g,'').length;
+  },0);
+  const tw=document.getElementById('wed-total-wc-'+node.id);
+  if(tw) tw.textContent='전체 '+total.toLocaleString()+'자';
+}
+
 
 function _ptInit(node){
   if(!node.data) node.data={};
