@@ -929,7 +929,7 @@ input[type=number]{-moz-appearance:textfield}
 
 /* ── 관계도 ── */
 .rm-container{flex:1;display:flex;overflow:hidden}
-.rm-canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--surf);cursor:default}
+.rm-canvas-wrap{flex:1;position:relative;overflow:visible;background:var(--surf);cursor:default;min-height:300px}
 .rm-canvas{position:absolute;inset:0;pointer-events:none}
 .rm-char-card{
   position:absolute;width:110px;
@@ -1624,9 +1624,9 @@ input[type=number]{-moz-appearance:textfield}
         <div class="epane" id="pub-ep1">
           <div class="etbar">
             <span class="etitle empty" id="pub-et1">← 항목을 선택하세요</span>
-            <div id="pub-writing-export" style="display:none;align-items:center;gap:4px;position:relative">
+            <div id="pub-writing-export" style="align-items:center;gap:4px;position:relative;display:none">
               <button class="splitbtn" onclick="_toggleWritingExportMenu(null)" title="집필 시트 내보내기">⬇ 내보내기</button>
-              <div id="pub-writing-export-menu" class="export-menu" style="display:none;position:absolute;right:0;top:110%;z-index:2000;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.25)">
+              <div id="pub-writing-export-menu" class="export-menu" style="position:absolute;right:0;top:110%;z-index:9999;min-width:140px">
                 <div class="export-item" onclick="_doWritingExport('word')">📝 Word (.doc)</div>
                 <div class="export-item" onclick="_doWritingExport('pdf')">📄 PDF</div>
                 <div class="export-item" onclick="_doWritingExport('png')">🖼 PNG</div>
@@ -3017,7 +3017,8 @@ function pubOpenWritingNode(node){
   const _wExpBtn = document.getElementById('pub-writing-export');
   if(_wExpBtn){
     _wExpBtn.style.display = 'flex';
-    _wExpBtn.onclick = ()=>_toggleWritingExportMenu(node);
+    _wExpBtn.style.alignItems = 'center';
+    _currentWritingNode = node;
   }
   if(etEl){
     const info = WRITING_TYPES[node.t] || {};
@@ -4474,7 +4475,7 @@ function pubOpenNode(node){
   if(etEl) etEl.textContent=node.n;
   // 집필 뷰 숨기기
   const _wv=document.getElementById('pub-writing-view');if(_wv)_wv.classList.add('hidden');
-  const _we=document.getElementById('pub-writing-export');if(_we)_we.style.display='none';
+  const _we=document.getElementById('pub-writing-export');if(_we){_we.style.display='none';const _wm=document.getElementById('pub-writing-export-menu');if(_wm)_wm.style.display='none';}
 
   if(node.t==='I'){
     // 파일 항목 — 파일 목록 표시
@@ -8358,8 +8359,7 @@ function _rmOpenRelPopupV2(e, fromId, toId, node, d, cvWrap){
     const rel={id:'rel'+Date.now(),from:fromId,to:toId,label:labelInp.value.trim(),color:selColor,dir:dirSel.value,lineStyle:selStyle};
     d.rels.push(rel);
     _saveWritingData(node.id,{rels:[...d.rels]});
-    const svg=document.getElementById('rm-svg-'+node.id);
-    _rmDrawAllLinesV2(svg,d,cvWrap);
+    if(_rmSvg) _rmDrawAllLinesV2(_rmSvg, _rmD_global, _rmCvWrap);
     pop.remove();
   };
   btnRow.append(cancelBtn,okBtn);
