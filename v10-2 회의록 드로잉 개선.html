@@ -6682,7 +6682,8 @@ function mtgBind(){
 
   // 스크롤 오프셋 반영 좌표 변환
   const getPos=e=>{
-    const r=canvas.getBoundingClientRect();
+    // cvwrap 기준으로 좌표 계산 (canvas는 -scroll 위치에 있어서 BoundingRect에 이미 반영됨 → 이중 계산 방지)
+    const r=cvwrap.getBoundingClientRect();
     return {
       x:(e.clientX-r.left+_mtgScrollX),
       y:(e.clientY-r.top +_mtgScrollY)
@@ -6740,13 +6741,20 @@ function mtgBind(){
 
   // ── 펜/마우스 드로잉 ──
   canvas.addEventListener('pointerdown',e=>{
-    if(_mtgPopTool)mtgHidePop();
     // 손가락 터치 → 완전 무시
     if(e.pointerType==='touch') return;
-    if(_mtg.tool==='text'){ mtgPlaceText(getPos(e)); return; }
+    if(_mtgPopTool)mtgHidePop();
+    // iOS가 드래그로 가로채기 전에 반드시 먼저 preventDefault
     e.preventDefault();
     try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+    if(_mtg.tool==='text'){ mtgPlaceText(getPos(e)); return; }
     const p=getPos(e);
+    // ── iPadOS pointercancel 복구: 펜이 pointercancel 후 재발화하면 기존 획 이어서 그리기
+    if(_mtg.drawing && _mtg.curPath && e.pointerType==='pen'){
+      _mtg.curPath.pts.push({x:p.x,y:p.y});
+      _mtg.ctx.moveTo(p.x,p.y);
+      return;
+    }
     const ts=_mtgTS[_mtg.tool]||{lw:3};
     const color=_mtg.tool==='erase'?'':mtgGetColor(_mtg.tool);
     _mtg.curPath={tool:_mtg.tool,color,lw:ts.lw,pts:[{x:p.x,y:p.y}]};
@@ -6771,6 +6779,8 @@ function mtgBind(){
 
   const endDraw=e=>{
     if(e&&e.pointerType==='touch') return;
+    // iPadOS Safari: Apple Pencil 사용 시 pointercancel이 오발화됨 → 획 유지
+    if(e&&e.type==='pointercancel'&&e.pointerType==='pen') return;
     if(!_mtg.drawing)return;
     _mtg.drawing=false;
     try{ _mtg.ctx.restore(); }catch(err){}
@@ -6778,8 +6788,8 @@ function mtgBind(){
       _mtg.paths.push(JSON.parse(JSON.stringify(_mtg.curPath)));
     _mtg.curPath=null; mtgSave();
   };
-  canvas.addEventListener('pointerup',endDraw);
-  canvas.addEventListener('pointercancel',endDraw);
+  canvas.addEventListener('pointerup',endDraw,{passive:false});
+  canvas.addEventListener('pointercancel',endDraw,{passive:false});
 
   // 초기 스크롤 위치 적용
   _mtgScrollX=0; _mtgScrollY=0;
