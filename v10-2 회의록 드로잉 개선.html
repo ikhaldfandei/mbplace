@@ -6346,6 +6346,10 @@ function openMeetingDoc(id){
   const eq1=document.getElementById('eq1');
   et.textContent='📋 '+nd.n; et.className='etitle';
   ee.style.display='none'; ew.classList.remove('hidden');
+  // ── 핵심 픽스: 아이패드에서 @media(max-width:768px)가 equill-wrap에 overflow-y:auto를 강제 적용해
+  //    펜슬 획이 부모 스크롤로 가로채짐 → overflow:hidden으로 잠금
+  ew.style.overflow='hidden';
+  ew.style.touchAction='none';
   if(eq1tb)eq1tb.style.display='none';
   if(eq1)eq1.style.display='none';
 
@@ -6496,6 +6500,8 @@ function hideMeetingCanvas(){
   const eq1tb=document.getElementById('eq1toolbar');if(eq1tb)eq1tb.style.display='';
   const eq1=document.getElementById('eq1');if(eq1)eq1.style.display='';
   const outer=document.getElementById('mtg-outer');if(outer)outer.style.display='none';
+  // overflow 잠금 해제
+  const ew=document.getElementById('ew1');if(ew){ew.style.overflow='';ew.style.touchAction='';}
   if(_mtg.ro){_mtg.ro.disconnect();_mtg.ro=null;}
   _mtg.nodeId=null;_mtg.paths=[];_mtg.canvas=null;_mtg.ctx=null;
 }
