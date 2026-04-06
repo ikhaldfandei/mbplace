@@ -6,7 +6,7 @@
 <title>마케팅 허브</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow:hidden;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-overflow-scrolling:touch}
 :root{
   --bg:#0d1117;--surf:#161b22;--surf2:#1c2128;--surf3:#21262d;
   --bdr:#30363d;--bdr2:#21262d;
@@ -6311,10 +6311,10 @@ function openMeetingDoc(id){
   // ── 캔버스 영역 ──
   const cvwrap=document.createElement('div');
   cvwrap.id='mtg-cvwrap';
-  cvwrap.style.cssText='flex:1;position:relative;overflow:hidden;background:var(--surf);touch-action:pan-y';
+  cvwrap.style.cssText='flex:1;position:relative;overflow:auto;background:var(--surf);touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch';
   const canvas=document.createElement('canvas');
   canvas.id='mtg-canvas';
-  canvas.style.cssText='position:absolute;top:0;left:0;touch-action:none;display:block;cursor:crosshair';
+  canvas.style.cssText='position:absolute;top:0;left:0;touch-action:pan-x pan-y;display:block;cursor:crosshair';
   cvwrap.appendChild(canvas);
 
   // ── 색상 팔레트 오버레이 (캔버스 위) ──
@@ -6415,10 +6415,18 @@ function hideMeetingCanvas(){
 function mtgFit(){
   const wrap=document.getElementById('mtg-cvwrap');
   if(!wrap||!_mtg.canvas)return;
-  const w=wrap.offsetWidth,h=wrap.offsetHeight;if(!w||!h)return;
-  _mtg.canvas.width=w;_mtg.canvas.height=h;
-  _mtg.canvas.style.width=w+'px';_mtg.canvas.style.height=h+'px';
-  _mtg.ctx=_mtg.canvas.getContext('2d');
+  const vw=wrap.offsetWidth||800, vh=wrap.offsetHeight||600;
+  // 캔버스를 뷰포트보다 크게 — 손가락 스크롤로 필기 공간 확장
+  const cw=Math.max(vw, 2400), ch=Math.max(vh, 1800);
+  // 크기 변경 시에만 (변경하면 캔버스 내용 초기화되므로 redraw 필요)
+  if(_mtg.canvas.width!==cw||_mtg.canvas.height!==ch){
+    _mtg.canvas.width=cw; _mtg.canvas.height=ch;
+    _mtg.canvas.style.width=cw+'px'; _mtg.canvas.style.height=ch+'px';
+    _mtg.ctx=_mtg.canvas.getContext('2d');
+    mtgRedraw();
+  } else {
+    _mtg.ctx=_mtg.canvas.getContext('2d');
+  }
 }
 
 function mtgRedraw(){
@@ -6557,7 +6565,7 @@ function mtgBind(){
   };
   canvas.addEventListener('pointerdown',e=>{
     if(_mtgPopTool)mtgHidePop();
-    if(e.pointerType==='touch'){if(_mtg.tool==='text'){e.preventDefault();mtgPlaceText(getPos(e));}return;}
+    if(e.pointerType==='touch'&&_mtg.tool==='text'){e.preventDefault();mtgPlaceText(getPos(e));return;}
     if(_mtg.tool==='text'){mtgPlaceText(getPos(e));return;}
     e.preventDefault();
     try{canvas.setPointerCapture(e.pointerId);}catch(err){}
@@ -6573,7 +6581,7 @@ function mtgBind(){
     ctx.beginPath();ctx.moveTo(p.x,p.y);
   },{passive:false});
   canvas.addEventListener('pointermove',e=>{
-    if(!_mtg.drawing||!_mtg.curPath||e.pointerType==='touch')return;
+    if(!_mtg.drawing||!_mtg.curPath)return;
     e.preventDefault();
     const p=getPos(e);_mtg.curPath.pts.push({x:p.x,y:p.y});
     _mtg.ctx.lineTo(p.x,p.y);_mtg.ctx.stroke();
