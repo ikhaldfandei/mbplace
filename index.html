@@ -6346,10 +6346,9 @@ function openMeetingDoc(id){
   const eq1=document.getElementById('eq1');
   et.textContent='📋 '+nd.n; et.className='etitle';
   ee.style.display='none'; ew.classList.remove('hidden');
-  // ── 핵심 픽스: 아이패드에서 @media(max-width:768px)가 equill-wrap에 overflow-y:auto를 강제 적용해
-  //    펜슬 획이 부모 스크롤로 가로채짐 → overflow:hidden으로 잠금
-  ew.style.overflow='hidden';
-  ew.style.touchAction='none';
+  // ── 핵심 픽스: @media(max-width:768px)의 overflow-y:auto!important를 inline !important로 제압
+  ew.style.setProperty('overflow', 'hidden', 'important');
+  ew.style.setProperty('touch-action', 'none', 'important');
   if(eq1tb)eq1tb.style.display='none';
   if(eq1)eq1.style.display='none';
 
@@ -6361,14 +6360,16 @@ function openMeetingDoc(id){
     ew.appendChild(outer);
   }
   outer.style.display='flex';
+  outer.style.setProperty('touch-action','none','important');
   outer.innerHTML='';
 
   // ── 캔버스 영역 + 커스텀 스크롤바 ──
   const scrollWrap=document.createElement('div');
-  scrollWrap.style.cssText='flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden';
+  scrollWrap.id='mtg-scroll-wrap'; // 가로 스크롤바 thumbX 찾기용 ID
+  scrollWrap.style.cssText='flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden;touch-action:none';
 
   const cvRow=document.createElement('div');
-  cvRow.style.cssText='flex:1;display:flex;overflow:hidden;position:relative;min-height:0';
+  cvRow.style.cssText='flex:1;display:flex;overflow:hidden;position:relative;min-height:0;touch-action:none';
 
   const cvwrap=document.createElement('div');
   cvwrap.id='mtg-cvwrap';
@@ -6500,8 +6501,12 @@ function hideMeetingCanvas(){
   const eq1tb=document.getElementById('eq1toolbar');if(eq1tb)eq1tb.style.display='';
   const eq1=document.getElementById('eq1');if(eq1)eq1.style.display='';
   const outer=document.getElementById('mtg-outer');if(outer)outer.style.display='none';
-  // overflow 잠금 해제
-  const ew=document.getElementById('ew1');if(ew){ew.style.overflow='';ew.style.touchAction='';}
+  // overflow/touch-action 잠금 해제
+  const ew=document.getElementById('ew1');
+  if(ew){ew.style.removeProperty('overflow');ew.style.removeProperty('touch-action');}
+  // document 레벨 폴백 핸들러 제거
+  if(_mtg._docPenMove){document.removeEventListener('pointermove',_mtg._docPenMove);_mtg._docPenMove=null;}
+  if(_mtg._docPenUp){document.removeEventListener('pointerup',_mtg._docPenUp);_mtg._docPenUp=null;}
   if(_mtg.ro){_mtg.ro.disconnect();_mtg.ro=null;}
   _mtg.nodeId=null;_mtg.paths=[];_mtg.canvas=null;_mtg.ctx=null;
 }
@@ -6740,8 +6745,9 @@ function mtgBind(){
 
   // 스크롤바 thumb 찾아서 바인딩
   const thumbY=cvwrap&&cvwrap.parentElement&&cvwrap.parentElement.querySelector('.mtg-scroll-thumb-y');
-  const thumbX=cvwrap&&cvwrap.closest('[style*="flex-direction:column"]')&&
-               cvwrap.closest('[style*="flex-direction:column"]').querySelector('.mtg-scroll-thumb-x');
+  // 가로 스크롤바: style 셀렉터 대신 ID 사용 (브라우저 CSS 정규화로 인한 셀렉터 불일치 방지)
+  const swEl=document.getElementById('mtg-scroll-wrap');
+  const thumbX=swEl&&swEl.querySelector('.mtg-scroll-thumb-x');
   bindScrollbar(thumbY, true);
   bindScrollbar(thumbX, false);
 
@@ -6796,6 +6802,27 @@ function mtgBind(){
   };
   canvas.addEventListener('pointerup',endDraw,{passive:false});
   canvas.addEventListener('pointercancel',endDraw,{passive:false});
+
+  // ── document 레벨 폴백: pointercancel 후 캡처를 잃어도 펜슬 획 계속 처리
+  // (캡처 없으면 pointermove가 다른 요소로 가는데, 여기서 잡아서 드로잉 유지 + 스크롤 차단)
+  const _docPenMove=e=>{
+    if(e.pointerType!=='pen'||!_mtg.drawing||!_mtg.curPath) return;
+    e.preventDefault();
+    const p=getPos(e);
+    _mtg.curPath.pts.push({x:p.x,y:p.y});
+    _mtg.ctx.lineTo(p.x,p.y); _mtg.ctx.stroke();
+    // 캡처 재시도
+    try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
+  };
+  const _docPenUp=e=>{
+    if(e.pointerType!=='pen'||!_mtg.drawing) return;
+    endDraw(e);
+  };
+  document.addEventListener('pointermove',_docPenMove,{passive:false});
+  document.addEventListener('pointerup',_docPenUp,{passive:false});
+  // 정리용으로 _mtg에 저장
+  _mtg._docPenMove=_docPenMove;
+  _mtg._docPenUp=_docPenUp;
 
   // 초기 스크롤 위치 적용
   _mtgScrollX=0; _mtgScrollY=0;
@@ -7535,28 +7562,41 @@ function renderWritingMB(node, container){
   zoomHint.textContent='이미지를 클릭하면 크게 볼 수 있습니다';
   board.appendChild(zoomHint);
 
-  // 전역 마우스 이벤트
-  if(!board._mbBound){
-    board._mbBound=true;
-    document.addEventListener('mousemove',e=>{
-      if(!_mbDragPin) return;
-      const rect=board.getBoundingClientRect();
-      const nx=Math.max(0,Math.min(rect.width-_mbDragPin.offsetWidth,e.clientX-rect.left-_mbDragOffX));
-      const ny=Math.max(0,Math.min(rect.height-_mbDragPin.offsetHeight,e.clientY-rect.top-_mbDragOffY));
-      _mbDragPin.style.left=nx+'px';
-      _mbDragPin.style.top=ny+'px';
-    });
-    document.addEventListener('mouseup',()=>{
-      if(!_mbDragPin) return;
-      const pin=_mbNode&&_mbD&&_mbD.pins.find(p=>p.id===_mbDragPin.dataset.id);
-      if(pin){
-        pin.x=parseFloat(_mbDragPin.style.left);
-        pin.y=parseFloat(_mbDragPin.style.top);
-        _saveWritingData(_mbNode.id,{pins:[..._mbD.pins]});
+  // 전역 드래그 핸들러 — 누적 방지 위해 이전 것 제거 후 재등록
+  if(window._mbMoveH) document.removeEventListener('pointermove',window._mbMoveH);
+  if(window._mbUpH)   document.removeEventListener('pointerup',  window._mbUpH);
+
+  window._mbMoveH=e=>{
+    // 5px 넘으면 드래그 확정 (클릭과 구분)
+    if(window._mbPending&&!_mbDragPin){
+      if(Math.abs(e.clientX-window._mbPending.sx)>5||Math.abs(e.clientY-window._mbPending.sy)>5){
+        _mbDragPin=window._mbPending.el;
+        _mbDragOffX=window._mbPending.ox;_mbDragOffY=window._mbPending.oy;
+        _mbNode=window._mbPending.node;_mbD=window._mbPending.node.data;
+        window._mbPending=null;
       }
-      _mbDragPin=null;
-    });
-  }
+    }
+    if(!_mbDragPin)return;
+    e.preventDefault();
+    const boardEl=_mbDragPin.closest('.mb-board');
+    if(!boardEl)return;
+    const rect=boardEl.getBoundingClientRect();
+    const nx=Math.max(0,Math.min(rect.width-_mbDragPin.offsetWidth,e.clientX-rect.left-_mbDragOffX));
+    const ny=Math.max(0,Math.min(rect.height-_mbDragPin.offsetHeight,e.clientY-rect.top-_mbDragOffY));
+    _mbDragPin.style.left=nx+'px';_mbDragPin.style.top=ny+'px';
+  };
+  window._mbUpH=()=>{
+    window._mbPending=null;
+    if(!_mbDragPin)return;
+    const pin=_mbNode&&_mbD&&_mbD.pins.find(p=>p.id===_mbDragPin.dataset.id);
+    if(pin){
+      pin.x=parseFloat(_mbDragPin.style.left);pin.y=parseFloat(_mbDragPin.style.top);
+      _saveWritingData(_mbNode.id,{pins:[..._mbD.pins]});
+    }
+    _mbDragPin=null;
+  };
+  document.addEventListener('pointermove',window._mbMoveH,{passive:false});
+  document.addEventListener('pointerup',  window._mbUpH);
 
   container.appendChild(board);
 }
@@ -7568,11 +7608,11 @@ function _mbUpload(node, board){
     [...e.target.files].forEach((file,i)=>{
       const reader=new FileReader();
       reader.onload=ev=>{
-        const rect=board.getBoundingClientRect();
         const pin={
           id:'pin'+Date.now()+i,
           src:ev.target.result,
-          x:40+i*30, y:40+i*30,
+          x:_mbFindFreePos(node.data.pins, i),
+          y:_mbFindFreePos(node.data.pins, i, true),
           w:160, caption:''
         };
         node.data.pins.push(pin);
@@ -7583,6 +7623,27 @@ function _mbUpload(node, board){
     });
   };
   inp.click();
+}
+
+// 기존 핀들과 겹치지 않는 위치 계산
+function _mbFindFreePos(pins, idx, isY=false){
+  const PIN_W=180, PIN_H=220, GAP=20, COLS=3;
+  // 이미 배치된 핀들의 사각형 목록
+  const rects=(pins||[]).map(p=>({x:p.x,y:p.y,w:p.w||160,h:PIN_H}));
+  // 격자 후보 위치를 순서대로 시도
+  for(let row=0;row<20;row++){
+    for(let col=0;col<COLS;col++){
+      const cx=GAP+col*(PIN_W+GAP);
+      const cy=GAP+row*(PIN_H+GAP);
+      const overlap=rects.some(r=>
+        cx<r.x+r.w+GAP && cx+PIN_W>r.x-GAP &&
+        cy<r.y+r.h+GAP && cy+PIN_H>r.y-GAP
+      );
+      if(!overlap) return isY?cy:cx;
+    }
+  }
+  // 격자가 꽉 찼으면 그냥 오프셋
+  return GAP+(idx%COLS)*(PIN_W+GAP);
 }
 
 function _mbCreatePin(pin, node, board){
@@ -7662,16 +7723,18 @@ function _mbCreatePin(pin, node, board){
   });
   el.appendChild(resizeH);
 
-  // 드래그 이동
-  el.addEventListener('mousedown',e=>{
-    if(e.target===delBtn||e.target===cap||e.target===resizeH||e.target===img) return;
-    e.preventDefault();
-    _mbDragPin=el; _mbNode=node; _mbD=node.data;
+  // 드래그 이동 — 이미지 포함 핀 전체에서 드래그 가능 (클릭은 5px 이내면 허용)
+  el.addEventListener('pointerdown',e=>{
+    if(e.target===delBtn||e.target===cap||e.target===resizeH) return;
+    if(e.button!==undefined&&e.button!==0) return;
     const rect=board.getBoundingClientRect();
-    _mbDragOffX=e.clientX-rect.left-parseFloat(el.style.left||0);
-    _mbDragOffY=e.clientY-rect.top-parseFloat(el.style.top||0);
+    window._mbPending={
+      el,node,sx:e.clientX,sy:e.clientY,
+      ox:e.clientX-rect.left-parseFloat(el.style.left||0),
+      oy:e.clientY-rect.top-parseFloat(el.style.top||0)
+    };
     el.style.zIndex='25';
-    board.querySelectorAll('.mb-pin').forEach(p=>p.style.zIndex='');
+    board.querySelectorAll('.mb-pin').forEach(p=>{if(p!==el)p.style.zIndex='';});
   });
 
   // 우클릭 삭제
