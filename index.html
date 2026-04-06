@@ -1448,6 +1448,81 @@ input[type=number]{-moz-appearance:textfield}
   color:var(--tx3);gap:10px;
 }
 
+
+/* ── WED 트래커 사이드바 ── */
+.wed-sidebar{display:flex;flex-direction:column;overflow:hidden}
+.wed-ch-list{flex:1;overflow-y:auto;min-height:60px}
+.wed-tracker-drag{
+  height:5px;cursor:row-resize;background:var(--bdr);
+  flex-shrink:0;transition:background .15s;
+}
+.wed-tracker-drag:hover,.wed-tracker-drag.active{background:var(--ac)}
+.wed-tracker-panel{
+  flex-shrink:0;overflow-y:auto;
+  border-top:1px solid var(--bdr);
+  display:flex;flex-direction:column;
+  background:var(--surf2);
+  min-height:80px;max-height:70%;
+}
+.wed-trk-hdr{
+  padding:7px 10px;font-size:10px;font-weight:800;
+  color:var(--tx3);border-bottom:1px solid var(--bdr);
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+}
+.wed-trk-body{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:7px}
+.wed-trk-goal-row{display:flex;align-items:center;gap:5px}
+.wed-trk-goal-lbl{font-size:9px;color:var(--tx3);flex-shrink:0}
+.wed-trk-goal-inp{
+  flex:1;background:var(--surf);border:1px solid var(--bdr);border-radius:5px;
+  padding:3px 6px;font-size:11px;font-weight:700;color:var(--tx);
+  text-align:right;outline:none;min-width:0;
+}
+.wed-trk-goal-inp:focus{border-color:#00b894}
+.wed-trk-bar-wrap{position:relative;height:14px;background:var(--surf);border-radius:7px;overflow:hidden}
+.wed-trk-bar-fill{height:100%;background:linear-gradient(90deg,#00b894,#00cec9);border-radius:7px;transition:width .4s}
+.wed-trk-bar-pct{
+  position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  font-size:9px;font-weight:800;color:var(--tx);
+}
+.wed-trk-stats{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.wed-trk-stat{
+  background:var(--surf);border-radius:5px;padding:5px 7px;text-align:center;
+}
+.wed-trk-stat-val{font-size:12px;font-weight:800;color:#00b894}
+.wed-trk-stat-lbl{font-size:9px;color:var(--tx3);margin-top:1px}
+.wed-trk-stat.warn .wed-trk-stat-val{color:var(--yw)}
+.wed-trk-stat.danger .wed-trk-stat-val{color:var(--rd)}
+.wed-trk-today-btn{
+  padding:5px 8px;border-radius:6px;border:1px solid #00b894;
+  background:transparent;color:#00b894;font-size:10px;font-weight:700;
+  cursor:pointer;text-align:center;
+}
+.wed-trk-today-btn:hover{background:#00b894;color:#fff}
+.wed-trk-log-table{width:100%;border-collapse:collapse;font-size:10px}
+.wed-trk-log-table thead th{
+  background:var(--surf);border:1px solid var(--bdr);
+  padding:4px 5px;font-weight:700;color:var(--tx3);
+  position:sticky;top:0;z-index:1;white-space:nowrap;
+}
+.wed-trk-log-table td{border:1px solid var(--bdr);padding:0}
+.wed-trk-log-table tbody tr:hover{background:var(--surf)}
+.wed-trk-log-cell{
+  width:100%;padding:4px 5px;background:transparent;border:none;
+  outline:none;font-size:10px;font-family:inherit;color:var(--tx);
+}
+.wed-trk-log-cell:focus{background:var(--surf);box-shadow:inset 0 0 0 1.5px #00b894}
+.wed-trk-log-bar-wrap{padding:0 5px}
+.wed-trk-log-bar{height:4px;background:#00b894;border-radius:2px;min-width:2px;transition:width .3s}
+.wed-trk-del{background:none;border:none;cursor:pointer;color:var(--tx3);font-size:10px;opacity:0;padding:4px}
+.wed-trk-log-table tbody tr:hover .wed-trk-del{opacity:1}
+.wed-trk-del:hover{color:var(--rd)}
+.wed-trk-add-row{
+  font-size:10px;color:var(--tx3);cursor:pointer;
+  padding:5px 4px;display:flex;align-items:center;gap:4px;
+  border-top:1px solid var(--bdr);margin-top:2px;
+}
+.wed-trk-add-row:hover{color:#00b894}
+
 /* TOAST */
 .toast{position:fixed;bottom:54px;right:20px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:9px 16px;font-size:12px;color:var(--tx);z-index:9999;opacity:0;transform:translateY(8px);transition:all .18s;pointer-events:none;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
@@ -4518,6 +4593,7 @@ function buildPubTree(wrap,pid,depth){
         if(_isWritingItem(node.id)){
           menu.push({l:'──── 집필 시트 추가 ────',a:()=>{}});
           Object.entries(WRITING_TYPES).forEach(([type,info])=>{
+            if(type==='WPT') return; // WED에 통합
             menu.push({l:info.icon+' '+info.label+' 추가',a:()=>pubAddWritingNode(node.id,type)});
           });
           menu.push('sep');
@@ -7423,6 +7499,236 @@ function _wedInit(node){
   return node.data;
 }
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  WED 사이드바 트래커 (집필 진행 기록)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function _wedBuildTracker(sidebar, node, d){
+  // 드래그 핸들
+  const dragH = document.createElement('div');
+  dragH.className = 'wed-tracker-drag';
+  dragH.title = '드래그하여 크기 조절';
+  sidebar.appendChild(dragH);
+
+  // 트래커 패널
+  const panel = document.createElement('div');
+  panel.className = 'wed-tracker-panel';
+  panel.style.height = (d.trackerH || 220) + 'px';
+  sidebar.appendChild(panel);
+
+  // 드래그 리사이즈
+  let _dragging = false, _startY = 0, _startH = 0;
+  dragH.addEventListener('mousedown', e=>{
+    e.preventDefault();
+    _dragging = true; _startY = e.clientY; _startH = panel.offsetHeight;
+    dragH.classList.add('active');
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', e=>{
+    if(!_dragging) return;
+    const dy = _startY - e.clientY; // 위로 드래그 = 트래커 커짐
+    const nh = Math.max(80, Math.min(500, _startH + dy));
+    panel.style.height = nh + 'px';
+  });
+  document.addEventListener('mouseup', ()=>{
+    if(!_dragging) return;
+    _dragging = false;
+    dragH.classList.remove('active');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    d.trackerH = panel.offsetHeight;
+    _saveWritingData(node.id, {trackerH: d.trackerH});
+  });
+
+  // 헤더
+  const hdr = document.createElement('div');
+  hdr.className = 'wed-trk-hdr';
+  hdr.innerHTML = '<span>📊 집필 진행</span>';
+  panel.appendChild(hdr);
+
+  // 바디
+  const body = document.createElement('div');
+  body.className = 'wed-trk-body';
+  body.id = 'wed-trk-body-' + node.id;
+  panel.appendChild(body);
+
+  _wedRenderTracker(body, node, d);
+}
+
+function _wedTotalChars(d){
+  return (d.chapters||[]).reduce((s,ch)=>{
+    return s + (ch.content||'').replace(/<[^>]*>/g,'').replace(/\s/g,'').length;
+  }, 0);
+}
+
+function _wedRenderTracker(body, node, d){
+  body.innerHTML = '';
+  if(!d.logs) d.logs = [];
+  if(!d.goal) d.goal = 0;
+
+  const total = _wedTotalChars(d);
+  const goal = parseInt(d.goal) || 0;
+  const pct = goal > 0 ? Math.min(100, Math.round(total/goal*100)) : 0;
+  const remain = goal > 0 ? Math.max(0, goal - total) : 0;
+  const days = d.logs.filter(l=>parseInt(l.chars)>0).length;
+  const avg = days > 0 ? Math.round(total/days) : 0;
+  const daysLeft = remain > 0 && avg > 0 ? Math.ceil(remain/avg) : 0;
+
+  // 목표 입력
+  const goalRow = document.createElement('div');
+  goalRow.className = 'wed-trk-goal-row';
+  const goalLbl = document.createElement('span');
+  goalLbl.className = 'wed-trk-goal-lbl';
+  goalLbl.textContent = '🎯 목표';
+  const goalInp = document.createElement('input');
+  goalInp.className = 'wed-trk-goal-inp';
+  goalInp.type = 'number';
+  goalInp.value = d.goal || '';
+  goalInp.placeholder = '목표 자수';
+  goalInp.min = '0';
+  goalInp.addEventListener('input', ()=>{
+    d.goal = parseInt(goalInp.value) || 0;
+    _saveWritingData(node.id, {goal: d.goal});
+    _wedRenderTracker(body, node, d);
+  });
+  goalInp.addEventListener('keydown', e=>e.stopPropagation());
+  goalRow.append(goalLbl, goalInp);
+  body.appendChild(goalRow);
+
+  // 진행률 바
+  const barWrap = document.createElement('div');
+  barWrap.className = 'wed-trk-bar-wrap';
+  const fill = document.createElement('div');
+  fill.className = 'wed-trk-bar-fill';
+  fill.style.width = pct + '%';
+  const pctLbl = document.createElement('div');
+  pctLbl.className = 'wed-trk-bar-pct';
+  pctLbl.textContent = goal > 0 ? pct + '%' : '';
+  barWrap.append(fill, pctLbl);
+  body.appendChild(barWrap);
+
+  // 통계 카드
+  const stats = document.createElement('div');
+  stats.className = 'wed-trk-stats';
+  const mkStat = (val, lbl, cls='') => {
+    const card = document.createElement('div');
+    card.className = 'wed-trk-stat' + (cls?' '+cls:'');
+    const v = document.createElement('div'); v.className='wed-trk-stat-val'; v.textContent=val;
+    const l = document.createElement('div'); l.className='wed-trk-stat-lbl'; l.textContent=lbl;
+    card.append(v, l); return card;
+  };
+  stats.appendChild(mkStat(total.toLocaleString()+'자', '총 집필량'));
+  if(goal > 0){
+    stats.appendChild(mkStat(pct+'%', '달성률', pct<30?'danger':pct<70?'warn':''));
+    stats.appendChild(mkStat(remain.toLocaleString()+'자', '남은 분량'));
+  }
+  if(avg > 0) stats.appendChild(mkStat(avg.toLocaleString()+'자', '일평균'));
+  if(daysLeft > 0) stats.appendChild(mkStat(daysLeft+'일', '예상 완료'));
+  body.appendChild(stats);
+
+  // 오늘 기록 버튼
+  const todayBtn = document.createElement('button');
+  todayBtn.className = 'wed-trk-today-btn';
+  const todayStr = new Date().toISOString().slice(0,10);
+  const todayLog = d.logs.find(l=>l.date===todayStr);
+  todayBtn.textContent = todayLog ? '📝 오늘 기록 수정' : '📝 오늘 기록하기';
+  todayBtn.onclick = ()=>{
+    if(todayLog){
+      todayLog.chars = String(total);
+    } else {
+      d.logs.push({id:'log'+Date.now(), date:todayStr, chars:String(total), memo:''});
+    }
+    _saveWritingData(node.id, {logs:[...d.logs]});
+    _wedRenderTracker(body, node, d);
+    toast('오늘 집필량이 기록됐습니다 (' + total.toLocaleString() + '자)');
+  };
+  body.appendChild(todayBtn);
+
+  // 날짜별 로그
+  if(d.logs.length > 0){
+    const tableWrap = document.createElement('div');
+    tableWrap.style.cssText = 'overflow:auto;border:1px solid var(--bdr);border-radius:5px';
+    const table = document.createElement('table');
+    table.className = 'wed-trk-log-table';
+    table.innerHTML = `<thead><tr>
+      <th style="width:72px">날짜</th>
+      <th style="width:52px">글자수</th>
+      <th>메모</th>
+      <th style="width:30px">달성</th>
+      <th style="width:18px"></th>
+    </tr></thead>`;
+    const tbody = document.createElement('tbody');
+
+    const maxChars = Math.max(1, ...d.logs.map(l=>parseInt(l.chars)||0));
+    d.logs.forEach((log, li)=>{
+      const tr = document.createElement('tr');
+      tr.dataset.id = log.id;
+
+      const mkTd = (key, type, ph, isDate) => {
+        const td = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.className = 'wed-trk-log-cell';
+        inp.type = isDate ? 'date' : (type==='number'?'number':'text');
+        inp.value = log[key] || '';
+        inp.placeholder = ph || '';
+        inp.addEventListener('input', ()=>{
+          log[key] = inp.value;
+          _saveWritingData(node.id, {logs:[...d.logs]});
+          if(key==='chars') _wedRenderTracker(body, node, d);
+        });
+        inp.addEventListener('keydown', e=>e.stopPropagation());
+        td.appendChild(inp);
+        return td;
+      };
+
+      // 달성 바
+      const barTd = document.createElement('td');
+      barTd.className = 'wed-trk-log-bar-wrap';
+      const bar = document.createElement('div');
+      bar.className = 'wed-trk-log-bar';
+      const chars = parseInt(log.chars)||0;
+      bar.style.width = Math.round(chars/maxChars*100)+'%';
+      barTd.appendChild(bar);
+
+      const delTd = document.createElement('td');
+      delTd.style.cssText = 'text-align:center;padding:0';
+      const delBtn = document.createElement('button');
+      delBtn.className = 'wed-trk-del'; delBtn.textContent = '✕';
+      delBtn.onclick = ()=>{
+        d.logs.splice(li,1);
+        _saveWritingData(node.id,{logs:[...d.logs]});
+        _wedRenderTracker(body,node,d);
+      };
+      delTd.appendChild(delBtn);
+
+      tr.append(mkTd('date','text','',true), mkTd('chars','number','0'), mkTd('memo','text','메모'), barTd, delTd);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+
+    // 행 추가
+    const addRow = document.createElement('div');
+    addRow.className = 'wed-trk-add-row';
+    addRow.innerHTML = '＋ 날짜 추가';
+    addRow.onclick = ()=>{
+      d.logs.push({id:'log'+Date.now(), date:new Date().toISOString().slice(0,10), chars:'', memo:''});
+      _saveWritingData(node.id,{logs:[...d.logs]});
+      _wedRenderTracker(body,node,d);
+    };
+    tableWrap.appendChild(addRow);
+    body.appendChild(tableWrap);
+  } else {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:10px;color:var(--tx3);text-align:center;padding:8px 0';
+    hint.textContent = '위 버튼으로 오늘 기록을 추가하세요';
+    body.appendChild(hint);
+  }
+}
+
+
 function renderWritingED(node, container){
   container.innerHTML='';
   _wedNode=node;
@@ -7472,6 +7778,8 @@ function renderWritingED(node, container){
   addChBottom.innerHTML='<span>＋</span> 회차 추가';
   addChBottom.onclick=()=>_wedAddChapter(node,d,chList,editorArea);
   sidebar.appendChild(addChBottom);
+  // 트래커 사이드바
+  _wedBuildTracker(sidebar, node, d);
 
   // ── 에디터 영역 ──
   const editorArea=document.createElement('div');
@@ -7695,7 +8003,10 @@ function _wedOpenChapter(ch, node, d, chList, editorArea){
       _wedSaveTimer=setTimeout(()=>{
         _saveWritingData(node.id,{chapters:[...d.chapters]});
         _wedUpdateTotalWc(node,d);
-      },400);
+        // 트래커 통계 갱신
+        const _tb=document.getElementById('wed-trk-body-'+node.id);
+        if(_tb) _wedRenderTracker(_tb, node, d);
+      },600);
     }
   );
   editor.html=ch.content||'';
