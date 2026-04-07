@@ -5737,6 +5737,7 @@ class MBEditor {
     this.ce=document.getElementById(ceId);
     this.ph=ph;this.cb=cb;this._st=null;
     this._fonts=[];
+    this._savedRange=null; // 툴바 클릭 직전 커서 위치 저장용
     try{this._fonts=JSON.parse(localStorage.getItem('mb_ufonts')||'[]');}catch(e){}
     this._fonts.forEach(f=>MBEditor._inject(f));
     this._setup();
@@ -5752,6 +5753,17 @@ class MBEditor {
     ce.contentEditable='true';ce.spellcheck=true;
     ce.className='mbedit';ce.setAttribute('data-ph',this.ph);
     this._buildTb();
+    // 툴바 버튼 클릭 직전(mousedown) 커서 위치 저장
+    // — 버튼 click 시 포커스가 이동하기 전에 range를 잡아야 중첩 삽입이 가능
+    this.tb.addEventListener('mousedown',()=>{
+      const sel=window.getSelection();
+      if(sel&&sel.rangeCount>0){
+        const r=sel.getRangeAt(0);
+        // ce 또는 토글 내부 contenteditable 안에 커서가 있을 때만 저장
+        const anchor=r.commonAncestorContainer;
+        if(this.ce.contains(anchor))this._savedRange=r.cloneRange();
+      }
+    });
     ce.addEventListener('input',()=>this._change());
     ce.addEventListener('paste',e=>this._paste(e));
     ce.addEventListener('keyup',()=>this._syncBtns());
@@ -6208,15 +6220,9 @@ class MBEditor {
     this._change();
   }
   _doToggle(size='lg'){
-    // 중첩 삽입 지원: 현재 포커스가 토글 body-inner 안에 있으면 거기 삽입
-    const sel=window.getSelection();
-    const activeInner=sel&&sel.anchorNode&&sel.anchorNode.nodeType===3
-      ? sel.anchorNode.parentElement.closest('.mb-toggle-body-inner')
-      : (document.activeElement.closest ? document.activeElement.closest('.mb-toggle-body-inner') : null);
-
-    const id='tg'+Date.now();
     const sizeClass='mb-toggle--'+(size==='lg'?'lg':'sm');
     const titleDefault=size==='lg'?'큰 토글 제목':'작은 토글 제목';
+    const id='tg'+Date.now();
     const html=
       `<div class="mb-toggle ${sizeClass}" data-open="1" data-id="${id}" data-size="${size}" contenteditable="false">`+
         `<div class="mb-toggle-hdr">`+
@@ -6228,19 +6234,34 @@ class MBEditor {
         `</div>`+
       `</div><br>`;
 
-    if(activeInner){
-      // 토글 body-inner 안에 중첩 삽입
-      activeInner.focus();
+    // 저장된 range로 삽입 위치 결정
+    const saved=this._savedRange;
+    const innerTarget=saved
+      ? saved.commonAncestorContainer.nodeType===1
+        ? saved.commonAncestorContainer.closest('.mb-toggle-body-inner')
+        : saved.commonAncestorContainer.parentElement.closest('.mb-toggle-body-inner')
+      : null;
+
+    if(innerTarget){
+      // 토글 body-inner 안에 중첩 삽입 — 저장된 range에 직접 삽입
+      innerTarget.focus();
+      const sel=window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(saved);
       document.execCommand('insertHTML',false,html);
     } else {
       this.ce.focus();
+      if(saved){
+        const sel=window.getSelection();sel.removeAllRanges();sel.addRange(saved);
+      }
       document.execCommand('insertHTML',false,html);
     }
-    // 삽입 후 제목 전체 선택 → 바로 입력 가능
+    this._savedRange=null;
+
+    // 삽입 후 제목 전체 선택
     setTimeout(()=>{
-      // 삽입된 위치에서 검색 (ce 전체 또는 activeInner의 상위)
-      const root=activeInner ? activeInner.closest('.mb-toggle-body') : this.ce;
-      const el=root&&root.querySelector(`.mb-toggle[data-id="${id}"] .mb-toggle-title`);
+      const root=innerTarget||this.ce;
+      const el=root.querySelector(`.mb-toggle[data-id="${id}"] .mb-toggle-title`);
       if(el){
         el.focus();
         const r=document.createRange();r.selectNodeContents(el);
