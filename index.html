@@ -409,6 +409,18 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
   word-break:break-word;white-space:pre-wrap;
 }
 .mb-toggle-body-inner:empty::before{content:'내용을 입력하세요...';color:var(--tx3);pointer-events:none}
+/* 드래그 핸들 */
+.mb-toggle-drag{
+  flex-shrink:0;cursor:grab;color:var(--tx3);font-size:14px;line-height:1;
+  opacity:0;padding:0 3px;margin-top:3px;transition:opacity .12s;
+  user-select:none;-webkit-user-select:none;
+}
+.mb-toggle:hover>.mb-toggle-hdr .mb-toggle-drag{opacity:0.45}
+.mb-toggle-drag:hover{opacity:1!important;cursor:grab}
+.mb-toggle-drag:active{cursor:grabbing}
+/* 드롭 위치 표시 */
+.mb-toggle--drop-above{border-top:2px solid var(--ac)!important}
+.mb-toggle--drop-below{border-bottom:2px solid var(--ac)!important}
 /* 토글 컨텍스트 메뉴 */
 .mb-tog-ctx{
   position:fixed;background:var(--surf2);border:1px solid var(--bdr);
@@ -6224,7 +6236,6 @@ class MBEditor {
     this._change();
   }
   _createToggleEl(id, size){
-    // createElement로 정확한 구조 보장 (execCommand가 속성 변조하는 문제 회피)
     const sizeClass='mb-toggle--'+(size==='lg'?'lg':'sm');
     const titleDefault=size==='lg'?'큰 토글 제목':'작은 토글 제목';
 
@@ -6232,10 +6243,16 @@ class MBEditor {
     tog.className='mb-toggle '+sizeClass;
     tog.setAttribute('data-id',id);
     tog.setAttribute('data-size',size);
-    // data-open 없음 = 기본 열림 (CSS 기본값이 display:block)
+    tog.contentEditable='false'; // ← atomic element: Enter/커서 오작동 방지
 
     const hdr=document.createElement('div');
     hdr.className='mb-toggle-hdr';
+
+    // 드래그 핸들
+    const drag=document.createElement('span');
+    drag.className='mb-toggle-drag';
+    drag.textContent='⠿';
+    drag.contentEditable='false';
 
     const arrow=document.createElement('span');
     arrow.className='mb-toggle-arrow';
@@ -6246,8 +6263,7 @@ class MBEditor {
     title.contentEditable='true';
     title.textContent=titleDefault;
 
-    hdr.appendChild(arrow);
-    hdr.appendChild(title);
+    hdr.append(drag,arrow,title);
 
     const body=document.createElement('div');
     body.className='mb-toggle-body';
@@ -6257,130 +6273,76 @@ class MBEditor {
     inner.contentEditable='true';
 
     body.appendChild(inner);
-    tog.appendChild(hdr);
-    tog.appendChild(body);
+    tog.append(hdr,body);
     return tog;
   }
 
   _doToggle(size='lg'){
     const id='tg'+Date.now();
-    const markerId='mbmark_'+id;
     const saved=this._savedRange;
 
-    // 삽입 위치 결정 — 저장된 range 기준
-    const innerTarget=saved ? (()=>{
+    // 삽입 위치: 저장된 range 기준으로 중첩 여부 판단
+    const innerTarget=saved?(()=>{
       const n=saved.commonAncestorContainer;
       const el=n.nodeType===1?n:n.parentElement;
       return el.closest('.mb-toggle-body-inner');
-    })() : null;
+    })():null;
 
-    const restoreRange=(target)=>{
-      if(saved){const sel=window.getSelection();sel.removeAllRanges();sel.addRange(saved);}
-      else target.focus();
-    };
+    // execCommand('insertHTML') 사용 → 브라우저 undo 스택에 등록됨
+    // contenteditable="false" 등 속성은 최신 브라우저에서 보존됨
+    // CSS가 data-open 없을 때 기본 열림이므로 sanitize돼도 무관
+    const togEl=this._createToggleEl(id,size);
+    // 토글 뒤에 <p><br></p> 삽입: 토글 다음 Enter로 새 줄 이동 가능
+    const html=togEl.outerHTML+'<p><br></p>';
 
     if(innerTarget){
       innerTarget.focus();
-      restoreRange(innerTarget);
+      const sel=window.getSelection();sel.removeAllRanges();sel.addRange(saved);
+      document.execCommand('insertHTML',false,html);
     } else {
       this.ce.focus();
-      if(saved) restoreRange(this.ce);
+      if(saved){const sel=window.getSelection();sel.removeAllRanges();sel.addRange(saved);}
+      document.execCommand('insertHTML',false,html);
     }
-
-    // ① 플레이스홀더 삽입 (execCommand는 커서 위치 삽입에만 사용)
-    document.execCommand('insertHTML',false,`<span id="${markerId}"\u200b></span>`);
-
-    // ② 플레이스홀더를 실제 토글 DOM으로 교체
-    const marker=document.getElementById(markerId);
-    if(!marker){this._savedRange=null;this._change();return;}
-
-    const togEl=this._createToggleEl(id,size);
-    marker.replaceWith(togEl);
     this._savedRange=null;
 
-    // ③ 제목 포커스 + 전체 선택
+    // 삽입 후 제목 포커스 + 전체 선택
     setTimeout(()=>{
-      const titleEl=togEl.querySelector('.mb-toggle-title');
-      if(titleEl){
-        titleEl.focus();
-        const r=document.createRange();r.selectNodeContents(titleEl);
+      const root=innerTarget||this.ce;
+      const el=root.querySelector(`.mb-toggle[data-id="${id}"] .mb-toggle-title`);
+      if(el){
+        el.focus();
+        const r=document.createRange();r.selectNodeContents(el);
         const s=window.getSelection();s.removeAllRanges();s.addRange(r);
       }
     },30);
     this._change();
   }
 
-  _toggleCtx(e, tog){
-    document.querySelectorAll('.mb-tog-ctx').forEach(m=>m.remove());
-    const menu=document.createElement('div');
-    menu.className='mb-tog-ctx';
-    const curSize=tog.getAttribute('data-size')||'lg';
-
-    const mkItem=(icon,label,cls,fn)=>{
-      const item=document.createElement('div');
-      item.className='mb-tog-ctx-item'+(cls?' '+cls:'');
-      item.innerHTML=`<span>${icon}</span><span>${label}</span>`;
-      item.onclick=()=>{menu.remove();fn();};
-      menu.appendChild(item);
-    };
-    const sep=()=>{const d=document.createElement('div');d.className='mb-tog-ctx-sep';menu.appendChild(d);};
-
-    if(curSize==='sm'){
-      mkItem('▶','큰 토글로 변경','',()=>{
-        tog.classList.remove('mb-toggle--sm');tog.classList.add('mb-toggle--lg');
-        tog.setAttribute('data-size','lg');this._change();
-      });
-    } else {
-      mkItem('▶','작은 토글로 변경','',()=>{
-        tog.classList.remove('mb-toggle--lg');tog.classList.add('mb-toggle--sm');
-        tog.setAttribute('data-size','sm');this._change();
-      });
+  _endDrag(){
+    if(this._draggedToggle){
+      this._draggedToggle.style.opacity='';
+      this._draggedToggle.classList.remove('mb-toggle--dragging');
+      this._draggedToggle.draggable=false;
+      this._draggedToggle=null;
     }
-    sep();
-    mkItem('↩','토글 해제 (내용 유지)','',()=>{
-      const titleEl=tog.querySelector('.mb-toggle-title');
-      const bodyEl=tog.querySelector('.mb-toggle-body-inner');
-      const frag=document.createDocumentFragment();
-      // 제목 → <p><strong>...</strong></p>
-      const tp=document.createElement('p');
-      const tb=document.createElement('strong');
-      tb.textContent=titleEl?titleEl.textContent:'';
-      tp.appendChild(tb);frag.appendChild(tp);
-      // 본문 내용 그대로 이동
-      if(bodyEl){
-        while(bodyEl.firstChild)frag.appendChild(bodyEl.firstChild);
-      }
-      tog.replaceWith(frag);
-      this._change();
+    document.querySelectorAll('.mb-toggle--drop-above,.mb-toggle--drop-below').forEach(el=>{
+      el.classList.remove('mb-toggle--drop-above','mb-toggle--drop-below');
     });
-    sep();
-    mkItem('🗑','토글 삭제','danger',()=>{
-      // 다음 형제 <br> 잔재도 제거
-      const next=tog.nextSibling;
-      tog.remove();
-      if(next&&next.nodeName==='BR')next.remove();
-      this._change();
-    });
-
-    const x=Math.min(e.clientX,window.innerWidth-185);
-    const y=Math.min(e.clientY,window.innerHeight-160);
-    menu.style.cssText=`left:${x}px;top:${y}px`;
-    document.body.appendChild(menu);
-    const close=ev=>{if(!menu.contains(ev.target)){menu.remove();document.removeEventListener('mousedown',close,true);}};
-    setTimeout(()=>document.addEventListener('mousedown',close,true),0);
   }
 
   _initToggle(ce){
+    this._draggedToggle=null;
+
     // ── 화살표 클릭 → 접기/펼치기 ──
     ce.addEventListener('click',e=>{
       const arrow=e.target.closest('.mb-toggle-arrow');
       if(!arrow) return;
       const tog=arrow.closest('.mb-toggle');
       if(!tog) return;
-      // data-open 없음=열림, "0"=닫힘 (CSS 기본값과 일치)
       const isClosed=tog.getAttribute('data-open')==='0';
-      if(isClosed) tog.removeAttribute('data-open'); // 열기: 속성 제거 = 기본 열림
-      else tog.setAttribute('data-open','0');         // 닫기
+      if(isClosed) tog.removeAttribute('data-open');
+      else tog.setAttribute('data-open','0');
       this._change();
       e.stopPropagation();e.preventDefault();
     });
@@ -6410,6 +6372,22 @@ class MBEditor {
           const tog=title.closest('.mb-toggle');
           const body=tog&&tog.querySelector('.mb-toggle-body-inner');
           if(body){tog.removeAttribute('data-open');body.focus();}
+          return;
+        }
+      }
+      // Escape: 본문에서 토글 바깥으로 커서 이동
+      if(e.key==='Escape'){
+        const inner=e.target.closest('.mb-toggle-body-inner');
+        if(inner){
+          e.preventDefault();
+          const tog=inner.closest('.mb-toggle');
+          if(tog){
+            const range=document.createRange();
+            range.setStartAfter(tog);range.collapse(true);
+            const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+            ce.focus();
+          }
+          return;
         }
       }
       // Backspace: 제목 비어있으면 토글 전체 삭제
@@ -6426,6 +6404,68 @@ class MBEditor {
         }
       }
     });
+
+    // ── 드래그 앤 드롭 ──
+    // 드래그 핸들 mousedown → draggable 활성화 (토글 전체 드래그 방지)
+    ce.addEventListener('mousedown',e=>{
+      const handle=e.target.closest('.mb-toggle-drag');
+      if(!handle) return;
+      const tog=handle.closest('.mb-toggle');
+      if(!tog) return;
+      tog.draggable=true;
+      const cleanup=()=>{if(tog&&!this._draggedToggle)tog.draggable=false;};
+      document.addEventListener('mouseup',cleanup,{once:true});
+    });
+
+    ce.addEventListener('dragstart',e=>{
+      const tog=e.target.closest('.mb-toggle');
+      if(!tog||!tog.draggable){e.preventDefault();return;}
+      this._draggedToggle=tog;
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain',tog.getAttribute('data-id')||'');
+      setTimeout(()=>{if(tog)tog.style.opacity='0.35';},0);
+    });
+
+    ce.addEventListener('dragover',e=>{
+      if(!this._draggedToggle) return;
+      const target=e.target.closest('.mb-toggle');
+      if(!target||target===this._draggedToggle) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      ce.querySelectorAll('.mb-toggle--drop-above,.mb-toggle--drop-below').forEach(el=>{
+        if(el!==target){el.classList.remove('mb-toggle--drop-above','mb-toggle--drop-below');}
+      });
+      const rect=target.getBoundingClientRect();
+      if(e.clientY<rect.top+rect.height/2){
+        target.classList.add('mb-toggle--drop-above');
+        target.classList.remove('mb-toggle--drop-below');
+      } else {
+        target.classList.add('mb-toggle--drop-below');
+        target.classList.remove('mb-toggle--drop-above');
+      }
+    });
+
+    ce.addEventListener('dragleave',e=>{
+      const target=e.target.closest('.mb-toggle');
+      if(target&&!target.contains(e.relatedTarget)){
+        target.classList.remove('mb-toggle--drop-above','mb-toggle--drop-below');
+      }
+    });
+
+    ce.addEventListener('drop',e=>{
+      if(!this._draggedToggle) return;
+      e.preventDefault();
+      const target=e.target.closest('.mb-toggle');
+      if(!target||target===this._draggedToggle){this._endDrag();return;}
+      const rect=target.getBoundingClientRect();
+      const isAfter=e.clientY>=rect.top+rect.height/2;
+      if(isAfter) target.after(this._draggedToggle);
+      else target.before(this._draggedToggle);
+      this._endDrag();
+      this._change();
+    });
+
+    ce.addEventListener('dragend',()=>this._endDrag());
   }
   _doFontUp(){
     const inp=document.createElement('input');inp.type='file';inp.accept='.ttf,.otf,.woff,.woff2';
