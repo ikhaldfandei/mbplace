@@ -370,6 +370,36 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .mbedit table tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 .mbedit hr{border:none;border-top:1px solid var(--bdr);margin:14px 0}
 .mbedit p{margin:2px 0}
+/* ── 토글 블록 ── */
+.mb-toggle{margin:4px 0;border-radius:6px;border:1px solid transparent}
+.mb-toggle:hover{border-color:var(--bdr2)}
+.mb-toggle-hdr{
+  display:flex;align-items:flex-start;gap:6px;padding:4px 6px;border-radius:6px;
+  cursor:pointer;user-select:none;min-height:28px;
+  font-weight:600;color:var(--tx);
+}
+.mb-toggle-hdr:hover{background:var(--surf2)}
+.mb-toggle-arrow{
+  flex-shrink:0;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--tx3);transition:transform .15s;margin-top:3px;
+}
+.mb-toggle[data-open="1"] .mb-toggle-arrow{transform:rotate(90deg)}
+.mb-toggle-title{
+  flex:1;outline:none;min-width:60px;word-break:break-word;
+  font-size:14px;line-height:1.7;
+}
+.mb-toggle-body{
+  display:none;padding:2px 0 4px 24px;
+  border-left:2px solid var(--bdr2);margin-left:14px;
+}
+.mb-toggle[data-open="1"] .mb-toggle-body{display:block}
+.mb-toggle-body-inner{
+  outline:none;min-height:28px;
+  font-size:14px;line-height:1.8;color:var(--tx);
+  font-family:'Malgun Gothic','Apple SD Gothic Neo','Nanum Gothic',sans-serif;
+  word-break:break-word;white-space:pre-wrap;
+}
+.mb-toggle-body-inner:empty::before{content:'내용을 입력하세요...';color:var(--tx3);pointer-events:none}
 /* Color/HL popup */
 .mbpop{position:fixed;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.55)}
 /* Modal dialogs */
@@ -5726,6 +5756,7 @@ class MBEditor {
     // 드래그 이미지 삽입 + 리사이즈 초기화
     this._initDrop(ce);
     this._initResize(ce);
+    this._initToggle(ce);
     // 컨텍스트 메뉴 (표)
     const _self=this;
     ce.addEventListener('contextmenu',e=>{
@@ -5776,7 +5807,7 @@ class MBEditor {
     const ul=this._mkB('불릿 목록');ul.innerHTML='<span style="font-size:14px">•</span>';ul.onclick=()=>this._exec('insertUnorderedList');tb.appendChild(ul);
     this._sep();
     // Insert buttons
-    [['🔗','링크 삽입',()=>this._doLink()],['🖼️','이미지 삽입',()=>this._doImg()],['🎬','동영상 삽입',()=>this._doVid()],['⊞','표 삽입',()=>this._doTable()],['—','구분선',()=>this._doHR()]].forEach(([t,title,fn])=>{
+    [['🔗','링크 삽입',()=>this._doLink()],['🖼️','이미지 삽입',()=>this._doImg()],['🎬','동영상 삽입',()=>this._doVid()],['⊞','표 삽입',()=>this._doTable()],['—','구분선',()=>this._doHR()],['▶','토글 블록',()=>this._doToggle()]].forEach(([t,title,fn])=>{
       const b=this._mkB(title);b.textContent=t;b.style.fontSize='14px';b.onclick=fn;tb.appendChild(b);
     });
     this._sep();
@@ -6154,6 +6185,61 @@ class MBEditor {
     this.ce.focus();
     document.execCommand('insertHTML',false,'<hr style="border:none;border-top:1px solid #30363d;margin:14px 0"><br>');
     this._change();
+  }
+  _doToggle(){
+    const id='tg'+Date.now();
+    const html=`<div class="mb-toggle" data-open="1" data-id="${id}" contenteditable="false">`+
+      `<div class="mb-toggle-hdr">`+
+        `<span class="mb-toggle-arrow">▶</span>`+
+        `<span class="mb-toggle-title" contenteditable="true" data-ph="제목">제목</span>`+
+      `</div>`+
+      `<div class="mb-toggle-body">`+
+        `<div class="mb-toggle-body-inner" contenteditable="true"></div>`+
+      `</div>`+
+    `</div><br>`;
+    this.ce.focus();
+    document.execCommand('insertHTML',false,html);
+    // 삽입 후 제목 포커스
+    setTimeout(()=>{
+      const el=this.ce.querySelector(`.mb-toggle[data-id="${id}"] .mb-toggle-title`);
+      if(el){el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=window.getSelection();s.removeAllRanges();s.addRange(r);}
+    },30);
+    this._change();
+  }
+  _initToggle(ce){
+    // 이벤트 위임: 화살표/헤더 클릭 → 접기/펼치기
+    ce.addEventListener('click',e=>{
+      const hdr=e.target.closest('.mb-toggle-hdr');
+      if(!hdr) return;
+      // 제목 span 클릭은 편집 허용 — 화살표 클릭만 토글
+      if(e.target.closest('.mb-toggle-title')) return;
+      const tog=hdr.closest('.mb-toggle');
+      if(!tog) return;
+      const isOpen=tog.getAttribute('data-open')==='1';
+      tog.setAttribute('data-open',isOpen?'0':'1');
+      this._change();
+      e.stopPropagation();
+    });
+    // 토글 내부 contenteditable 변경도 부모 에디터 change 트리거
+    ce.addEventListener('input',e=>{
+      if(e.target.closest('.mb-toggle'))this._change();
+    });
+    // 토글 body-inner에서 Enter → 줄바꿈 (기본 동작)
+    // 토글 title에서 Enter → body-inner로 포커스 이동
+    ce.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){
+        const title=e.target.closest('.mb-toggle-title');
+        if(title){
+          e.preventDefault();
+          const tog=title.closest('.mb-toggle');
+          const body=tog&&tog.querySelector('.mb-toggle-body-inner');
+          if(body){
+            tog.setAttribute('data-open','1');
+            body.focus();
+          }
+        }
+      }
+    });
   }
   _doFontUp(){
     const inp=document.createElement('input');inp.type='file';inp.accept='.ttf,.otf,.woff,.woff2';
