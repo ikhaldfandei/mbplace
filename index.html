@@ -6326,57 +6326,42 @@ class MBEditor {
     this._draggedToggle=null;
     setTimeout(()=>this._fixOldToggles(ce),0);
 
-    // ── document 레벨 capture 핸들러 ──
-    // Capture phase = DOM 어디서 발생하든 가장 먼저 실행됨
-    // contenteditable, 버블링 차단 등 완전히 무관
-    const cap=e=>{
-      if(!document.body.contains(ce)) return; // 에디터가 DOM에서 제거됐으면 무시
-
-      if(e.button===0){
-        // + 버튼
-        const btn=e.target.closest('.mb-toggle-menu-btn');
-        if(btn&&ce.contains(btn)){
-          e.preventDefault();e.stopPropagation();
-          const tog=btn.closest('.mb-toggle');
-          if(tog){const r=btn.getBoundingClientRect();this._toggleCtx({clientX:r.left,clientY:r.bottom+4},tog);}
-          return;
-        }
-        // 드래그 핸들
-        const dh=e.target.closest('.mb-toggle-drag');
-        if(dh&&ce.contains(dh)){
-          const tog=dh.closest('.mb-toggle');
-          if(tog){
-            tog.draggable=true;
-            document.addEventListener('mouseup',()=>{if(!this._draggedToggle)tog.draggable=false;},{once:true});
-          }
-          return;
-        }
-      }
-
-      // 우클릭
-      if(e.button===2){
-        const hdr=e.target.closest('.mb-toggle-hdr');
-        if(hdr&&ce.contains(hdr)&&!e.target.closest('table')){
-          e.preventDefault();e.stopPropagation();
-          const tog=hdr.closest('.mb-toggle');
-          if(tog){
-            // contextmenu 이벤트를 capture로 한 번 차단 (브라우저 기본 메뉴 방지)
-            document.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();},{capture:true,once:true});
-            this._toggleCtx(e,tog);
-          }
-        }
-      }
-    };
-    document.addEventListener('mousedown',cap,true); // capture=true
-
-    // ── 화살표 클릭 → 접기/펼치기 ──
+    // ── 화살표 + + 버튼: ce 레벨 click 위임 (화살표와 동일한 방식) ──
     ce.addEventListener('click',e=>{
+      // 화살표 → 접기/펼치기
       const arrow=e.target.closest('.mb-toggle-arrow');
-      if(!arrow) return;
-      const tog=arrow.closest('.mb-toggle');if(!tog) return;
-      const isClosed=tog.getAttribute('data-open')==='0';
-      if(isClosed) tog.removeAttribute('data-open'); else tog.setAttribute('data-open','0');
-      this._change();e.stopPropagation();e.preventDefault();
+      if(arrow){
+        const tog=arrow.closest('.mb-toggle');if(!tog) return;
+        const isClosed=tog.getAttribute('data-open')==='0';
+        if(isClosed) tog.removeAttribute('data-open'); else tog.setAttribute('data-open','0');
+        this._change();e.stopPropagation();e.preventDefault();
+        return;
+      }
+      // + 버튼 → 메뉴
+      const btn=e.target.closest('.mb-toggle-menu-btn');
+      if(btn){
+        const tog=btn.closest('.mb-toggle');if(!tog) return;
+        e.preventDefault();e.stopPropagation();
+        const r=btn.getBoundingClientRect();
+        this._toggleCtx({clientX:r.left,clientY:r.bottom+4},tog);
+        return;
+      }
+      // 드래그 핸들 좌클릭 → draggable 활성화
+      const dh=e.target.closest('.mb-toggle-drag');
+      if(dh){
+        const tog=dh.closest('.mb-toggle');if(!tog) return;
+        tog.draggable=true;
+        document.addEventListener('mouseup',()=>{if(!this._draggedToggle)tog.draggable=false;},{once:true});
+      }
+    });
+
+    // ── 우클릭: ce 레벨 contextmenu 위임 ──
+    ce.addEventListener('contextmenu',e=>{
+      const hdr=e.target.closest('.mb-toggle-hdr');
+      if(!hdr||e.target.closest('table')) return;
+      const tog=hdr.closest('.mb-toggle');if(!tog) return;
+      e.preventDefault();e.stopPropagation();
+      this._toggleCtx(e,tog);
     });
 
     // ── 토글 내부 변경 → change ──
