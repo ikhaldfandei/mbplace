@@ -410,13 +410,23 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 }
 .mb-toggle-body-inner:empty::before{content:'내용을 입력하세요...';color:var(--tx3);pointer-events:none}
 /* 드래그 핸들 */
-.mb-toggle-drag{
-  flex-shrink:0;cursor:grab;color:var(--tx3);font-size:14px;line-height:1;
-  opacity:0;padding:0 3px;margin-top:3px;transition:opacity .12s;
-  user-select:none;-webkit-user-select:none;
+.mb-toggle-actions{
+  flex-shrink:0;display:flex;align-items:center;gap:1px;
+  opacity:0;transition:opacity .12s;margin-left:4px;
 }
-.mb-toggle:hover>.mb-toggle-hdr .mb-toggle-drag{opacity:0.45}
-.mb-toggle-drag:hover{opacity:1!important;cursor:grab}
+.mb-toggle:hover>.mb-toggle-hdr .mb-toggle-actions{opacity:1}
+.mb-toggle-menu-btn{
+  background:none;border:none;cursor:pointer;
+  font-size:15px;font-weight:400;line-height:1;
+  color:var(--tx3);padding:1px 4px;border-radius:4px;
+  font-family:inherit;
+}
+.mb-toggle-menu-btn:hover{background:var(--surf3);color:var(--tx)}
+.mb-toggle-drag{
+  cursor:grab;color:var(--tx3);font-size:14px;line-height:1;
+  padding:1px 3px;border-radius:4px;user-select:none;-webkit-user-select:none;
+}
+.mb-toggle-drag:hover{background:var(--surf3);color:var(--tx)}
 .mb-toggle-drag:active{cursor:grabbing}
 /* 드롭 위치 표시 */
 .mb-toggle--drop-above{border-top:2px solid var(--ac)!important}
@@ -5816,6 +5826,8 @@ class MBEditor {
       this._initTableResize(ce);
       // 새 셀에도 핸들 추가
       ce.querySelectorAll('table.mb-table').forEach(t=>this._addTableHandles(t));
+      // 로드된 기존 토글 보정 (contenteditable, actions 누락 처리)
+      this._fixOldToggles(ce);
     });
     _mo.observe(ce,{childList:true,subtree:true});
   }
@@ -6235,64 +6247,79 @@ class MBEditor {
     document.execCommand('insertHTML',false,'<hr style="border:none;border-top:1px solid #30363d;margin:14px 0"><br>');
     this._change();
   }
+  _createToggleActions(){
+    const actions=document.createElement('span');
+    actions.className='mb-toggle-actions';
+    actions.contentEditable='false';
+    const menuBtn=document.createElement('button');
+    menuBtn.className='mb-toggle-menu-btn';
+    menuBtn.type='button';
+    menuBtn.title='토글 메뉴';
+    menuBtn.textContent='+';
+    const drag=document.createElement('span');
+    drag.className='mb-toggle-drag';
+    drag.title='드래그로 이동';
+    drag.textContent='⠿';
+    actions.append(menuBtn,drag);
+    return actions;
+  }
+
   _createToggleEl(id, size){
     const sizeClass='mb-toggle--'+(size==='lg'?'lg':'sm');
     const titleDefault=size==='lg'?'큰 토글 제목':'작은 토글 제목';
-
     const tog=document.createElement('div');
     tog.className='mb-toggle '+sizeClass;
     tog.setAttribute('data-id',id);
     tog.setAttribute('data-size',size);
-    tog.contentEditable='false'; // ← atomic element: Enter/커서 오작동 방지
-
+    tog.contentEditable='false';
     const hdr=document.createElement('div');
     hdr.className='mb-toggle-hdr';
-
-    // 드래그 핸들
-    const drag=document.createElement('span');
-    drag.className='mb-toggle-drag';
-    drag.textContent='⠿';
-    drag.contentEditable='false';
-
     const arrow=document.createElement('span');
     arrow.className='mb-toggle-arrow';
     arrow.textContent='▶';
-
     const title=document.createElement('span');
     title.className='mb-toggle-title';
     title.contentEditable='true';
     title.textContent=titleDefault;
-
-    hdr.append(drag,arrow,title);
-
+    hdr.append(arrow,title,this._createToggleActions());
     const body=document.createElement('div');
     body.className='mb-toggle-body';
-
     const inner=document.createElement('div');
     inner.className='mb-toggle-body-inner';
     inner.contentEditable='true';
-
     body.appendChild(inner);
     tog.append(hdr,body);
     return tog;
   }
 
+  // 기존(구버전) 토글에 누락된 contenteditable·actions 보정
+  _fixOldToggles(ce){
+    ce.querySelectorAll('.mb-toggle').forEach(tog=>{
+      // contenteditable="false" 누락 보정
+      if(tog.getAttribute('contenteditable')!=='false') tog.contentEditable='false';
+      // actions 버튼 누락 보정
+      const hdr=tog.querySelector(':scope>.mb-toggle-hdr');
+      if(hdr&&!hdr.querySelector('.mb-toggle-actions')){
+        hdr.appendChild(this._createToggleActions());
+      }
+      // 토글이 마지막 요소면 뒤에 편집 가능한 줄 추가
+      if(!tog.nextSibling||tog.nextSibling.nodeName==='BR'){
+        const p=document.createElement('p');p.innerHTML='<br>';
+        tog.after(p);
+      }
+    });
+  }
+
   _doToggle(size='lg'){
     const id='tg'+Date.now();
     const saved=this._savedRange;
-
-    // 삽입 위치: 저장된 range 기준으로 중첩 여부 판단
     const innerTarget=saved?(()=>{
       const n=saved.commonAncestorContainer;
       const el=n.nodeType===1?n:n.parentElement;
       return el.closest('.mb-toggle-body-inner');
     })():null;
 
-    // execCommand('insertHTML') 사용 → 브라우저 undo 스택에 등록됨
-    // contenteditable="false" 등 속성은 최신 브라우저에서 보존됨
-    // CSS가 data-open 없을 때 기본 열림이므로 sanitize돼도 무관
     const togEl=this._createToggleEl(id,size);
-    // 토글 뒤에 <p><br></p> 삽입: 토글 다음 Enter로 새 줄 이동 가능
     const html=togEl.outerHTML+'<p><br></p>';
 
     if(innerTarget){
@@ -6306,9 +6333,10 @@ class MBEditor {
     }
     this._savedRange=null;
 
-    // 삽입 후 제목 포커스 + 전체 선택
     setTimeout(()=>{
       const root=innerTarget||this.ce;
+      // execCommand가 contenteditable="false" 속성을 보존 못할 때 보정
+      this._fixOldToggles(root===this.ce?this.ce:root.closest('.mbedit')||this.ce);
       const el=root.querySelector(`.mb-toggle[data-id="${id}"] .mb-toggle-title`);
       if(el){
         el.focus();
@@ -6333,9 +6361,12 @@ class MBEditor {
 
   _initToggle(ce){
     this._draggedToggle=null;
+    // 로드된 기존 토글 보정 (약간 지연: ce.innerHTML이 세팅된 직후 실행)
+    setTimeout(()=>this._fixOldToggles(ce),0);
 
     // ── 화살표 클릭 → 접기/펼치기 ──
     ce.addEventListener('click',e=>{
+      if(e.target.closest('.mb-toggle-actions')) return; // 버튼 영역 클릭은 무시
       const arrow=e.target.closest('.mb-toggle-arrow');
       if(!arrow) return;
       const tog=arrow.closest('.mb-toggle');
@@ -6347,7 +6378,20 @@ class MBEditor {
       e.stopPropagation();e.preventDefault();
     });
 
-    // ── 우클릭 → 컨텍스트 메뉴 ──
+    // ── + 버튼 클릭 → 컨텍스트 메뉴 ──
+    ce.addEventListener('click',e=>{
+      const btn=e.target.closest('.mb-toggle-menu-btn');
+      if(!btn) return;
+      const tog=btn.closest('.mb-toggle');
+      if(!tog) return;
+      e.stopPropagation();e.preventDefault();
+      // + 버튼 위치에 메뉴 띄우기
+      const rect=btn.getBoundingClientRect();
+      const fakeE={clientX:rect.left,clientY:rect.bottom+2,target:btn};
+      this._toggleCtx(fakeE,tog);
+    });
+
+    // ── 우클릭 → 컨텍스트 메뉴 (드래그와 완전 독립) ──
     ce.addEventListener('contextmenu',e=>{
       const hdr=e.target.closest('.mb-toggle-hdr');
       if(!hdr||e.target.closest('table')) return;
@@ -6364,50 +6408,50 @@ class MBEditor {
 
     // ── 키보드 ──
     ce.addEventListener('keydown',e=>{
+      const title=e.target.closest('.mb-toggle-title');
+      const inner=e.target.closest('.mb-toggle-body-inner');
+
+      // Alt+Enter: 제목에서 줄바꿈 (Enter는 body-inner로 이동에 쓰므로 Alt로 구분)
+      if(e.key==='Enter'&&e.altKey&&title){
+        e.preventDefault();
+        document.execCommand('insertHTML',false,'<br>\u200b');
+        return;
+      }
       // Enter: 제목 → 본문으로 포커스
-      if(e.key==='Enter'){
-        const title=e.target.closest('.mb-toggle-title');
-        if(title){
-          e.preventDefault();
-          const tog=title.closest('.mb-toggle');
-          const body=tog&&tog.querySelector('.mb-toggle-body-inner');
-          if(body){tog.removeAttribute('data-open');body.focus();}
-          return;
-        }
+      if(e.key==='Enter'&&!e.altKey&&title){
+        e.preventDefault();
+        const tog=title.closest('.mb-toggle');
+        const body=tog&&tog.querySelector('.mb-toggle-body-inner');
+        if(body){tog.removeAttribute('data-open');body.focus();}
+        return;
       }
       // Escape: 본문에서 토글 바깥으로 커서 이동
-      if(e.key==='Escape'){
-        const inner=e.target.closest('.mb-toggle-body-inner');
-        if(inner){
-          e.preventDefault();
-          const tog=inner.closest('.mb-toggle');
-          if(tog){
-            const range=document.createRange();
-            range.setStartAfter(tog);range.collapse(true);
-            const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
-            ce.focus();
-          }
-          return;
+      if(e.key==='Escape'&&inner){
+        e.preventDefault();
+        const tog=inner.closest('.mb-toggle');
+        if(tog){
+          const range=document.createRange();
+          range.setStartAfter(tog);range.collapse(true);
+          const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+          ce.focus();
         }
+        return;
       }
-      // Backspace: 제목 비어있으면 토글 전체 삭제
-      if(e.key==='Backspace'){
-        const title=e.target.closest('.mb-toggle-title');
-        if(title&&(title.textContent||'').trim()===''){
-          e.preventDefault();
-          const tog=title.closest('.mb-toggle');
-          if(!tog) return;
-          const next=tog.nextSibling;
-          tog.remove();
-          if(next&&next.nodeName==='BR')next.remove();
-          this._change();
-        }
+      // Backspace: 제목 비어있으면 토글 삭제
+      if(e.key==='Backspace'&&title&&(title.textContent||'').trim()===''){
+        e.preventDefault();
+        const tog=title.closest('.mb-toggle');
+        if(!tog) return;
+        const next=tog.nextSibling;
+        tog.remove();
+        if(next&&next.nodeName==='BR')next.remove();
+        this._change();
       }
     });
 
-    // ── 드래그 앤 드롭 ──
-    // 드래그 핸들 mousedown → draggable 활성화 (토글 전체 드래그 방지)
+    // ── 드래그 앤 드롭 (핸들 좌클릭에서만) ──
     ce.addEventListener('mousedown',e=>{
+      if(e.button!==0) return; // 우클릭 제외
       const handle=e.target.closest('.mb-toggle-drag');
       if(!handle) return;
       const tog=handle.closest('.mb-toggle');
