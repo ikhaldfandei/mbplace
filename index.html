@@ -6264,11 +6264,60 @@ class MBEditor {
 
   _fixOldToggles(ce){
     ce.querySelectorAll('.mb-toggle').forEach(tog=>{
+      // contenteditable 보정
       if(tog.getAttribute('contenteditable')!=='false') tog.contentEditable='false';
+      // actions 없으면 추가
       const hdr=tog.querySelector(':scope>.mb-toggle-hdr');
       if(hdr&&!hdr.querySelector('.mb-toggle-actions')) hdr.appendChild(this._createToggleActions());
+      // 뒤에 편집줄 보장
       if(!tog.nextSibling||tog.nextSibling.nodeName==='BR'){
         const p=document.createElement('p');p.innerHTML='<br>';tog.after(p);
+      }
+
+      // ── 직접 바인딩 (관계도/타임라인과 동일한 방식) ──
+      // _toggleBound 플래그로 중복 방지
+      if(tog._toggleBound) return;
+      tog._toggleBound=true;
+
+      // 화살표 클릭 → 접기/펼치기
+      const arrow=tog.querySelector('.mb-toggle-arrow');
+      if(arrow){
+        arrow.addEventListener('click',e=>{
+          e.stopPropagation();e.preventDefault();
+          const isClosed=tog.getAttribute('data-open')==='0';
+          if(isClosed) tog.removeAttribute('data-open'); else tog.setAttribute('data-open','0');
+          this._change();
+        });
+      }
+
+      // + 버튼 클릭
+      const btn=tog.querySelector('.mb-toggle-menu-btn');
+      if(btn){
+        btn.addEventListener('click',e=>{
+          e.stopPropagation();e.preventDefault();
+          const r=btn.getBoundingClientRect();
+          this._toggleCtx({clientX:r.left,clientY:r.bottom+4},tog);
+        });
+      }
+
+      // 우클릭
+      const hdrEl=tog.querySelector(':scope>.mb-toggle-hdr');
+      if(hdrEl){
+        hdrEl.addEventListener('contextmenu',e=>{
+          if(e.target.closest('table')) return;
+          e.preventDefault();e.stopPropagation();
+          this._toggleCtx(e,tog);
+        });
+      }
+
+      // 드래그 핸들
+      const dh=tog.querySelector('.mb-toggle-drag');
+      if(dh){
+        dh.addEventListener('mousedown',e=>{
+          if(e.button!==0) return;
+          tog.draggable=true;
+          document.addEventListener('mouseup',()=>{if(!this._draggedToggle)tog.draggable=false;},{once:true});
+        });
       }
     });
   }
@@ -6325,44 +6374,6 @@ class MBEditor {
   _initToggle(ce){
     this._draggedToggle=null;
     setTimeout(()=>this._fixOldToggles(ce),0);
-
-    // ── 화살표 + + 버튼: ce 레벨 click 위임 (화살표와 동일한 방식) ──
-    ce.addEventListener('click',e=>{
-      // 화살표 → 접기/펼치기
-      const arrow=e.target.closest('.mb-toggle-arrow');
-      if(arrow){
-        const tog=arrow.closest('.mb-toggle');if(!tog) return;
-        const isClosed=tog.getAttribute('data-open')==='0';
-        if(isClosed) tog.removeAttribute('data-open'); else tog.setAttribute('data-open','0');
-        this._change();e.stopPropagation();e.preventDefault();
-        return;
-      }
-      // + 버튼 → 메뉴
-      const btn=e.target.closest('.mb-toggle-menu-btn');
-      if(btn){
-        const tog=btn.closest('.mb-toggle');if(!tog) return;
-        e.preventDefault();e.stopPropagation();
-        const r=btn.getBoundingClientRect();
-        this._toggleCtx({clientX:r.left,clientY:r.bottom+4},tog);
-        return;
-      }
-      // 드래그 핸들 좌클릭 → draggable 활성화
-      const dh=e.target.closest('.mb-toggle-drag');
-      if(dh){
-        const tog=dh.closest('.mb-toggle');if(!tog) return;
-        tog.draggable=true;
-        document.addEventListener('mouseup',()=>{if(!this._draggedToggle)tog.draggable=false;},{once:true});
-      }
-    });
-
-    // ── 우클릭: ce 레벨 contextmenu 위임 ──
-    ce.addEventListener('contextmenu',e=>{
-      const hdr=e.target.closest('.mb-toggle-hdr');
-      if(!hdr||e.target.closest('table')) return;
-      const tog=hdr.closest('.mb-toggle');if(!tog) return;
-      e.preventDefault();e.stopPropagation();
-      this._toggleCtx(e,tog);
-    });
 
     // ── 토글 내부 변경 → change ──
     ce.addEventListener('input',e=>{if(e.target.closest('.mb-toggle'))this._change();});
