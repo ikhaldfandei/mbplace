@@ -6247,41 +6247,22 @@ class MBEditor {
     document.execCommand('insertHTML',false,'<hr style="border:none;border-top:1px solid #30363d;margin:14px 0"><br>');
     this._change();
   }
-  _createToggleActions(tog){
+  _createToggleActions(){
+    // 이벤트 바인딩 없음 — execCommand 직렬화 시 리스너 소실되므로
+    // 모든 이벤트는 ce의 mousedown 위임으로 처리
     const actions=document.createElement('span');
     actions.className='mb-toggle-actions';
     actions.contentEditable='false';
-
-    const menuBtn=document.createElement('span'); // <button>은 contenteditable 안에서 버블링 안됨 → span 사용
+    const menuBtn=document.createElement('span');
     menuBtn.className='mb-toggle-menu-btn';
     menuBtn.title='토글 메뉴';
     menuBtn.textContent='+';
-
     const drag=document.createElement('span');
     drag.className='mb-toggle-drag';
     drag.title='드래그로 이동';
     drag.textContent='⠿';
-
-    // 직접 바인딩 — contenteditable 내부에서 ce까지 버블링이 안 되는 문제 우회
-    menuBtn.addEventListener('mousedown',e=>{
-      if(e.button!==0) return;
-      e.preventDefault();e.stopPropagation();
-      const rect=menuBtn.getBoundingClientRect();
-      this._toggleCtx({clientX:rect.left,clientY:rect.bottom+4},tog);
-    });
-
     actions.append(menuBtn,drag);
     return actions;
-  }
-
-  _bindToggleHdrCtx(hdr, tog){
-    if(hdr._ctxBound) return; // 중복 바인딩 방지
-    hdr._ctxBound=true;
-    hdr.addEventListener('contextmenu',e=>{
-      if(e.target.closest('table')) return;
-      e.preventDefault();e.stopPropagation();
-      this._toggleCtx(e,tog);
-    });
   }
 
   _createToggleEl(id, size){
@@ -6301,8 +6282,7 @@ class MBEditor {
     title.className='mb-toggle-title';
     title.contentEditable='true';
     title.textContent=titleDefault;
-    hdr.append(arrow,title,this._createToggleActions(tog));
-    this._bindToggleHdrCtx(hdr,tog);
+    hdr.append(arrow,title,this._createToggleActions());
     const body=document.createElement('div');
     body.className='mb-toggle-body';
     const inner=document.createElement('div');
@@ -6313,16 +6293,12 @@ class MBEditor {
     return tog;
   }
 
-  // 기존(구버전) 토글에 누락된 contenteditable·actions 보정
   _fixOldToggles(ce){
     ce.querySelectorAll('.mb-toggle').forEach(tog=>{
       if(tog.getAttribute('contenteditable')!=='false') tog.contentEditable='false';
       const hdr=tog.querySelector(':scope>.mb-toggle-hdr');
-      if(hdr){
-        if(!hdr.querySelector('.mb-toggle-actions')){
-          hdr.appendChild(this._createToggleActions(tog));
-        }
-        this._bindToggleHdrCtx(hdr,tog);
+      if(hdr&&!hdr.querySelector('.mb-toggle-actions')){
+        hdr.appendChild(this._createToggleActions());
       }
       if(!tog.nextSibling||tog.nextSibling.nodeName==='BR'){
         const p=document.createElement('p');p.innerHTML='<br>';
@@ -6404,7 +6380,49 @@ class MBEditor {
       if(e.target.closest('.mb-toggle'))this._change();
     });
 
-    // ── 키보드 ──
+    // ── mousedown 통합 핸들러 ──
+    // mousedown은 contenteditable="false" 내부에서도 ce까지 버블링됨 (drag handle로 검증됨)
+    // click/contextmenu는 버블링 안 되므로 mousedown으로 대체 처리
+    ce.addEventListener('mousedown',e=>{
+      // ── 좌클릭: + 버튼 → 메뉴 ──
+      if(e.button===0){
+        const btn=e.target.closest('.mb-toggle-menu-btn');
+        if(btn){
+          const tog=btn.closest('.mb-toggle');
+          if(tog){
+            e.preventDefault();e.stopPropagation();
+            const rect=btn.getBoundingClientRect();
+            this._toggleCtx({clientX:rect.left,clientY:rect.bottom+4},tog);
+            return;
+          }
+        }
+        // ── 좌클릭: 드래그 핸들 → draggable 활성화 ──
+        const handle=e.target.closest('.mb-toggle-drag');
+        if(handle){
+          const tog=handle.closest('.mb-toggle');
+          if(tog){
+            tog.draggable=true;
+            const cleanup=()=>{if(tog&&!this._draggedToggle)tog.draggable=false;};
+            document.addEventListener('mouseup',cleanup,{once:true});
+            return;
+          }
+        }
+      }
+      // ── 우클릭: 헤더 우클릭 → 메뉴 + 브라우저 기본 메뉴 차단 ──
+      if(e.button===2){
+        const hdr=e.target.closest('.mb-toggle-hdr');
+        if(hdr&&!e.target.closest('table')){
+          const tog=hdr.closest('.mb-toggle');
+          if(tog){
+            e.preventDefault();e.stopPropagation();
+            // mousedown 이후 발화되는 contextmenu 이벤트를 capture로 한 번만 차단
+            document.addEventListener('contextmenu',ev=>ev.preventDefault(),{capture:true,once:true});
+            this._toggleCtx(e,tog);
+            return;
+          }
+        }
+      }
+    });
     ce.addEventListener('keydown',e=>{
       const title=e.target.closest('.mb-toggle-title');
       const inner=e.target.closest('.mb-toggle-body-inner');
@@ -6447,18 +6465,7 @@ class MBEditor {
       }
     });
 
-    // ── 드래그 앤 드롭 (핸들 좌클릭에서만) ──
-    ce.addEventListener('mousedown',e=>{
-      if(e.button!==0) return; // 우클릭 제외
-      const handle=e.target.closest('.mb-toggle-drag');
-      if(!handle) return;
-      const tog=handle.closest('.mb-toggle');
-      if(!tog) return;
-      tog.draggable=true;
-      const cleanup=()=>{if(tog&&!this._draggedToggle)tog.draggable=false;};
-      document.addEventListener('mouseup',cleanup,{once:true});
-    });
-
+    // ── 드래그 앤 드롭 ──
     ce.addEventListener('dragstart',e=>{
       const tog=e.target.closest('.mb-toggle');
       if(!tog||!tog.draggable){e.preventDefault();return;}
