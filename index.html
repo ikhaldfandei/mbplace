@@ -6247,21 +6247,41 @@ class MBEditor {
     document.execCommand('insertHTML',false,'<hr style="border:none;border-top:1px solid #30363d;margin:14px 0"><br>');
     this._change();
   }
-  _createToggleActions(){
+  _createToggleActions(tog){
     const actions=document.createElement('span');
     actions.className='mb-toggle-actions';
     actions.contentEditable='false';
-    const menuBtn=document.createElement('button');
+
+    const menuBtn=document.createElement('span'); // <button>은 contenteditable 안에서 버블링 안됨 → span 사용
     menuBtn.className='mb-toggle-menu-btn';
-    menuBtn.type='button';
     menuBtn.title='토글 메뉴';
     menuBtn.textContent='+';
+
     const drag=document.createElement('span');
     drag.className='mb-toggle-drag';
     drag.title='드래그로 이동';
     drag.textContent='⠿';
+
+    // 직접 바인딩 — contenteditable 내부에서 ce까지 버블링이 안 되는 문제 우회
+    menuBtn.addEventListener('mousedown',e=>{
+      if(e.button!==0) return;
+      e.preventDefault();e.stopPropagation();
+      const rect=menuBtn.getBoundingClientRect();
+      this._toggleCtx({clientX:rect.left,clientY:rect.bottom+4},tog);
+    });
+
     actions.append(menuBtn,drag);
     return actions;
+  }
+
+  _bindToggleHdrCtx(hdr, tog){
+    if(hdr._ctxBound) return; // 중복 바인딩 방지
+    hdr._ctxBound=true;
+    hdr.addEventListener('contextmenu',e=>{
+      if(e.target.closest('table')) return;
+      e.preventDefault();e.stopPropagation();
+      this._toggleCtx(e,tog);
+    });
   }
 
   _createToggleEl(id, size){
@@ -6281,7 +6301,8 @@ class MBEditor {
     title.className='mb-toggle-title';
     title.contentEditable='true';
     title.textContent=titleDefault;
-    hdr.append(arrow,title,this._createToggleActions());
+    hdr.append(arrow,title,this._createToggleActions(tog));
+    this._bindToggleHdrCtx(hdr,tog);
     const body=document.createElement('div');
     body.className='mb-toggle-body';
     const inner=document.createElement('div');
@@ -6295,14 +6316,14 @@ class MBEditor {
   // 기존(구버전) 토글에 누락된 contenteditable·actions 보정
   _fixOldToggles(ce){
     ce.querySelectorAll('.mb-toggle').forEach(tog=>{
-      // contenteditable="false" 누락 보정
       if(tog.getAttribute('contenteditable')!=='false') tog.contentEditable='false';
-      // actions 버튼 누락 보정
       const hdr=tog.querySelector(':scope>.mb-toggle-hdr');
-      if(hdr&&!hdr.querySelector('.mb-toggle-actions')){
-        hdr.appendChild(this._createToggleActions());
+      if(hdr){
+        if(!hdr.querySelector('.mb-toggle-actions')){
+          hdr.appendChild(this._createToggleActions(tog));
+        }
+        this._bindToggleHdrCtx(hdr,tog);
       }
-      // 토글이 마지막 요소면 뒤에 편집 가능한 줄 추가
       if(!tog.nextSibling||tog.nextSibling.nodeName==='BR'){
         const p=document.createElement('p');p.innerHTML='<br>';
         tog.after(p);
@@ -6366,7 +6387,7 @@ class MBEditor {
 
     // ── 화살표 클릭 → 접기/펼치기 ──
     ce.addEventListener('click',e=>{
-      if(e.target.closest('.mb-toggle-actions')) return; // 버튼 영역 클릭은 무시
+      if(e.target.closest('.mb-toggle-actions')) return;
       const arrow=e.target.closest('.mb-toggle-arrow');
       if(!arrow) return;
       const tog=arrow.closest('.mb-toggle');
@@ -6376,29 +6397,6 @@ class MBEditor {
       else tog.setAttribute('data-open','0');
       this._change();
       e.stopPropagation();e.preventDefault();
-    });
-
-    // ── + 버튼 클릭 → 컨텍스트 메뉴 ──
-    ce.addEventListener('click',e=>{
-      const btn=e.target.closest('.mb-toggle-menu-btn');
-      if(!btn) return;
-      const tog=btn.closest('.mb-toggle');
-      if(!tog) return;
-      e.stopPropagation();e.preventDefault();
-      // + 버튼 위치에 메뉴 띄우기
-      const rect=btn.getBoundingClientRect();
-      const fakeE={clientX:rect.left,clientY:rect.bottom+2,target:btn};
-      this._toggleCtx(fakeE,tog);
-    });
-
-    // ── 우클릭 → 컨텍스트 메뉴 (드래그와 완전 독립) ──
-    ce.addEventListener('contextmenu',e=>{
-      const hdr=e.target.closest('.mb-toggle-hdr');
-      if(!hdr||e.target.closest('table')) return;
-      const tog=hdr.closest('.mb-toggle');
-      if(!tog) return;
-      e.preventDefault();e.stopPropagation();
-      this._toggleCtx(e,tog);
     });
 
     // ── 토글 내부 변경 → 부모 에디터 change ──
