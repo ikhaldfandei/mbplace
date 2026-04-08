@@ -344,6 +344,23 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .equill-wrap.hidden{display:none}
 /* 회의록 캔버스 활성 시 — 미디어쿼리 !important보다 specificity 높게 */
 .equill-wrap.mtg-canvas-on{overflow:hidden!important;touch-action:none!important}
+
+/* ── 회의록 필기 모드 3단계 방어선 ── */
+/* 1단계: 캔버스 외 모든 요소 pointer-events/user-select 차단 */
+body.mtg-active *{
+  user-select:none!important;
+  -webkit-user-select:none!important;
+}
+body.mtg-active *:not(#mtg-outer):not(#mtg-outer *):not(#mtg-float):not(#mtg-float *){
+  pointer-events:none!important;
+}
+/* 캔버스 영역·툴바·플로팅툴바는 허용 */
+body.mtg-active #mtg-outer,
+body.mtg-active #mtg-outer *,
+body.mtg-active #mtg-float,
+body.mtg-active #mtg-float *{
+  pointer-events:auto!important;
+}
 /* ── RICH EDITOR TOOLBAR ── */
 .mbtb{background:var(--surf2);border-bottom:1px solid var(--bdr);padding:5px 8px;display:flex;flex-wrap:wrap;align-items:center;gap:2px;flex-shrink:0}
 .mbt{background:none;border:1px solid transparent;border-radius:4px;min-width:26px;height:26px;padding:0 5px;color:var(--tx2);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .1s,border-color .1s;white-space:nowrap;font-family:inherit;position:relative}
@@ -6709,6 +6726,7 @@ function openMeetingDoc(id){
   ee.style.display='none'; ew.classList.remove('hidden');
   // CSS 클래스로 overflow 잠금 — setProperty보다 specificity 기반이라 확실
   ew.classList.add('mtg-canvas-on');
+  document.body.classList.add('mtg-active'); // 필기 모드 방어선 활성화
   if(eq1tb)eq1tb.style.display='none';
   if(eq1)eq1.style.display='none';
 
@@ -6863,9 +6881,15 @@ function hideMeetingCanvas(){
   // overflow/touch-action 잠금 해제
   const ew=document.getElementById('ew1');
   if(ew){ew.classList.remove('mtg-canvas-on');}
+  document.body.classList.remove('mtg-active'); // 필기 모드 방어선 해제
   // document 레벨 폴백 핸들러 제거
   if(_mtg._docPenMove){document.removeEventListener('pointermove',_mtg._docPenMove);_mtg._docPenMove=null;}
   if(_mtg._docPenUp){document.removeEventListener('pointerup',_mtg._docPenUp);_mtg._docPenUp=null;}
+  if(_mtg._docPenBlock){
+    document.removeEventListener('pointerdown',_mtg._docPenBlock,{capture:true});
+    document.removeEventListener('pointerup',_mtg._docPenBlock,{capture:true});
+    _mtg._docPenBlock=null;
+  }
   if(_mtg.ro){_mtg.ro.disconnect();_mtg.ro=null;}
   _mtg.nodeId=null;_mtg.paths=[];_mtg.canvas=null;_mtg.ctx=null;
 }
@@ -7167,14 +7191,28 @@ function mtgBind(){
   // ── document 레벨 폴백: pointercancel 후 캡처를 잃어도 펜슬 획 계속 처리
   // (캡처 없으면 pointermove가 다른 요소로 가는데, 여기서 잡아서 드로잉 유지 + 스크롤 차단)
   const _docPenMove=e=>{
-    if(e.pointerType!=='pen'||!_mtg.drawing||!_mtg.curPath) return;
+    if(e.pointerType!=='pen') return;
+    // 3단계: 텍스트 선택 즉시 해제
+    const sel=window.getSelection();
+    if(sel&&sel.rangeCount>0&&!sel.isCollapsed) sel.removeAllRanges();
+    if(!_mtg.drawing||!_mtg.curPath) return;
     e.preventDefault();
     const p=getPos(e);
     _mtg.curPath.pts.push({x:p.x,y:p.y});
     _mtg.ctx.lineTo(p.x,p.y); _mtg.ctx.stroke();
-    // 캡처 재시도
     try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
   };
+
+  // 2단계: drawing 중 캔버스 외부 pointer 이벤트 차단
+  const _docPenBlock=e=>{
+    if(e.pointerType!=='pen'||!_mtg.drawing) return;
+    if(e.target===canvas||canvas.contains(e.target)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  };
+  document.addEventListener('pointerdown',_docPenBlock,{capture:true,passive:false});
+  document.addEventListener('pointerup',_docPenBlock,{capture:true,passive:false});
+  _mtg._docPenBlock=_docPenBlock;
   const _docPenUp=e=>{
     if(e.pointerType!=='pen'||!_mtg.drawing) return;
     // preventDefault → pointerup 이후 발생하는 click 이벤트 차단 (내보내기 버튼 오클릭 방지)
@@ -7183,7 +7221,6 @@ function mtgBind(){
   };
   document.addEventListener('pointermove',_docPenMove,{passive:false});
   document.addEventListener('pointerup',_docPenUp,{passive:false});
-  // 정리용으로 _mtg에 저장
   _mtg._docPenMove=_docPenMove;
   _mtg._docPenUp=_docPenUp;
 
