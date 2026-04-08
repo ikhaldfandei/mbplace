@@ -6329,6 +6329,58 @@ class MBEditor {
     this._change();
   }
 
+  _toggleCtx(e, tog){
+    document.querySelectorAll('.mb-tog-ctx').forEach(m=>m.remove());
+    const menu=document.createElement('div');
+    menu.className='mb-tog-ctx';
+    const curSize=tog.getAttribute('data-size')||'lg';
+    const mkItem=(icon,label,cls,fn)=>{
+      const item=document.createElement('div');
+      item.className='mb-tog-ctx-item'+(cls?' '+cls:'');
+      item.innerHTML=`<span>${icon}</span><span>${label}</span>`;
+      item.onclick=()=>{menu.remove();fn();};
+      menu.appendChild(item);
+    };
+    const sep=()=>{const d=document.createElement('div');d.className='mb-tog-ctx-sep';menu.appendChild(d);};
+    if(curSize==='sm'){
+      mkItem('▶','큰 토글로 변경','',()=>{
+        tog.classList.remove('mb-toggle--sm');tog.classList.add('mb-toggle--lg');
+        tog.setAttribute('data-size','lg');this._change();
+      });
+    } else {
+      mkItem('▶','작은 토글로 변경','',()=>{
+        tog.classList.remove('mb-toggle--lg');tog.classList.add('mb-toggle--sm');
+        tog.setAttribute('data-size','sm');this._change();
+      });
+    }
+    sep();
+    mkItem('↩','토글 해제 (내용 유지)','',()=>{
+      const titleEl=tog.querySelector('.mb-toggle-title');
+      const bodyEl=tog.querySelector('.mb-toggle-body-inner');
+      const frag=document.createDocumentFragment();
+      const tp=document.createElement('p');
+      const tb=document.createElement('strong');
+      tb.textContent=titleEl?titleEl.textContent:'';
+      tp.appendChild(tb);frag.appendChild(tp);
+      if(bodyEl){while(bodyEl.firstChild)frag.appendChild(bodyEl.firstChild);}
+      tog.replaceWith(frag);
+      this._change();
+    });
+    sep();
+    mkItem('🗑','토글 삭제','danger',()=>{
+      const next=tog.nextSibling;
+      tog.remove();
+      if(next&&next.nodeName==='BR')next.remove();
+      this._change();
+    });
+    const x=Math.min(e.clientX,window.innerWidth-185);
+    const y=Math.min(e.clientY,window.innerHeight-160);
+    menu.style.cssText=`left:${x}px;top:${y}px`;
+    document.body.appendChild(menu);
+    const close=ev=>{if(!menu.contains(ev.target)){menu.remove();document.removeEventListener('mousedown',close,true);}};
+    setTimeout(()=>document.addEventListener('mousedown',close,true),0);
+  }
+
   _endDrag(){
     if(this._draggedToggle){
       this._draggedToggle.style.opacity='';
