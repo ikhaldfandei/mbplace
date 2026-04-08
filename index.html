@@ -6887,7 +6887,6 @@ function hideMeetingCanvas(){
   if(_mtg._docPenUp){document.removeEventListener('pointerup',_mtg._docPenUp);_mtg._docPenUp=null;}
   if(_mtg._docPenBlock){
     document.removeEventListener('pointerdown',_mtg._docPenBlock,{capture:true});
-    document.removeEventListener('pointerup',_mtg._docPenBlock,{capture:true});
     _mtg._docPenBlock=null;
   }
   if(_mtg.ro){_mtg.ro.disconnect();_mtg.ro=null;}
@@ -7203,7 +7202,7 @@ function mtgBind(){
     try{ canvas.setPointerCapture(e.pointerId); }catch(err){}
   };
 
-  // 2단계: drawing 중 캔버스 외부 pointer 이벤트 차단
+  // 2단계: drawing 중 캔버스 외부 pointerdown만 차단 (pointerup은 endDraw 동작에 필요하므로 제외)
   const _docPenBlock=e=>{
     if(e.pointerType!=='pen'||!_mtg.drawing) return;
     if(e.target===canvas||canvas.contains(e.target)) return;
@@ -7211,7 +7210,6 @@ function mtgBind(){
     e.stopImmediatePropagation();
   };
   document.addEventListener('pointerdown',_docPenBlock,{capture:true,passive:false});
-  document.addEventListener('pointerup',_docPenBlock,{capture:true,passive:false});
   _mtg._docPenBlock=_docPenBlock;
   const _docPenUp=e=>{
     if(e.pointerType!=='pen'||!_mtg.drawing) return;
