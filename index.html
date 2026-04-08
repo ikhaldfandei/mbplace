@@ -6,7 +6,7 @@
 <title>마케팅 허브</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-overflow-scrolling:touch}
+html,body{height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:none}
 :root{
   --bg:#0d1117;--surf:#161b22;--surf2:#1c2128;--surf3:#21262d;
   --bdr:#30363d;--bdr2:#21262d;
@@ -7177,6 +7177,8 @@ function mtgBind(){
   };
   const _docPenUp=e=>{
     if(e.pointerType!=='pen'||!_mtg.drawing) return;
+    // preventDefault → pointerup 이후 발생하는 click 이벤트 차단 (내보내기 버튼 오클릭 방지)
+    e.preventDefault();
     endDraw(e);
   };
   document.addEventListener('pointermove',_docPenMove,{passive:false});
