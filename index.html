@@ -321,9 +321,6 @@ body.th-cargo .wc-bar{background:#0a0c04;color:#687830}
 body.th-midnightcherry .mbedit{background:#080010;color:#fff0f4}
 body.th-midnightcherry .scell{background:#080010;color:#fff0f4}
 body.th-midnightcherry .wc-bar{background:#040008;color:#a05070}
-
-/* 네온라임: 네온 옐로그린 */
-.th-neonlime{
   --bg:#010800;--surf:#031200;--surf2:#061e00;--surf3:#092a00;
   --bdr:#1a5c00;--bdr2:#0e3800;
   --tx:#e8ff80;--tx2:#a0d840;--tx3:#508020;
@@ -367,74 +364,6 @@ body.th-lavender .scell{background:#161228;color:#e8e0ff}
 body.th-cobalt .mbedit{background:#040e28;color:#d0e4ff}
 body.th-cobalt .scell{background:#040e28;color:#d0e4ff}
 
-
-
-/* ── 추가 밝은 테마 ── */
-
-/* 아이스: 유리빛 블루 화이트 */
-.th-ice{
-  --bg:#f3fbff;--surf:#ffffff;--surf2:#eaf6ff;--surf3:#d9efff;
-  --bdr:#b9dff5;--bdr2:#d8edf9;
-  --tx:#0e2433;--tx2:#36556d;--tx3:#7ca4bc;
-  --ac:#2f80ed;--ac2:#1f6fd9;
-  --gn:#2fbf71;--yw:#d4a017;--rd:#e45858;
-}
-body.th-ice .mbedit{background:#fcfeff;color:#0e2433}
-body.th-ice .scell{background:#fcfeff;color:#0e2433}
-body.th-ice .scell:focus{background:#eef8ff}
-body.th-ice .wc-bar{background:#f3fbff;color:#7ca4bc}
-
-/* 버터: 크리미 옐로 */
-.th-butter{
-  --bg:#fffbea;--surf:#fffef8;--surf2:#fff6d8;--surf3:#ffefbd;
-  --bdr:#ebd89a;--bdr2:#f4e6ba;
-  --tx:#382b12;--tx2:#6f5a2d;--tx3:#b59a5a;
-  --ac:#d4a017;--ac2:#b88a11;
-  --gn:#52a96b;--yw:#d4a017;--rd:#d65b5b;
-}
-body.th-butter .mbedit{background:#fffefb;color:#382b12}
-body.th-butter .scell{background:#fffefb;color:#382b12}
-body.th-butter .scell:focus{background:#fff8e3}
-body.th-butter .wc-bar{background:#fffbea;color:#b59a5a}
-
-/* 세이지페이퍼: 종이톤 그린 */
-.th-sagepaper{
-  --bg:#f4f8f2;--surf:#ffffff;--surf2:#e9f0e4;--surf3:#dbe6d4;
-  --bdr:#bfd0b4;--bdr2:#d8e4d0;
-  --tx:#203024;--tx2:#4b6651;--tx3:#7d9a84;
-  --ac:#5b8c5a;--ac2:#4a7749;
-  --gn:#4fa36a;--yw:#c29b2c;--rd:#c85f5f;
-}
-body.th-sagepaper .mbedit{background:#fcfefb;color:#203024}
-body.th-sagepaper .scell{background:#fcfefb;color:#203024}
-body.th-sagepaper .scell:focus{background:#f0f7eb}
-body.th-sagepaper .wc-bar{background:#f4f8f2;color:#7d9a84}
-
-/* 피치크림: 살구 크림 */
-.th-peachcream{
-  --bg:#fff5ef;--surf:#ffffff;--surf2:#ffebe0;--surf3:#ffd9c8;
-  --bdr:#efbea8;--bdr2:#f7d8c9;
-  --tx:#3b2016;--tx2:#7a4f3a;--tx3:#c08a6a;
-  --ac:#e07a3f;--ac2:#c9652d;
-  --gn:#58a870;--yw:#d89a2b;--rd:#d85c5c;
-}
-body.th-peachcream .mbedit{background:#fffdfb;color:#3b2016}
-body.th-peachcream .scell{background:#fffdfb;color:#3b2016}
-body.th-peachcream .scell:focus{background:#fff2ea}
-body.th-peachcream .wc-bar{background:#fff5ef;color:#c08a6a}
-
-/* 라일락데이: 밝은 라일락 */
-.th-lilacday{
-  --bg:#faf7ff;--surf:#ffffff;--surf2:#f1ebff;--surf3:#e5dbff;
-  --bdr:#cabcf2;--bdr2:#e0d5f8;
-  --tx:#2b2140;--tx2:#5c4e7f;--tx3:#9b8bc2;
-  --ac:#8b6ee8;--ac2:#7459cf;
-  --gn:#58b28a;--yw:#cfa33b;--rd:#d46868;
-}
-body.th-lilacday .mbedit{background:#fffdff;color:#2b2140}
-body.th-lilacday .scell{background:#fffdff;color:#2b2140}
-body.th-lilacday .scell:focus{background:#f6f0ff}
-body.th-lilacday .wc-bar{background:#faf7ff;color:#9b8bc2}
 
 /* theme switcher UI */
 .theme-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
@@ -2315,47 +2244,6 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label">🟢 네온라임</div>
           </div>
-
-          <div class="theme-opt" id="th-opt-ice" onclick="applyTheme('ice')" title="아이스">
-            <div class="theme-swatch" style="background:#f3fbff">
-              <div style="height:8px;border-radius:2px;background:#ffffff"></div>
-              <div style="height:5px;border-radius:2px;background:#2f80ed;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#b9dff5"></div>
-            </div>
-            <div class="theme-label">🧊 아이스</div>
-          </div>
-          <div class="theme-opt" id="th-opt-butter" onclick="applyTheme('butter')" title="버터">
-            <div class="theme-swatch" style="background:#fffbea">
-              <div style="height:8px;border-radius:2px;background:#fffef8"></div>
-              <div style="height:5px;border-radius:2px;background:#d4a017;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#ebd89a"></div>
-            </div>
-            <div class="theme-label">🧈 버터</div>
-          </div>
-          <div class="theme-opt" id="th-opt-sagepaper" onclick="applyTheme('sagepaper')" title="세이지페이퍼">
-            <div class="theme-swatch" style="background:#f4f8f2">
-              <div style="height:8px;border-radius:2px;background:#ffffff"></div>
-              <div style="height:5px;border-radius:2px;background:#5b8c5a;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#bfd0b4"></div>
-            </div>
-            <div class="theme-label">🌿 세이지</div>
-          </div>
-          <div class="theme-opt" id="th-opt-peachcream" onclick="applyTheme('peachcream')" title="피치크림">
-            <div class="theme-swatch" style="background:#fff5ef">
-              <div style="height:8px;border-radius:2px;background:#ffffff"></div>
-              <div style="height:5px;border-radius:2px;background:#e07a3f;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#efbea8"></div>
-            </div>
-            <div class="theme-label">🍑 피치크림</div>
-          </div>
-          <div class="theme-opt" id="th-opt-lilacday" onclick="applyTheme('lilacday')" title="라일락데이">
-            <div class="theme-swatch" style="background:#faf7ff">
-              <div style="height:8px;border-radius:2px;background:#ffffff"></div>
-              <div style="height:5px;border-radius:2px;background:#8b6ee8;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#cabcf2"></div>
-            </div>
-            <div class="theme-label">🪻 라일락</div>
-          </div>
           <div class="theme-opt" id="th-opt-turquoise" onclick="applyTheme('turquoise')" title="터콰이즈">
             <div class="theme-swatch" style="background:#021412">
               <div style="height:8px;border-radius:2px;background:#041e1a"></div>
@@ -2396,6 +2284,17 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label">🌊 디프씨</div>
           </div>
+          <div class="theme-opt" id="th-opt-bubblegum" onclick="applyTheme('bubblegum')" title="버블검">
+            <div class="theme-swatch" style="background:#0a0014">
+              <div style="height:8px;border-radius:2px;background:#120020"></div>
+              <div style="height:5px;border-radius:2px;background:#ff40e0;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#800090"></div>
+            </div>
+            <div class="theme-label">🍬 버블검</div>
+          </div>
+          <div class="theme-opt" id="th-opt-cargo" onclick="applyTheme('cargo')" title="카고">
+            <div class="theme-swatch" style="background:#0a0c04">
+              <div style="height:8px;border-radius:2px;background:#141808"></div>
               <div style="height:5px;border-radius:2px;background:#ff6a00;width:60%"></div>
               <div style="height:5px;border-radius:2px;background:#506020"></div>
             </div>
@@ -2443,9 +2342,9 @@ input[type=number]{-moz-appearance:textfield}
         </div>
         <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.8;background:var(--surf2);padding:10px 12px;border-radius:6px;border:1px solid var(--bdr)">
           🔐 <b>연결 방식: PKCE (보안 강화)</b><br>
-          • 처음 한 번 연결하면 브라우저에 로그인 상태와 토큰 정보가 저장됩니다<br>
-          • 토큰이 만료되면 가능한 경우 조용히 재인증을 시도하고, 실패 시 다시 연결이 필요할 수 있습니다<br>
-          • 브라우저 로그인 상태나 보안 정책에 따라 자동 재연결 동작은 달라질 수 있습니다<br>
+          • 처음 한 번 연결 후 <b>자동 유지</b>됩니다 — 재연결 불필요<br>
+          • 내부적으로 refresh_token으로 access_token을 자동 갱신합니다<br>
+          • <b>6개월 미사용 시</b> refresh_token 만료 → 재연결 필요<br>
           • Google 미검증 앱 제한: 최대 100명 사용자 (개인 사용 무관)
         </div>
         <div class="srow">
@@ -11169,7 +11068,7 @@ function gdHandleCallback(){
   sessionStorage.removeItem('gd_auth_pending');
   sessionStorage.removeItem('gd_pkce_verifier');
 }
-// ── PKCE: 저장된 토큰 만료 시 조용한 재인증 시도 ──
+// ── PKCE: refresh_token으로 access_token 자동 갱신 ──
 function gdSilentRefresh(){
   return new Promise((resolve)=>{
     const cid = gdClientId();
@@ -11809,7 +11708,7 @@ async function updateStorageInfo(){
   }catch(e){el.innerHTML='<span style="font-size:11px;color:var(--tx3)">로딩 중...</span>';}
 }
 
-const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest','obsidian','aurora','sunset','sakura','matrix','mocha','cyber','gold','grape','void','crimson','neonlime','ice','butter','sagepaper','peachcream','lilacday','turquoise','lavender','cobalt','holo','deepsea','midnightcherry'];
+const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest','obsidian','aurora','sunset','sakura','matrix','mocha','cyber','gold','grape','void','crimson','neonlime','turquoise','lavender','cobalt','holo','deepsea','bubblegum','cargo','midnightcherry'];
 function applyTheme(t){
   if(!THEMES.includes(t))t='dark';
   document.body.className=t==='dark'?'':'th-'+t;
