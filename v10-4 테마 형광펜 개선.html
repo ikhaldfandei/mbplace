@@ -261,19 +261,66 @@ body.th-void .scell{background:#0a0a0a;color:#ffffff}
 body.th-crimson .mbedit{background:#1a0408;color:#ffe8e0}
 body.th-crimson .scell{background:#1a0408;color:#ffe8e0}
 
-/* 스틸: 차가운 스틸 블루그레이 — 산업적 */
-.th-steel{
-  --bg:#0d1117;--surf:#161c26;--surf2:#1e2535;--surf3:#262e40;
-  --bdr:#3a4a60;--bdr2:#2a3848;
-  --tx:#c8d8e8;--tx2:#8098b0;--tx3:#506070;
-  --ac:#5b9bd5;--ac2:#4080c0;
-  --gn:#3cb87a;--yw:#d4b843;--rd:#d05555;
+/* 홀로그램: 은색+무지갯빛 — 미래적 홀로그래픽 */
+.th-holo{
+  --bg:#080c10;--surf:#0e1420;--surf2:#141e30;--surf3:#1a2840;
+  --bdr:#304060;--bdr2:#202e48;
+  --tx:#e0f0ff;--tx2:#a0c8f0;--tx3:#6090c0;
+  --ac:#a0f0e8;--ac2:#60d8d0;
+  --gn:#80ffcc;--yw:#ffe080;--rd:#ff80a0;
 }
-body.th-steel .mbedit{background:#161c26;color:#c8d8e8}
-body.th-steel .scell{background:#161c26;color:#c8d8e8}
+body.th-holo .mbedit{background:#0e1420;color:#e0f0ff}
+body.th-holo .scell{background:#0e1420;color:#e0f0ff}
+body.th-holo .hdr{background:linear-gradient(135deg,#0e1420 0%,#141e30 50%,#0e1420 100%)}
+body.th-holo *{border-image:none}
 
-/* 네온라임: 블랙 + 형광 라임 — 사이버펑크 변형 */
-.th-neonlime{
+/* 디프씨: 심해 블루블랙 — 발광하는 청록 */
+.th-deepsea{
+  --bg:#000810;--surf:#001020;--surf2:#001a30;--surf3:#002440;
+  --bdr:#004060;--bdr2:#002840;
+  --tx:#c0f8ff;--tx2:#60d0e8;--tx3:#2080a0;
+  --ac:#00e5ff;--ac2:#00b8d4;
+  --gn:#00ffb0;--yw:#ffee00;--rd:#ff4060;
+}
+body.th-deepsea .mbedit{background:#001020;color:#c0f8ff}
+body.th-deepsea .scell{background:#001020;color:#c0f8ff}
+body.th-deepsea .wc-bar{background:#000810;color:#2080a0}
+
+/* 버블검: 핫핑크+민트 — Y2K 팝아트 */
+.th-bubblegum{
+  --bg:#0a0014;--surf:#120020;--surf2:#1c0030;--surf3:#260040;
+  --bdr:#800090;--bdr2:#500060;
+  --tx:#fff0ff;--tx2:#f080f8;--tx3:#a040b0;
+  --ac:#ff40e0;--ac2:#d020c0;
+  --gn:#40ffe0;--yw:#ffff40;--rd:#ff4080;
+}
+body.th-bubblegum .mbedit{background:#120020;color:#fff0ff}
+body.th-bubblegum .scell{background:#120020;color:#fff0ff}
+body.th-bubblegum .wc-bar{background:#0a0014;color:#a040b0}
+
+/* 카고: 밀리터리 올리브+형광오렌지 — 게릴라 감성 */
+.th-cargo{
+  --bg:#0a0c04;--surf:#141808;--surf2:#1e240c;--surf3:#283010;
+  --bdr:#506020;--bdr2:#384414;
+  --tx:#e8f0c0;--tx2:#a8b870;--tx3:#687830;
+  --ac:#ff6a00;--ac2:#e05000;
+  --gn:#a8e040;--yw:#ff6a00;--rd:#e03020;
+}
+body.th-cargo .mbedit{background:#141808;color:#e8f0c0}
+body.th-cargo .scell{background:#141808;color:#e8f0c0}
+body.th-cargo .wc-bar{background:#0a0c04;color:#687830}
+
+/* 미드나잇체리: 자정 블루블랙+체리레드 — 극한 대비 */
+.th-midnightcherry{
+  --bg:#040008;--surf:#080010;--surf2:#10001c;--surf3:#180028;
+  --bdr:#600020;--bdr2:#400014;
+  --tx:#fff0f4;--tx2:#f0a0b8;--tx3:#a05070;
+  --ac:#ff1a4a;--ac2:#d8002e;
+  --gn:#40e8a0;--yw:#ffd040;--rd:#ff1a4a;
+}
+body.th-midnightcherry .mbedit{background:#080010;color:#fff0f4}
+body.th-midnightcherry .scell{background:#080010;color:#fff0f4}
+body.th-midnightcherry .wc-bar{background:#040008;color:#a05070}
   --bg:#010800;--surf:#031200;--surf2:#061e00;--surf3:#092a00;
   --bdr:#1a5c00;--bdr2:#0e3800;
   --tx:#e8ff80;--tx2:#a0d840;--tx3:#508020;
@@ -283,17 +330,6 @@ body.th-steel .scell{background:#161c26;color:#c8d8e8}
 body.th-neonlime .mbedit{background:#031200;color:#e8ff80}
 body.th-neonlime .scell{background:#031200;color:#e8ff80}
 body.th-neonlime .wc-bar{background:#010800;color:#508020}
-
-/* 오텀: 오렌지-브라운 가을 감성 */
-.th-autumn{
-  --bg:#1a0e04;--surf:#261608;--surf2:#321c0c;--surf3:#3e2410;
-  --bdr:#7a4020;--bdr2:#582e14;
-  --tx:#ffecd8;--tx2:#d4a878;--tx3:#9a7050;
-  --ac:#e8782a;--ac2:#c85e14;
-  --gn:#7ab84a;--yw:#e8a82a;--rd:#d04040;
-}
-body.th-autumn .mbedit{background:#261608;color:#ffecd8}
-body.th-autumn .scell{background:#261608;color:#ffecd8}
 
 /* 터콰이즈: 에메랄드 딥톤 */
 .th-turquoise{
@@ -317,17 +353,6 @@ body.th-turquoise .scell{background:#041e1a;color:#d0fff8}
 body.th-lavender .mbedit{background:#161228;color:#e8e0ff}
 body.th-lavender .scell{background:#161228;color:#e8e0ff}
 
-/* 빈티지: 세피아+낡은 종이 — 레트로 */
-.th-vintage{
-  --bg:#1a1408;--surf:#241c0c;--surf2:#2e2410;--surf3:#382c14;
-  --bdr:#786040;--bdr2:#584428;
-  --tx:#f0e0c0;--tx2:#c8a880;--tx3:#907050;
-  --ac:#c89040;--ac2:#a87030;
-  --gn:#789060;--yw:#c8a840;--rd:#c06040;
-}
-body.th-vintage .mbedit{background:#241c0c;color:#f0e0c0}
-body.th-vintage .scell{background:#241c0c;color:#f0e0c0}
-
 /* 코발트: 코발트 딥블루 — 네이비보다 선명 */
 .th-cobalt{
   --bg:#020818;--surf:#040e28;--surf2:#081638;--surf3:#0c1e48;
@@ -338,18 +363,6 @@ body.th-vintage .scell{background:#241c0c;color:#f0e0c0}
 }
 body.th-cobalt .mbedit{background:#040e28;color:#d0e4ff}
 body.th-cobalt .scell{background:#040e28;color:#d0e4ff}
-
-/* 톡식: 산성 형광그린+블랙 — 극한 사이버펑크 */
-.th-toxic{
-  --bg:#000800;--surf:#001000;--surf2:#001a00;--surf3:#002400;
-  --bdr:#005500;--bdr2:#003300;
-  --tx:#80ff40;--tx2:#50d820;--tx3:#308010;
-  --ac:#40ff00;--ac2:#30dd00;
-  --gn:#40ff00;--yw:#ccff00;--rd:#ff2020;
-}
-body.th-toxic .mbedit{background:#001000;color:#80ff40}
-body.th-toxic .scell{background:#001000;color:#80ff40}
-body.th-toxic .wc-bar{background:#000800;color:#308010}
 
 
 /* theme switcher UI */
@@ -482,8 +495,8 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .mbedit table tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 .mbedit hr{border:none;border-top:1px solid var(--bdr);margin:14px 0}
 .mbedit p{margin:2px 0}
-/* 형광펜 가독성: 배경색 있는 텍스트는 항상 어두운 글자 — 어두운 테마에서도 잘 보임 */
-.mbedit span[style*="background-color"]{color:#1a1a1a!important}
+/* 형광펜 가독성: 배경색만 있고 글자색 지정이 없는 span은 어두운 글자로 고정 */
+.mbedit span[style*="background-color"]:not([style*="color"]){color:#1a1a1a!important}
 /* ── 토글 블록 ── */
 .mb-toggle{margin:4px 0;border-radius:6px;border:1px solid transparent;position:relative}
 .mb-toggle:hover{border-color:var(--bdr2)}
@@ -2223,14 +2236,6 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label">🔴 크림슨</div>
           </div>
-          <div class="theme-opt" id="th-opt-steel" onclick="applyTheme('steel')" title="스틸">
-            <div class="theme-swatch" style="background:#0d1117">
-              <div style="height:8px;border-radius:2px;background:#161c26"></div>
-              <div style="height:5px;border-radius:2px;background:#5b9bd5;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#3a4a60"></div>
-            </div>
-            <div class="theme-label">🔩 스틸</div>
-          </div>
           <div class="theme-opt" id="th-opt-neonlime" onclick="applyTheme('neonlime')" title="네온라임">
             <div class="theme-swatch" style="background:#010800">
               <div style="height:8px;border-radius:2px;background:#031200"></div>
@@ -2238,14 +2243,6 @@ input[type=number]{-moz-appearance:textfield}
               <div style="height:5px;border-radius:2px;background:#1a5c00"></div>
             </div>
             <div class="theme-label">🟢 네온라임</div>
-          </div>
-          <div class="theme-opt" id="th-opt-autumn" onclick="applyTheme('autumn')" title="오텀">
-            <div class="theme-swatch" style="background:#1a0e04">
-              <div style="height:8px;border-radius:2px;background:#261608"></div>
-              <div style="height:5px;border-radius:2px;background:#e8782a;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#7a4020"></div>
-            </div>
-            <div class="theme-label">🍂 오텀</div>
           </div>
           <div class="theme-opt" id="th-opt-turquoise" onclick="applyTheme('turquoise')" title="터콰이즈">
             <div class="theme-swatch" style="background:#021412">
@@ -2263,14 +2260,6 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label">💜 라벤더</div>
           </div>
-          <div class="theme-opt" id="th-opt-vintage" onclick="applyTheme('vintage')" title="빈티지">
-            <div class="theme-swatch" style="background:#1a1408">
-              <div style="height:8px;border-radius:2px;background:#241c0c"></div>
-              <div style="height:5px;border-radius:2px;background:#c89040;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#786040"></div>
-            </div>
-            <div class="theme-label">📜 빈티지</div>
-          </div>
           <div class="theme-opt" id="th-opt-cobalt" onclick="applyTheme('cobalt')" title="코발트">
             <div class="theme-swatch" style="background:#020818">
               <div style="height:8px;border-radius:2px;background:#040e28"></div>
@@ -2279,13 +2268,45 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label">🔷 코발트</div>
           </div>
-          <div class="theme-opt" id="th-opt-toxic" onclick="applyTheme('toxic')" title="톡식">
-            <div class="theme-swatch" style="background:#000800">
-              <div style="height:8px;border-radius:2px;background:#001000"></div>
-              <div style="height:5px;border-radius:2px;background:#40ff00;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#005500"></div>
+          <div class="theme-opt" id="th-opt-holo" onclick="applyTheme('holo')" title="홀로그램">
+            <div class="theme-swatch" style="background:#080c10">
+              <div style="height:8px;border-radius:2px;background:#0e1420"></div>
+              <div style="height:5px;border-radius:2px;background:#a0f0e8;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#304060"></div>
             </div>
-            <div class="theme-label">☢️ 톡식</div>
+            <div class="theme-label">✨ 홀로그램</div>
+          </div>
+          <div class="theme-opt" id="th-opt-deepsea" onclick="applyTheme('deepsea')" title="디프씨">
+            <div class="theme-swatch" style="background:#000810">
+              <div style="height:8px;border-radius:2px;background:#001020"></div>
+              <div style="height:5px;border-radius:2px;background:#00e5ff;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#004060"></div>
+            </div>
+            <div class="theme-label">🌊 디프씨</div>
+          </div>
+          <div class="theme-opt" id="th-opt-bubblegum" onclick="applyTheme('bubblegum')" title="버블검">
+            <div class="theme-swatch" style="background:#0a0014">
+              <div style="height:8px;border-radius:2px;background:#120020"></div>
+              <div style="height:5px;border-radius:2px;background:#ff40e0;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#800090"></div>
+            </div>
+            <div class="theme-label">🍬 버블검</div>
+          </div>
+          <div class="theme-opt" id="th-opt-cargo" onclick="applyTheme('cargo')" title="카고">
+            <div class="theme-swatch" style="background:#0a0c04">
+              <div style="height:8px;border-radius:2px;background:#141808"></div>
+              <div style="height:5px;border-radius:2px;background:#ff6a00;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#506020"></div>
+            </div>
+            <div class="theme-label">🪖 카고</div>
+          </div>
+          <div class="theme-opt" id="th-opt-midnightcherry" onclick="applyTheme('midnightcherry')" title="미드나잇체리">
+            <div class="theme-swatch" style="background:#040008">
+              <div style="height:8px;border-radius:2px;background:#080010"></div>
+              <div style="height:5px;border-radius:2px;background:#ff1a4a;width:60%"></div>
+              <div style="height:5px;border-radius:2px;background:#600020"></div>
+            </div>
+            <div class="theme-label">🍒 미드나잇체리</div>
           </div>
         </div>
       </div>
@@ -11687,7 +11708,7 @@ async function updateStorageInfo(){
   }catch(e){el.innerHTML='<span style="font-size:11px;color:var(--tx3)">로딩 중...</span>';}
 }
 
-const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest','obsidian','aurora','sunset','sakura','matrix','mocha','cyber','gold','grape','void','crimson','steel','neonlime','autumn','turquoise','lavender','vintage','cobalt','toxic'];
+const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest','obsidian','aurora','sunset','sakura','matrix','mocha','cyber','gold','grape','void','crimson','neonlime','turquoise','lavender','cobalt','holo','deepsea','bubblegum','cargo','midnightcherry'];
 function applyTheme(t){
   if(!THEMES.includes(t))t='dark';
   document.body.className=t==='dark'?'':'th-'+t;
