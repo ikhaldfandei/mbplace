@@ -7448,12 +7448,26 @@ function mtgBind(){
   bindScrollbar(thumbY, true);
   bindScrollbar(thumbX, false);
 
-  // ── 펜/마우스 드로잉 ──
+  // ── 펜/마우스/펜슬 드로잉 ──
+  // iPad Safari / Apple Pencil에서 pointerType 판별이 일관되지 않거나
+  // pointerup/cancel 타이밍이 흔들릴 수 있어, active pointerId 기준으로 추적한다.
+  _mtg.activePointerId=null;
+  _mtg.activePointerType='';
+
+  canvas.addEventListener('dragstart',e=>e.preventDefault());
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
   canvas.addEventListener('pointerdown',e=>{
     if(_mtgPopTool)mtgHidePop();
-    if(e.pointerType==='touch'){if(_mtg.tool==='text'){e.preventDefault();mtgPlaceText(getPos(e));}return;}
-    if(_mtg.tool==='text'){mtgPlaceText(getPos(e));return;}
+    if(_mtg.tool==='text'){
+      e.preventDefault();
+      mtgPlaceText(getPos(e));
+      return;
+    }
+    if(_mtg.drawing && _mtg.activePointerId!==null) return;
     e.preventDefault();
+    _mtg.activePointerId=e.pointerId;
+    _mtg.activePointerType=e.pointerType||'';
     try{canvas.setPointerCapture(e.pointerId);}catch(err){}
     const p=getPos(e);const ts=_mtgTS[_mtg.tool]||{lw:3};
     const color=_mtg.tool==='erase'?'':mtgGetColor(_mtg.tool);
@@ -7468,20 +7482,37 @@ function mtgBind(){
   },{passive:false});
 
   canvas.addEventListener('pointermove',e=>{
-    if(!_mtg.drawing||!_mtg.curPath||e.pointerType==='touch')return;
+    if(!_mtg.drawing||!_mtg.curPath) return;
+    if(_mtg.activePointerId!==null && e.pointerId!==_mtg.activePointerId) return;
     e.preventDefault();
     const p=getPos(e);_mtg.curPath.pts.push({x:p.x,y:p.y});
     _mtg.ctx.lineTo(p.x,p.y);_mtg.ctx.stroke();
   },{passive:false});
 
-  const endDraw=()=>{
-    if(!_mtg.drawing)return;_mtg.drawing=false;
+  const endDraw=(e)=>{
+    if(e && _mtg.activePointerId!==null && e.pointerId!==_mtg.activePointerId) return;
+    if(!_mtg.drawing){
+      if(e && _mtg.activePointerId===e.pointerId){
+        try{canvas.releasePointerCapture(e.pointerId);}catch(err){}
+        _mtg.activePointerId=null;_mtg.activePointerType='';
+      }
+      return;
+    }
+    _mtg.drawing=false;
     try{_mtg.ctx.restore();}catch(err){}
     if(_mtg.curPath&&_mtg.curPath.pts.length>1)_mtg.paths.push(JSON.parse(JSON.stringify(_mtg.curPath)));
-    _mtg.curPath=null;mtgSave();
+    _mtg.curPath=null;
+    if(e && _mtg.activePointerId===e.pointerId){
+      try{canvas.releasePointerCapture(e.pointerId);}catch(err){}
+    }
+    _mtg.activePointerId=null;_mtg.activePointerType='';
+    mtgSave();
   };
-  canvas.addEventListener('pointerup',endDraw);
-  canvas.addEventListener('pointercancel',endDraw);
+  canvas.addEventListener('pointerup',endDraw,{passive:false});
+  canvas.addEventListener('pointercancel',endDraw,{passive:false});
+  canvas.addEventListener('lostpointercapture',endDraw,{passive:false});
+  window.addEventListener('pointerup',endDraw,{passive:false});
+  window.addEventListener('pointercancel',endDraw,{passive:false});
 
   // 초기 스크롤 위치 적용
   _mtgScrollX=0; _mtgScrollY=0;
