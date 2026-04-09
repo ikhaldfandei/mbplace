@@ -6173,14 +6173,14 @@ class MBEditor {
       const s=document.createElement('div');
       s.style.cssText=`width:22px;height:22px;background:${c};border-radius:3px;cursor:pointer;border:1px solid rgba(255,255,255,.12)`;
       s.title=c;
-      s.onclick=()=>{this.ce.focus();this._restoreSavedRange();this._exec(cmd,c);const b=document.getElementById(barId);if(b)b.style.background=c;pop.remove();};
+      s.onclick=()=>{this.ce.focus();this._restoreSavedRange();if(cmd==='foreColor')this._applyTextColor(c);else this._exec(cmd,c);const b=document.getElementById(barId);if(b)b.style.background=c;pop.remove();};
       g.appendChild(s);
     });
     const row=document.createElement('div');row.style.cssText='padding:4px 8px 8px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--bdr)';
     const ci=document.createElement('input');ci.type='color';ci.value='#ff0000';
     ci.style.cssText='width:30px;height:28px;border:1px solid var(--bdr);border-radius:4px;cursor:pointer;padding:1px;background:var(--surf2)';
     const lbl=document.createElement('span');lbl.textContent='직접 선택';lbl.style.cssText='font-size:11px;color:var(--tx3)';
-    ci.oninput=()=>{this.ce.focus();this._restoreSavedRange();this._exec(cmd,ci.value);const b=document.getElementById(barId);if(b)b.style.background=ci.value;};
+    ci.oninput=()=>{this.ce.focus();this._restoreSavedRange();if(cmd==='foreColor')this._applyTextColor(ci.value);else this._exec(cmd,ci.value);const b=document.getElementById(barId);if(b)b.style.background=ci.value;};
     row.append(ci,lbl);pop.append(g,row);
     const r=anchor.getBoundingClientRect();
     pop.style.cssText=`left:${Math.min(r.left,window.innerWidth-230)}px;top:${r.bottom+2}px`;
@@ -6234,6 +6234,50 @@ class MBEditor {
       sel.addRange(saved);
       return true;
     }catch(e){return false;}
+  }
+  _applyTextColor(color){
+    this.ce.focus();
+    this._restoreSavedRange();
+    const sel=window.getSelection();
+    if(!sel || !sel.rangeCount) return false;
+    const range=sel.getRangeAt(0);
+    const anchor=range.commonAncestorContainer;
+    if(!this.ce.contains(anchor)) return false;
+
+    try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
+    try{
+      const ok=document.execCommand('foreColor', false, color);
+      if(ok){
+        this._change();
+        this._syncBtns();
+        this._savedRange=this._savedRange();
+        return true;
+      }
+    }catch(e){}
+
+    if(range.collapsed) return false;
+
+    try{
+      const wrap=document.createElement('span');
+      wrap.style.color=color;
+      try{
+        range.surroundContents(wrap);
+      }catch(e){
+        const frag=range.extractContents();
+        wrap.appendChild(frag);
+        range.insertNode(wrap);
+      }
+      const newRange=document.createRange();
+      newRange.selectNodeContents(wrap);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      this._savedRange=newRange.cloneRange();
+      this._change();
+      this._syncBtns();
+      return true;
+    }catch(e){
+      return false;
+    }
   }
   _normalizeHighlightText(root=this.ce){
     if(!root) return;
