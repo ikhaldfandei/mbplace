@@ -286,29 +286,7 @@ body.th-deepsea .mbedit{background:#001020;color:#c0f8ff}
 body.th-deepsea .scell{background:#001020;color:#c0f8ff}
 body.th-deepsea .wc-bar{background:#000810;color:#2080a0}
 
-/* 버블검: 핫핑크+민트 — Y2K 팝아트 */
-.th-bubblegum{
-  --bg:#0a0014;--surf:#120020;--surf2:#1c0030;--surf3:#260040;
-  --bdr:#800090;--bdr2:#500060;
-  --tx:#fff0ff;--tx2:#f080f8;--tx3:#a040b0;
-  --ac:#ff40e0;--ac2:#d020c0;
-  --gn:#40ffe0;--yw:#ffff40;--rd:#ff4080;
-}
-body.th-bubblegum .mbedit{background:#120020;color:#fff0ff}
-body.th-bubblegum .scell{background:#120020;color:#fff0ff}
-body.th-bubblegum .wc-bar{background:#0a0014;color:#a040b0}
 
-/* 카고: 밀리터리 올리브+형광오렌지 — 게릴라 감성 */
-.th-cargo{
-  --bg:#0a0c04;--surf:#141808;--surf2:#1e240c;--surf3:#283010;
-  --bdr:#506020;--bdr2:#384414;
-  --tx:#e8f0c0;--tx2:#a8b870;--tx3:#687830;
-  --ac:#ff6a00;--ac2:#e05000;
-  --gn:#a8e040;--yw:#ff6a00;--rd:#e03020;
-}
-body.th-cargo .mbedit{background:#141808;color:#e8f0c0}
-body.th-cargo .scell{background:#141808;color:#e8f0c0}
-body.th-cargo .wc-bar{background:#0a0c04;color:#687830}
 
 /* 미드나잇체리: 자정 블루블랙+체리레드 — 극한 대비 */
 .th-midnightcherry{
@@ -422,18 +400,6 @@ body.th-peachcream .scell{background:#fffdfb;color:#3b2016}
 body.th-peachcream .scell:focus{background:#fff2ea}
 body.th-peachcream .wc-bar{background:#fff5ef;color:#c08a6a}
 
-/* 라일락데이: 밝은 라일락 */
-.th-lilacday{
-  --bg:#faf7ff;--surf:#ffffff;--surf2:#f1ebff;--surf3:#e5dbff;
-  --bdr:#cabcf2;--bdr2:#e0d5f8;
-  --tx:#2b2140;--tx2:#5c4e7f;--tx3:#9b8bc2;
-  --ac:#8b6ee8;--ac2:#7459cf;
-  --gn:#58b28a;--yw:#cfa33b;--rd:#d46868;
-}
-body.th-lilacday .mbedit{background:#fffdff;color:#2b2140}
-body.th-lilacday .scell{background:#fffdff;color:#2b2140}
-body.th-lilacday .scell:focus{background:#f6f0ff}
-body.th-lilacday .wc-bar{background:#faf7ff;color:#9b8bc2}
 
 
 /* theme switcher UI */
@@ -2348,14 +2314,6 @@ input[type=number]{-moz-appearance:textfield}
             </div>
             <div class="theme-label">🍑 피치크림</div>
           </div>
-          <div class="theme-opt" id="th-opt-lilacday" onclick="applyTheme('lilacday')" title="라일락데이">
-            <div class="theme-swatch" style="background:#faf7ff">
-              <div style="height:8px;border-radius:2px;background:#ffffff"></div>
-              <div style="height:5px;border-radius:2px;background:#8b6ee8;width:60%"></div>
-              <div style="height:5px;border-radius:2px;background:#cabcf2"></div>
-            </div>
-            <div class="theme-label">🪻 라일락</div>
-          </div>
           <div class="theme-opt" id="th-opt-turquoise" onclick="applyTheme('turquoise')" title="터콰이즈">
             <div class="theme-swatch" style="background:#021412">
               <div style="height:8px;border-radius:2px;background:#041e1a"></div>
@@ -2395,8 +2353,6 @@ input[type=number]{-moz-appearance:textfield}
               <div style="height:5px;border-radius:2px;background:#004060"></div>
             </div>
             <div class="theme-label">🌊 디프씨</div>
-          </div>
-            <div class="theme-label">🪖 카고</div>
           </div>
           <div class="theme-opt" id="th-opt-midnightcherry" onclick="applyTheme('midnightcherry')" title="미드나잇체리">
             <div class="theme-swatch" style="background:#040008">
@@ -11806,7 +11762,7 @@ async function updateStorageInfo(){
   }catch(e){el.innerHTML='<span style="font-size:11px;color:var(--tx3)">로딩 중...</span>';}
 }
 
-const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest','obsidian','aurora','sunset','sakura','matrix','mocha','cyber','gold','grape','void','crimson','neonlime','ice','butter','sagepaper','peachcream','lilacday','turquoise','lavender','cobalt','holo','deepsea','midnightcherry'];
+const THEMES=['dark','light','gray','warm','navy','pastel','mint','rose','slate','forest','obsidian','aurora','sunset','sakura','matrix','mocha','cyber','gold','grape','void','crimson','neonlime','ice','butter','sagepaper','peachcream','turquoise','lavender','cobalt','holo','deepsea','midnightcherry'];
 function applyTheme(t){
   if(!THEMES.includes(t))t='dark';
   document.body.className=t==='dark'?'':'th-'+t;
