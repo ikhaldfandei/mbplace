@@ -17,431 +17,8 @@ html,body{height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;overscr
   --r:6px;
   font-family:'Apple SD Gothic Neo','Malgun Gothic','Nanum Gothic',-apple-system,'Segoe UI',sans-serif;
 }
-/* ── LIGHT THEME ── */
-body.th-light{
-  --bg:#f5f5f5;--surf:#ffffff;--surf2:#f0f0f0;--surf3:#e8e8e8;
-  --bdr:#d0d0d0;--bdr2:#e0e0e0;
-  --tx:#1a1a1a;--tx2:#444444;--tx3:#888888;
-  --ac:#1a6ef5;--ac2:#0d5ce0;
-}
-body.th-light .mbedit{background:#ffffff;color:#1a1a1a}
-body.th-light .scell{background:#ffffff;color:#1a1a1a}
-body.th-light .scell:focus{background:#f0f7ff}
-body.th-light .ql-editor{background:#ffffff;color:#1a1a1a}
-
-/* ── GRAY THEME ── */
-body.th-gray{
-  --bg:#e8e9eb;--surf:#f2f3f5;--surf2:#e0e2e5;--surf3:#d5d7db;
-  --bdr:#b8bcc4;--bdr2:#ced1d7;
-  --tx:#1e2128;--tx2:#40454f;--tx3:#72788a;
-  --ac:#2563eb;--ac2:#1d4ed8;
-}
-body.th-gray .mbedit{background:#f2f3f5;color:#1e2128}
-body.th-gray .scell{background:#f2f3f5;color:#1e2128}
-body.th-gray .scell:focus{background:#e8f0fe}
-
-/* ── WARM WHITE THEME ── */
-body.th-warm{
-  --bg:#fdf6ee;--surf:#ffffff;--surf2:#f5ede0;--surf3:#ede0ce;
-  --bdr:#d9c8b0;--bdr2:#e8dac8;
-  --tx:#2c1f0e;--tx2:#5c4a30;--tx3:#9c8060;
-  --ac:#b85c00;--ac2:#a04e00;
-}
-body.th-warm .mbedit{background:#fffdf8;color:#2c1f0e}
-body.th-warm .scell{background:#fffdf8;color:#2c1f0e}
-body.th-warm .scell:focus{background:#fff5e6}
-
-/* ── NAVY THEME ── */
-body.th-navy{
-  --bg:#0a1628;--surf:#0f2040;--surf2:#162a52;--surf3:#1c3464;
-  --bdr:#2a4a8a;--bdr2:#1e3870;
-  --tx:#dce8ff;--tx2:#a0bcee;--tx3:#607ab8;
-  --ac:#5b8ff9;--ac2:#4070e0;
-}
-body.th-navy .mbedit{background:#0f2040;color:#dce8ff}
-body.th-navy .scell{background:#0a1628;color:#dce8ff}
-
-/* ── PASTEL THEME ── */
-body.th-pastel{
-  --bg:#fef9ff;--surf:#ffffff;--surf2:#f3eeff;--surf3:#e9dfff;
-  --bdr:#d4c5f0;--bdr2:#e4d8f8;
-  --tx:#2d1b5e;--tx2:#5a4080;--tx3:#9880c0;
-  --ac:#8b5cf6;--ac2:#7c3aed;
-  --gn:#34d399;--yw:#f59e0b;--rd:#f87171;--pu:#a78bfa;
-}
-body.th-pastel .mbedit{background:#fffcff;color:#2d1b5e}
-body.th-pastel .scell{background:#fffcff;color:#2d1b5e}
-body.th-pastel .scell:focus{background:#f0e8ff}
-
-/* ── MINT THEME ── */
-body.th-mint{
-  --bg:#f0fdf8;--surf:#ffffff;--surf2:#e0faf2;--surf3:#c8f5e8;
-  --bdr:#a0e8cc;--bdr2:#c0f0dc;
-  --tx:#0a2e20;--tx2:#1a5c3e;--tx3:#4a9a72;
-  --ac:#059669;--ac2:#047857;
-  --gn:#10b981;--yw:#d97706;--rd:#ef4444;
-}
-body.th-mint .mbedit{background:#f8fffc;color:#0a2e20}
-body.th-mint .scell{background:#f8fffc;color:#0a2e20}
-body.th-mint .scell:focus{background:#e0fff4}
-
-/* ── ROSE THEME ── */
-body.th-rose{
-  --bg:#fff1f3;--surf:#ffffff;--surf2:#ffe4e8;--surf3:#ffd0d6;
-  --bdr:#ffa0b0;--bdr2:#ffc0cc;
-  --tx:#3b0a14;--tx2:#7a1c30;--tx3:#c05070;
-  --ac:#e11d48;--ac2:#be123c;
-  --gn:#16a34a;--yw:#ca8a04;--rd:#dc2626;
-}
-body.th-rose .mbedit{background:#fffcfd;color:#3b0a14}
-body.th-rose .scell{background:#fffcfd;color:#3b0a14}
-body.th-rose .scell:focus{background:#ffe8ee}
-
-/* ── SLATE THEME ── */
-body.th-slate{
-  --bg:#1e2533;--surf:#252d3e;--surf2:#2d3748;--surf3:#374151;
-  --bdr:#4a5568;--bdr2:#374151;
-  --tx:#e2e8f0;--tx2:#a0aec0;--tx3:#718096;
-  --ac:#63b3ed;--ac2:#4299e1;
-  --gn:#48bb78;--yw:#ecc94b;--rd:#fc8181;
-}
-body.th-slate .mbedit{background:#252d3e;color:#e2e8f0}
-body.th-slate .scell{background:#1e2533;color:#e2e8f0}
-
-/* ── FOREST THEME ── */
-body.th-forest{
-  --bg:#0d1f12;--surf:#132819;--surf2:#1a3420;--surf3:#224228;
-  --bdr:#2d5c38;--bdr2:#1e4428;
-  --tx:#d4edda;--tx2:#90c49a;--tx3:#5a8a64;
-  --ac:#4caf6e;--ac2:#3d9a5c;
-  --gn:#66bb6a;--yw:#cddc39;--rd:#ef5350;
-}
-body.th-forest .mbedit{background:#132819;color:#d4edda}
-body.th-forest .scell{background:#0d1f12;color:#d4edda}
-
-/* ── 추가 테마 ── */
-
-/* 옵시디언: 깊은 흑자 + 금빛 강조 — 까리함 극한 */
-.th-obsidian{
-  --bg:#0a0a0f;--surf:#12121a;--surf2:#1a1a26;--surf3:#222232;
-  --bdr:#2a2a40;--bdr2:#1e1e2e;
-  --tx:#e8e4d0;--tx2:#b8b090;--tx3:#6a6050;
-  --ac:#c9a84c;--ac2:#b8943a;
-  --gn:#6ab187;--yw:#c9a84c;--rd:#c0624a;
-}
-body.th-obsidian .mbedit{background:#12121a;color:#e8e4d0}
-body.th-obsidian .scell{background:#12121a;color:#e8e4d0}
-body.th-obsidian .scell:focus{background:#1a1a26}
-body.th-obsidian .wc-bar{background:#0a0a0f;color:#6a6050}
-
-/* 오로라: 딥퍼플 + 시안/핑크 그라데이션 강조 — 화려함 */
-.th-aurora{
-  --bg:#0d0d1a;--surf:#121228;--surf2:#181836;--surf3:#1e1e44;
-  --bdr:#2a2a5a;--bdr2:#1e1e44;
-  --tx:#e0d8ff;--tx2:#a090cc;--tx3:#584880;
-  --ac:#7c5cbf;--ac2:#6a4aad;
-  --gn:#4fc3a1;--yw:#f0c060;--rd:#e05555;
-}
-body.th-aurora .mbedit{background:#121228;color:#e0d8ff}
-body.th-aurora .scell{background:#121228;color:#e0d8ff}
-body.th-aurora .scell:focus{background:#181836}
-body.th-aurora .hdr{background:linear-gradient(135deg,#0d0d1a 0%,#1a0d2e 100%)}
-body.th-aurora .wc-bar{background:#0d0d1a;color:#584880}
-
-/* 선셋: 딥 오렌지/마젠타 — 강렬한 화려함 */
-.th-sunset{
-  --bg:#1a0a0d;--surf:#25101a;--surf2:#301525;--surf3:#3a1a2e;
-  --bdr:#5a2540;--bdr2:#3a1a2e;
-  --tx:#ffe8ec;--tx2:#d4909a;--tx3:#8a5060;
-  --ac:#e0486a;--ac2:#c83a5a;
-  --gn:#6aad80;--yw:#f0b040;--rd:#e0486a;
-}
-body.th-sunset .mbedit{background:#25101a;color:#ffe8ec}
-body.th-sunset .scell{background:#25101a;color:#ffe8ec}
-body.th-sunset .scell:focus{background:#301525}
-body.th-sunset .hdr{background:linear-gradient(135deg,#1a0a0d 0%,#2a0d18 100%)}
-body.th-sunset .wc-bar{background:#1a0a0d;color:#8a5060}
-
-/* 사쿠라: 연핑크 화이트 — 부드럽고 화사함 */
-.th-sakura{
-  --bg:#fff5f7;--surf:#ffffff;--surf2:#ffeef2;--surf3:#ffe4ea;
-  --bdr:#f0c0cc;--bdr2:#f8dde2;
-  --tx:#3a1a22;--tx2:#7a4050;--tx3:#c090a0;
-  --ac:#d4508a;--ac2:#c04078;
-  --gn:#5aad7a;--yw:#e0a030;--rd:#d4508a;
-}
-body.th-sakura .mbedit{background:#ffffff;color:#3a1a22}
-body.th-sakura .scell{background:#ffffff;color:#3a1a22}
-body.th-sakura .scell:focus{background:#ffeef2}
-body.th-sakura .wc-bar{background:#fff5f7;color:#c090a0}
-
-/* 매트릭스: 블랙 + 네온 그린 — 해커 감성 */
-.th-matrix{
-  --bg:#000300;--surf:#001a00;--surf2:#002200;--surf3:#003300;
-  --bdr:#004400;--bdr2:#002a00;
-  --tx:#00ff41;--tx2:#00c832;--tx3:#006618;
-  --ac:#00ff41;--ac2:#00cc33;
-  --gn:#00ff41;--yw:#aaff00;--rd:#ff3300;
-}
-body.th-matrix .mbedit{background:#001a00;color:#00ff41}
-body.th-matrix .scell{background:#001a00;color:#00ff41}
-body.th-matrix .scell:focus{background:#002200}
-body.th-matrix .hdr{background:#000300;border-bottom:1px solid #004400}
-body.th-matrix .wc-bar{background:#000300;color:#006618}
-
-/* 모카: 따뜻한 브라운 크림 — 카페 감성 까리함 */
-.th-mocha{
-  --bg:#1a1210;--surf:#251a14;--surf2:#30221a;--surf3:#3a2a20;
-  --bdr:#5a3e30;--bdr2:#402e22;
-  --tx:#f0e0cc;--tx2:#c0a080;--tx3:#806050;
-  --ac:#c07840;--ac2:#a86030;
-  --gn:#7aad6a;--yw:#c09040;--rd:#c05040;
-}
-body.th-mocha .mbedit{background:#251a14;color:#f0e0cc}
-body.th-mocha .scell{background:#251a14;color:#f0e0cc}
-body.th-mocha .scell:focus{background:#30221a}
-body.th-mocha .wc-bar{background:#1a1210;color:#806050}
 
 
-/* ── 추가 테마 ── */
-.th-cyber{
-  --bg:#0a0a0f;--surf:#0f0f1a;--surf2:#14142a;--surf3:#1a1a38;
-  --bdr:#2a2a60;--bdr2:#1e1e48;
-  --tx:#e0e0ff;--tx2:#a0a0e0;--tx3:#6060a0;
-  --ac:#00ff88;--ac2:#00cc66;
-  --gn:#00ff88;--yw:#ffff00;--rd:#ff0060;
-}
-.th-aurora{
-  --bg:#080c18;--surf:#0d1224;--surf2:#121a32;--surf3:#18234a;
-  --bdr:#2e3a6e;--bdr2:#1e2a58;
-  --tx:#d8f0ff;--tx2:#90b8e8;--tx3:#5070a0;
-  --ac:#a78bfa;--ac2:#7c3aed;
-  --gn:#34d399;--yw:#fbbf24;--rd:#f87171;
-}
-.th-sunset{
-  --bg:#1a0a12;--surf:#26101c;--surf2:#341828;--surf3:#421e34;
-  --bdr:#6e2a48;--bdr2:#561e38;
-  --tx:#ffe8f0;--tx2:#e8a0c0;--tx3:#c06080;
-  --ac:#ff6b9d;--ac2:#e0507a;
-  --gn:#4ade80;--yw:#fbbf24;--rd:#ff6b6b;
-}
-.th-gold{
-  --bg:#0e0a00;--surf:#1a1400;--surf2:#241c00;--surf3:#2e2400;
-  --bdr:#5a4400;--bdr2:#403000;
-  --tx:#fff0b0;--tx2:#d4a830;--tx3:#906a00;
-  --ac:#f5c518;--ac2:#d4a010;
-  --gn:#4ade80;--yw:#f5c518;--rd:#ff6b6b;
-}
-.th-grape{
-  --bg:#0e0818;--surf:#150e22;--surf2:#1e1530;--surf3:#271c3e;
-  --bdr:#4a2e80;--bdr2:#341e60;
-  --tx:#ecdcff;--tx2:#c090f0;--tx3:#8050c0;
-  --ac:#d946ef;--ac2:#b020c8;
-  --gn:#34d399;--yw:#fbbf24;--rd:#f87171;
-}
-
-/* 보이드: 순수 블랙 + 흰 텍스트 — 미니멀 극한 */
-.th-void{
-  --bg:#000000;--surf:#0a0a0a;--surf2:#141414;--surf3:#1e1e1e;
-  --bdr:#2a2a2a;--bdr2:#1e1e1e;
-  --tx:#ffffff;--tx2:#b0b0b0;--tx3:#606060;
-  --ac:#ffffff;--ac2:#cccccc;
-  --gn:#00ff88;--yw:#ffdd00;--rd:#ff3333;
-}
-body.th-void .mbedit{background:#0a0a0a;color:#ffffff}
-body.th-void .scell{background:#0a0a0a;color:#ffffff}
-
-/* 크림슨: 딥 레드 + 골드 강조 — 럭셔리 */
-.th-crimson{
-  --bg:#0f0204;--surf:#1a0408;--surf2:#240610;--surf3:#2e0818;
-  --bdr:#8b1a2a;--bdr2:#60101c;
-  --tx:#ffe8e0;--tx2:#d4a090;--tx3:#906050;
-  --ac:#d4a843;--ac2:#b8902e;
-  --gn:#4caf7a;--yw:#d4a843;--rd:#e05555;
-}
-body.th-crimson .mbedit{background:#1a0408;color:#ffe8e0}
-body.th-crimson .scell{background:#1a0408;color:#ffe8e0}
-
-/* 홀로그램: 은색+무지갯빛 — 미래적 홀로그래픽 */
-.th-holo{
-  --bg:#080c10;--surf:#0e1420;--surf2:#141e30;--surf3:#1a2840;
-  --bdr:#304060;--bdr2:#202e48;
-  --tx:#e0f0ff;--tx2:#a0c8f0;--tx3:#6090c0;
-  --ac:#a0f0e8;--ac2:#60d8d0;
-  --gn:#80ffcc;--yw:#ffe080;--rd:#ff80a0;
-}
-body.th-holo .mbedit{background:#0e1420;color:#e0f0ff}
-body.th-holo .scell{background:#0e1420;color:#e0f0ff}
-body.th-holo .hdr{background:linear-gradient(135deg,#0e1420 0%,#141e30 50%,#0e1420 100%)}
-body.th-holo *{border-image:none}
-
-/* 디프씨: 심해 블루블랙 — 발광하는 청록 */
-.th-deepsea{
-  --bg:#000810;--surf:#001020;--surf2:#001a30;--surf3:#002440;
-  --bdr:#004060;--bdr2:#002840;
-  --tx:#c0f8ff;--tx2:#60d0e8;--tx3:#2080a0;
-  --ac:#00e5ff;--ac2:#00b8d4;
-  --gn:#00ffb0;--yw:#ffee00;--rd:#ff4060;
-}
-body.th-deepsea .mbedit{background:#001020;color:#c0f8ff}
-body.th-deepsea .scell{background:#001020;color:#c0f8ff}
-body.th-deepsea .wc-bar{background:#000810;color:#2080a0}
-
-
-
-/* 미드나잇체리: 자정 블루블랙+체리레드 — 극한 대비 */
-.th-midnightcherry{
-  --bg:#040008;--surf:#080010;--surf2:#10001c;--surf3:#180028;
-  --bdr:#600020;--bdr2:#400014;
-  --tx:#fff0f4;--tx2:#f0a0b8;--tx3:#a05070;
-  --ac:#ff1a4a;--ac2:#d8002e;
-  --gn:#40e8a0;--yw:#ffd040;--rd:#ff1a4a;
-}
-body.th-midnightcherry .mbedit{background:#080010;color:#fff0f4}
-body.th-midnightcherry .scell{background:#080010;color:#fff0f4}
-body.th-midnightcherry .wc-bar{background:#040008;color:#a05070}
-
-/* 네온라임: 네온 옐로그린 */
-.th-neonlime{
-  --bg:#010800;--surf:#031200;--surf2:#061e00;--surf3:#092a00;
-  --bdr:#1a5c00;--bdr2:#0e3800;
-  --tx:#e8ff80;--tx2:#a0d840;--tx3:#508020;
-  --ac:#aaff00;--ac2:#88e000;
-  --gn:#aaff00;--yw:#ffee00;--rd:#ff4444;
-}
-body.th-neonlime .mbedit{background:#031200;color:#e8ff80}
-body.th-neonlime .scell{background:#031200;color:#e8ff80}
-body.th-neonlime .wc-bar{background:#010800;color:#508020}
-
-/* 터콰이즈: 에메랄드 딥톤 */
-.th-turquoise{
-  --bg:#021412;--surf:#041e1a;--surf2:#082a24;--surf3:#0c362e;
-  --bdr:#1a6858;--bdr2:#104840;
-  --tx:#d0fff8;--tx2:#80d8c8;--tx3:#409880;
-  --ac:#00d4b8;--ac2:#00b09a;
-  --gn:#00d4b8;--yw:#d4c800;--rd:#e05050;
-}
-body.th-turquoise .mbedit{background:#041e1a;color:#d0fff8}
-body.th-turquoise .scell{background:#041e1a;color:#d0fff8}
-
-/* 라벤더: 라벤더-퍼플 황혼 */
-.th-lavender{
-  --bg:#0e0c1a;--surf:#161228;--surf2:#201a38;--surf3:#2a2248;
-  --bdr:#5848a0;--bdr2:#3c3278;
-  --tx:#e8e0ff;--tx2:#b0a0e0;--tx3:#7060b0;
-  --ac:#9d85f5;--ac2:#7c64e0;
-  --gn:#60d4a0;--yw:#e0c060;--rd:#e07070;
-}
-body.th-lavender .mbedit{background:#161228;color:#e8e0ff}
-body.th-lavender .scell{background:#161228;color:#e8e0ff}
-
-/* 코발트: 코발트 딥블루 — 네이비보다 선명 */
-.th-cobalt{
-  --bg:#020818;--surf:#040e28;--surf2:#081638;--surf3:#0c1e48;
-  --bdr:#1a3a90;--bdr2:#102870;
-  --tx:#d0e4ff;--tx2:#80a8e8;--tx3:#4068b8;
-  --ac:#2d6fef;--ac2:#1a54d0;
-  --gn:#40c888;--yw:#d8c040;--rd:#e05858;
-}
-body.th-cobalt .mbedit{background:#040e28;color:#d0e4ff}
-body.th-cobalt .scell{background:#040e28;color:#d0e4ff}
-
-
-/* ── 추가 밝은 테마 ── */
-
-/* 아이스: 유리빛 블루 화이트 */
-.th-ice{
-  --bg:#f3fbff;--surf:#ffffff;--surf2:#eaf6ff;--surf3:#d9efff;
-  --bdr:#b9dff5;--bdr2:#d8edf9;
-  --tx:#0e2433;--tx2:#36556d;--tx3:#7ca4bc;
-  --ac:#2f80ed;--ac2:#1f6fd9;
-  --gn:#2fbf71;--yw:#d4a017;--rd:#e45858;
-}
-body.th-ice .mbedit{background:#fcfeff;color:#0e2433}
-body.th-ice .scell{background:#fcfeff;color:#0e2433}
-body.th-ice .scell:focus{background:#eef8ff}
-body.th-ice .wc-bar{background:#f3fbff;color:#7ca4bc}
-
-/* 버터: 크리미 옐로 */
-.th-butter{
-  --bg:#fffbea;--surf:#fffef8;--surf2:#fff6d8;--surf3:#ffefbd;
-  --bdr:#ebd89a;--bdr2:#f4e6ba;
-  --tx:#382b12;--tx2:#6f5a2d;--tx3:#b59a5a;
-  --ac:#d4a017;--ac2:#b88a11;
-  --gn:#52a96b;--yw:#d4a017;--rd:#d65b5b;
-}
-body.th-butter .mbedit{background:#fffefb;color:#382b12}
-body.th-butter .scell{background:#fffefb;color:#382b12}
-body.th-butter .scell:focus{background:#fff8e3}
-body.th-butter .wc-bar{background:#fffbea;color:#b59a5a}
-
-/* 세이지페이퍼: 종이톤 그린 */
-.th-sagepaper{
-  --bg:#f4f8f2;--surf:#ffffff;--surf2:#e9f0e4;--surf3:#dbe6d4;
-  --bdr:#bfd0b4;--bdr2:#d8e4d0;
-  --tx:#203024;--tx2:#4b6651;--tx3:#7d9a84;
-  --ac:#5b8c5a;--ac2:#4a7749;
-  --gn:#4fa36a;--yw:#c29b2c;--rd:#c85f5f;
-}
-body.th-sagepaper .mbedit{background:#fcfefb;color:#203024}
-body.th-sagepaper .scell{background:#fcfefb;color:#203024}
-body.th-sagepaper .scell:focus{background:#f0f7eb}
-body.th-sagepaper .wc-bar{background:#f4f8f2;color:#7d9a84}
-
-/* 피치크림: 살구 크림 */
-.th-peachcream{
-  --bg:#fff5ef;--surf:#ffffff;--surf2:#ffebe0;--surf3:#ffd9c8;
-  --bdr:#efbea8;--bdr2:#f7d8c9;
-  --tx:#3b2016;--tx2:#7a4f3a;--tx3:#c08a6a;
-  --ac:#e07a3f;--ac2:#c9652d;
-  --gn:#58a870;--yw:#d89a2b;--rd:#d85c5c;
-}
-body.th-peachcream .mbedit{background:#fffdfb;color:#3b2016}
-body.th-peachcream .scell{background:#fffdfb;color:#3b2016}
-body.th-peachcream .scell:focus{background:#fff2ea}
-body.th-peachcream .wc-bar{background:#fff5ef;color:#c08a6a}
-
-
-
-/* theme switcher UI */
-
-/* ── 추가 밝은/다크 테마 ── */
-.th-matchacream{
-  --bg:#f6f6ea;--surf:#fffef8;--surf2:#f2f2df;--surf3:#e7e7cd;
-  --bdr:#ced4aa;--bdr2:#dde1bf;
-  --tx:#2f3218;--tx2:#596032;--tx3:#8b9564;
-  --ac:#7a8f3a;--ac2:#65772f;
-  --gn:#6aa84f;--yw:#c5a332;--rd:#c65b5b;
-}
-body.th-matchacream .mbedit{background:#fffef8;color:#2f3218}
-body.th-matchacream .scell{background:#fffef8;color:#2f3218}
-body.th-matchacream .scell:focus{background:#f7f7ea}
-body.th-matchacream .wc-bar{background:#f0f0df;color:#8b9564}
-
-.th-apricotmilk{
-  --bg:#fff3ea;--surf:#fffdfa;--surf2:#ffefe4;--surf3:#ffe2d2;
-  --bdr:#f1c4a6;--bdr2:#f6d5bf;
-  --tx:#402319;--tx2:#7b4c37;--tx3:#be8766;
-  --ac:#e58a4e;--ac2:#cf7440;
-  --gn:#63b37b;--yw:#d8a232;--rd:#d85f5f;
-}
-body.th-apricotmilk .mbedit{background:#fffdfa;color:#402319}
-body.th-apricotmilk .scell{background:#fffdfa;color:#402319}
-body.th-apricotmilk .scell:focus{background:#fff5ef}
-body.th-apricotmilk .wc-bar{background:#fff0e4;color:#be8766}
-
-.th-neonstudio{
-  --bg:#0c0f18;--surf:#141a28;--surf2:#1b2234;--surf3:#232c44;
-  --bdr:#33405f;--bdr2:#26314d;
-  --tx:#eef3ff;--tx2:#a7b8dc;--tx3:#6e84b3;
-  --ac:#2de2e6;--ac2:#20c7cb;
-  --gn:#2de2e6;--yw:#ffd166;--rd:#ff4fd8;--pu:#9b7bff;
-}
-body.th-neonstudio .mbedit{background:#141a28;color:#eef3ff}
-body.th-neonstudio .scell{background:#141a28;color:#eef3ff}
-body.th-neonstudio .scell:focus{background:#1b2234}
-body.th-neonstudio .hdr{background:linear-gradient(135deg,#0c0f18 0%,#151c2e 60%,#1f1630 100%)}
-body.th-neonstudio .wc-bar{background:#0f1420;color:#6e84b3}
 
 .th-royalviolet{
   --bg:#140a22;--surf:#1d1030;--surf2:#26173d;--surf3:#31204f;
@@ -454,6 +31,46 @@ body.th-royalviolet .mbedit{background:#1d1030;color:#f2eaff}
 body.th-royalviolet .scell{background:#1d1030;color:#f2eaff}
 body.th-royalviolet .scell:focus{background:#26173d}
 body.th-royalviolet .wc-bar{background:#140a22;color:#8c72b8}
+
+
+.th-cyberpunkpink{
+  --bg:#08030f;--surf:#13081d;--surf2:#1d0d2a;--surf3:#2a123a;
+  --bdr:#6a2bbd;--bdr2:#3d186b;
+  --tx:#ffe6ff;--tx2:#f3a2ff;--tx3:#b46acb;
+  --ac:#ff4fd8;--ac2:#e036be;
+  --gn:#3df5c0;--yw:#ffd166;--rd:#ff6b8a;--pu:#9d4edd;
+}
+body.th-cyberpunkpink .mbedit{background:#13081d;color:#ffe6ff}
+body.th-cyberpunkpink .scell{background:#13081d;color:#ffe6ff}
+body.th-cyberpunkpink .scell:focus{background:#1d0d2a}
+body.th-cyberpunkpink .hdr{background:linear-gradient(135deg,#08030f 0%,#1a0830 55%,#08172a 100%)}
+body.th-cyberpunkpink .wc-bar{background:#0d0616;color:#b46acb}
+
+.th-vogue{
+  --bg:#fff8fb;--surf:#ffffff;--surf2:#fff0f6;--surf3:#ffe0ee;
+  --bdr:#f1bdd6;--bdr2:#f7d7e5;
+  --tx:#181114;--tx2:#5d4450;--tx3:#b57a94;
+  --ac:#e91e63;--ac2:#c2185b;
+  --gn:#3fb980;--yw:#d4af37;--rd:#e85a7b;--pu:#d16ba5;
+}
+body.th-vogue .mbedit{background:#fffdfd;color:#181114}
+body.th-vogue .scell{background:#fffdfd;color:#181114}
+body.th-vogue .scell:focus{background:#fff3f8}
+body.th-vogue .hdr{background:linear-gradient(135deg,#fff8fb 0%,#fff0f6 100%)}
+body.th-vogue .wc-bar{background:#fff5f9;color:#b57a94}
+
+.th-artattack{
+  --bg:#fff7e8;--surf:#fffdf8;--surf2:#fff0c9;--surf3:#ffd9d9;
+  --bdr:#ff8a00;--bdr2:#7c4dff;
+  --tx:#1a1611;--tx2:#5a4331;--tx3:#b15d2a;
+  --ac:#ff006e;--ac2:#d9045a;
+  --gn:#00b894;--yw:#ffbe0b;--rd:#ff006e;--pu:#7c4dff;
+}
+body.th-artattack .mbedit{background:#fffefb;color:#1a1611}
+body.th-artattack .scell{background:#fffefb;color:#1a1611}
+body.th-artattack .scell:focus{background:#fff6df}
+body.th-artattack .hdr{background:linear-gradient(135deg,#fff7e8 0%,#ffe5ec 45%,#e7dcff 100%)}
+body.th-artattack .wc-bar{background:#fff1d6;color:#b15d2a}
 
 .theme-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
 .theme-opt{width:80px;cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s;text-align:center}
@@ -2151,197 +1768,78 @@ input[type=number]{-moz-appearance:textfield}
 <div class="ssec">
 <div class="sstitle">🎨 테마 (화면 색상)</div>
 <div class="theme-grid" id="theme-grid"><div class="theme-opt" id="th-opt-light" onclick="applyTheme('light')" title="화이트">
-<div class="theme-swatch" style="background:#f5f5f5">
-<div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #d0d0d0"></div>
-<div style="height:5px;border-radius:2px;background:#1a6ef5;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#d0d0d0"></div>
-</div>
-<div class="theme-label" style="background:#e8e8e8;color:#888">☀️ 화이트</div>
-</div>
+<div class="theme-swatch" style="background:#f5f5f5"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#e8e8e8"></div></div>
+<div class="theme-label">화이트</div></div>
 <div class="theme-opt" id="th-opt-gray" onclick="applyTheme('gray')" title="그레이">
-<div class="theme-swatch" style="background:#e8e9eb">
-<div style="height:8px;border-radius:2px;background:#f2f3f5;border:1px solid #b8bcc4"></div>
-<div style="height:5px;border-radius:2px;background:#2563eb;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#b8bcc4"></div>
-</div>
-<div class="theme-label" style="background:#d5d7db;color:#72788a">🩶 그레이</div>
-</div>
+<div class="theme-swatch" style="background:#e8e9eb"><div style="height:10px;border-radius:4px;background:#f2f3f5"></div><div style="height:10px;border-radius:4px;background:#d5d7db"></div></div>
+<div class="theme-label">그레이</div></div>
 <div class="theme-opt" id="th-opt-warm" onclick="applyTheme('warm')" title="웜화이트">
-<div class="theme-swatch" style="background:#fdf6ee">
-<div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #d9c8b0"></div>
-<div style="height:5px;border-radius:2px;background:#b85c00;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#d9c8b0"></div>
-</div>
-<div class="theme-label" style="background:#ede0ce;color:#9c8060">🟡 웜화이트</div>
-</div>
+<div class="theme-swatch" style="background:#fdf6ee"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#ede0ce"></div></div>
+<div class="theme-label">웜화이트</div></div>
 <div class="theme-opt" id="th-opt-ice" onclick="applyTheme('ice')" title="아이스">
-<div class="theme-swatch" style="background:#f6fbff">
-<div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #b7d7ee"></div>
-<div style="height:5px;border-radius:2px;background:#4f97ff;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#b7d7ee"></div>
-</div>
-<div class="theme-label" style="background:#eaf6ff;color:#7ca4bc">🧊 아이스</div>
-</div>
+<div class="theme-swatch" style="background:#f3fbff"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#d9efff"></div></div>
+<div class="theme-label">아이스</div></div>
 <div class="theme-opt" id="th-opt-butter" onclick="applyTheme('butter')" title="버터">
-<div class="theme-swatch" style="background:#fff9e8">
-<div style="height:8px;border-radius:2px;background:#fffefb;border:1px solid #e1d3a2"></div>
-<div style="height:5px;border-radius:2px;background:#d3a317;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#e1d3a2"></div>
-</div>
-<div class="theme-label" style="background:#f7efcf;color:#af9550">🧈 버터</div>
-</div>
+<div class="theme-swatch" style="background:#fffbea"><div style="height:10px;border-radius:4px;background:#fffef8"></div><div style="height:10px;border-radius:4px;background:#ffefbd"></div></div>
+<div class="theme-label">버터</div></div>
 <div class="theme-opt" id="th-opt-sagepaper" onclick="applyTheme('sagepaper')" title="세이지">
-<div class="theme-swatch" style="background:#f5f8ef">
-<div style="height:8px;border-radius:2px;background:#fcfefb;border:1px solid #c8d2bc"></div>
-<div style="height:5px;border-radius:2px;background:#6e8f5f;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#c8d2bc"></div>
-</div>
-<div class="theme-label" style="background:#e6eddc;color:#7d9a84">🌿 세이지</div>
-</div>
-<div class="theme-opt" id="th-opt-matchacream" onclick="applyTheme('matchacream')" title="말차크림">
-<div class="theme-swatch" style="background:#f6f6ea">
-<div style="height:8px;border-radius:2px;background:#fffef8;border:1px solid #ced4aa"></div>
-<div style="height:5px;border-radius:2px;background:#7a8f3a;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#ced4aa"></div>
-</div>
-<div class="theme-label" style="background:#e6e8cd;color:#7c8650">🍵 말차크림</div>
-</div>
+<div class="theme-swatch" style="background:#f4f8f2"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#dbe6d4"></div></div>
+<div class="theme-label">세이지</div></div>
 <div class="theme-opt" id="th-opt-peachcream" onclick="applyTheme('peachcream')" title="피치크림">
-<div class="theme-swatch" style="background:#fff5ef">
-<div style="height:8px;border-radius:2px;background:#fffdfb;border:1px solid #efc4b0"></div>
-<div style="height:5px;border-radius:2px;background:#de8a5a;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#efc4b0"></div>
-</div>
-<div class="theme-label" style="background:#ffe8dc;color:#c08a6a">🍑 피치크림</div>
-</div>
-<div class="theme-opt" id="th-opt-apricotmilk" onclick="applyTheme('apricotmilk')" title="애프리콧밀크">
-<div class="theme-swatch" style="background:#fff3ea">
-<div style="height:8px;border-radius:2px;background:#fffdfa;border:1px solid #f1c4a6"></div>
-<div style="height:5px;border-radius:2px;background:#e58a4e;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#f1c4a6"></div>
-</div>
-<div class="theme-label" style="background:#ffe2d2;color:#c68155">🧡 애프리콧밀크</div>
-</div>
+<div class="theme-swatch" style="background:#fff5ef"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#ffd9c8"></div></div>
+<div class="theme-label">피치크림</div></div>
 <div class="theme-opt" id="th-opt-mint" onclick="applyTheme('mint')" title="민트">
-<div class="theme-swatch" style="background:#f0fdf8">
-<div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #a0e8cc"></div>
-<div style="height:5px;border-radius:2px;background:#059669;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#a0e8cc"></div>
-</div>
-<div class="theme-label" style="background:#c8f5e8;color:#4a9a72">🌿 민트</div>
-</div>
+<div class="theme-swatch" style="background:#f0fdf8"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#c8f5e8"></div></div>
+<div class="theme-label">민트</div></div>
 <div class="theme-opt" id="th-opt-rose" onclick="applyTheme('rose')" title="로즈">
-<div class="theme-swatch" style="background:#fff1f3">
-<div style="height:8px;border-radius:2px;background:#ffffff;border:1px solid #ffa0b0"></div>
-<div style="height:5px;border-radius:2px;background:#e11d48;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#ffa0b0"></div>
-</div>
-<div class="theme-label" style="background:#ffd0d6;color:#c05070">🌹 로즈</div>
-</div>
+<div class="theme-swatch" style="background:#fff1f3"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#ffd0d6"></div></div>
+<div class="theme-label">로즈</div></div>
 <div class="theme-opt" id="th-opt-pastel" onclick="applyTheme('pastel')" title="파스텔">
-<div class="theme-swatch" style="background:#fef9ff">
-<div style="height:8px;border-radius:2px;background:#f3eeff;border:1px solid #d4c5f0"></div>
-<div style="height:5px;border-radius:2px;background:#8b5cf6;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#d4c5f0"></div>
-</div>
-<div class="theme-label" style="background:#e9dfff;color:#9880c0">💜 파스텔</div>
-</div>
+<div class="theme-swatch" style="background:#fef9ff"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#e9dfff"></div></div>
+<div class="theme-label">파스텔</div></div>
+
 <div class="theme-opt" id="th-opt-dark" onclick="applyTheme('dark')" title="다크 (기본)">
-<div class="theme-swatch" style="background:#0d1117">
-<div style="height:8px;border-radius:2px;background:#161b22"></div>
-<div style="height:5px;border-radius:2px;background:#388bfd;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#30363d"></div>
-</div>
-<div class="theme-label">🌑 다크</div>
-</div>
+<div class="theme-swatch" style="background:#0d1117"><div style="height:10px;border-radius:4px;background:#161b22"></div><div style="height:10px;border-radius:4px;background:#21262d"></div></div>
+<div class="theme-label">다크</div></div>
 <div class="theme-opt" id="th-opt-navy" onclick="applyTheme('navy')" title="네이비">
-<div class="theme-swatch" style="background:#0a1628">
-<div style="height:8px;border-radius:2px;background:#0f2040"></div>
-<div style="height:5px;border-radius:2px;background:#5b8ff9;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#2a4a8a"></div>
-</div>
-<div class="theme-label" style="background:#162a52;color:#607ab8">🔵 네이비</div>
-</div>
+<div class="theme-swatch" style="background:#0a1628"><div style="height:10px;border-radius:4px;background:#0f2040"></div><div style="height:10px;border-radius:4px;background:#1c3464"></div></div>
+<div class="theme-label">네이비</div></div>
 <div class="theme-opt" id="th-opt-mocha" onclick="applyTheme('mocha')" title="모카">
-<div class="theme-swatch" style="background:#1a1210">
-<div style="height:8px;border-radius:2px;background:#251a14"></div>
-<div style="height:5px;border-radius:2px;background:#c07840;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#5a3e30"></div>
-</div>
-<div class="theme-label" style="background:#30221a;color:#806050">☕ 모카</div>
-</div>
+<div class="theme-swatch" style="background:#1a1210"><div style="height:10px;border-radius:4px;background:#251a14"></div><div style="height:10px;border-radius:4px;background:#3a2a20"></div></div>
+<div class="theme-label">모카</div></div>
 <div class="theme-opt" id="th-opt-aurora" onclick="applyTheme('aurora')" title="오로라">
-<div class="theme-swatch" style="background:#080c18">
-<div style="height:8px;border-radius:2px;background:#0d1224"></div>
-<div style="height:5px;border-radius:2px;background:#a78bfa;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#2e3a6e"></div>
-</div>
-<div class="theme-label" style="background:#121a32;color:#5070a0">🌌 오로라</div>
-</div>
+<div class="theme-swatch" style="background:#080c18"><div style="height:10px;border-radius:4px;background:#0d1224"></div><div style="height:10px;border-radius:4px;background:#18234a"></div></div>
+<div class="theme-label">오로라</div></div>
 <div class="theme-opt" id="th-opt-royalviolet" onclick="applyTheme('royalviolet')" title="로열바이올렛">
-<div class="theme-swatch" style="background:#140a22">
-<div style="height:8px;border-radius:2px;background:#1d1030"></div>
-<div style="height:5px;border-radius:2px;background:#c6a2ff;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#59407c"></div>
-</div>
-<div class="theme-label" style="background:#26173d;color:#8c72b8">👑 로열바이올렛</div>
-</div>
+<div class="theme-swatch" style="background:#140a22"><div style="height:10px;border-radius:4px;background:#1d1030"></div><div style="height:10px;border-radius:4px;background:#31204f"></div></div>
+<div class="theme-label">로열바이올렛</div></div>
 <div class="theme-opt" id="th-opt-cobalt" onclick="applyTheme('cobalt')" title="코발트">
-<div class="theme-swatch" style="background:#020818">
-<div style="height:8px;border-radius:2px;background:#040e28"></div>
-<div style="height:5px;border-radius:2px;background:#2d6fef;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#1a3a90"></div>
-</div>
-<div class="theme-label" style="background:#081638;color:#4068b8">🔷 코발트</div>
-</div>
-<div class="theme-opt" id="th-opt-turquoise" onclick="applyTheme('turquoise')" title="터콰이즈">
-<div class="theme-swatch" style="background:#021412">
-<div style="height:8px;border-radius:2px;background:#041e1a"></div>
-<div style="height:5px;border-radius:2px;background:#00d4b8;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#1a6858"></div>
-</div>
-<div class="theme-label" style="background:#082a24;color:#409880">💧 터콰이즈</div>
-</div>
+<div class="theme-swatch" style="background:#020818"><div style="height:10px;border-radius:4px;background:#040e28"></div><div style="height:10px;border-radius:4px;background:#0c1e48"></div></div>
+<div class="theme-label">코발트</div></div>
 <div class="theme-opt" id="th-opt-holo" onclick="applyTheme('holo')" title="홀로그램">
-<div class="theme-swatch" style="background:#080c10">
-<div style="height:8px;border-radius:2px;background:#0e1420"></div>
-<div style="height:5px;border-radius:2px;background:#a0f0e8;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#304060"></div>
-</div>
-<div class="theme-label" style="background:#141e30;color:#6090c0">✨ 홀로그램</div>
-</div>
+<div class="theme-swatch" style="background:#080c10"><div style="height:10px;border-radius:4px;background:#0e1420"></div><div style="height:10px;border-radius:4px;background:#1a2840"></div></div>
+<div class="theme-label">홀로그램</div></div>
 <div class="theme-opt" id="th-opt-matrix" onclick="applyTheme('matrix')" title="매트릭스">
-<div class="theme-swatch" style="background:#000300">
-<div style="height:8px;border-radius:2px;background:#001a00"></div>
-<div style="height:5px;border-radius:2px;background:#00ff41;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#004400"></div>
-</div>
-<div class="theme-label" style="background:#002200;color:#006618">💻 매트릭스</div>
-</div>
-<div class="theme-opt" id="th-opt-neonstudio" onclick="applyTheme('neonstudio')" title="네온스튜디오">
-<div class="theme-swatch" style="background:#0c0f18">
-<div style="height:8px;border-radius:2px;background:#141a28"></div>
-<div style="height:5px;border-radius:2px;background:#2de2e6;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#ff4fd8"></div>
-</div>
-<div class="theme-label" style="background:#1b2234;color:#7ea0d8">🎛️ 네온스튜디오</div>
-</div>
+<div class="theme-swatch" style="background:#000300"><div style="height:10px;border-radius:4px;background:#001a00"></div><div style="height:10px;border-radius:4px;background:#003300"></div></div>
+<div class="theme-label">매트릭스</div></div>
+<div class="theme-opt" id="th-opt-cyberpunkpink" onclick="applyTheme('cyberpunkpink')" title="사이버펑크핑크">
+<div class="theme-swatch" style="background:#08030f"><div style="height:10px;border-radius:4px;background:#13081d"></div><div style="height:10px;border-radius:4px;background:#2a123a"></div></div>
+<div class="theme-label">사이버펑크핑크</div></div>
 <div class="theme-opt" id="th-opt-void" onclick="applyTheme('void')" title="보이드">
-<div class="theme-swatch" style="background:#000000">
-<div style="height:8px;border-radius:2px;background:#0a0a0a"></div>
-<div style="height:5px;border-radius:2px;background:#ffffff;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#2a2a2a"></div>
-</div>
-<div class="theme-label" style="background:#141414;color:#606060">⬛ 보이드</div>
-</div>
+<div class="theme-swatch" style="background:#000000"><div style="height:10px;border-radius:4px;background:#0a0a0a"></div><div style="height:10px;border-radius:4px;background:#1e1e1e"></div></div>
+<div class="theme-label">보이드</div></div>
 <div class="theme-opt" id="th-opt-midnightcherry" onclick="applyTheme('midnightcherry')" title="미드나잇체리">
-<div class="theme-swatch" style="background:#040008">
-<div style="height:8px;border-radius:2px;background:#080010"></div>
-<div style="height:5px;border-radius:2px;background:#ff1a4a;width:60%"></div>
-<div style="height:5px;border-radius:2px;background:#600020"></div>
+<div class="theme-swatch" style="background:#040008"><div style="height:10px;border-radius:4px;background:#080010"></div><div style="height:10px;border-radius:4px;background:#180028"></div></div>
+<div class="theme-label">미드나잇체리</div></div>
+
+<div class="theme-opt" id="th-opt-vogue" onclick="applyTheme('vogue')" title="보그">
+<div class="theme-swatch" style="background:#fff8fb"><div style="height:10px;border-radius:4px;background:#ffffff"></div><div style="height:10px;border-radius:4px;background:#ffe0ee"></div></div>
+<div class="theme-label">보그</div></div>
+<div class="theme-opt" id="th-opt-artattack" onclick="applyTheme('artattack')" title="아트어택">
+<div class="theme-swatch" style="background:#fff7e8"><div style="height:10px;border-radius:4px;background:#fffdf8"></div><div style="height:10px;border-radius:4px;background:#e7dcff"></div></div>
+<div class="theme-label">아트어택</div></div></div>
 </div>
-<div class="theme-label" style="background:#10001c;color:#a05070">🍒 미드나잇체리</div>
-</div></div>
+</div>
 </div>
 <div class="ssec">
 <div class="sstitle">🔒 비밀번호 변경</div>
@@ -11877,7 +11375,7 @@ async function updateStorageInfo(){
   }catch(e){el.innerHTML='<span style="font-size:11px;color:var(--tx3)">로딩 중...</span>';}
 }
 
-const THEMES=['light','gray','warm','ice','butter','sagepaper','matchacream','peachcream','apricotmilk','mint','rose','pastel','dark','navy','mocha','aurora','royalviolet','cobalt','turquoise','holo','matrix','neonstudio','void','midnightcherry'];
+const THEMES=['light','gray','warm','ice','butter','sagepaper','peachcream','mint','rose','pastel','dark','navy','mocha','aurora','royalviolet','cobalt','holo','matrix','cyberpunkpink','void','midnightcherry','vogue','artattack'];
 function applyTheme(t){
   if(!THEMES.includes(t))t='dark';
   document.body.className=t==='dark'?'':'th-'+t;
