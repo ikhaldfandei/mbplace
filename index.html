@@ -533,7 +533,10 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .mbedit hr{border:none;border-top:1px solid var(--bdr);margin:14px 0}
 .mbedit p{margin:2px 0}
 /* 형광펜 가독성: 배경색만 있고 글자색 지정이 없는 span은 어두운 글자로 고정 */
-.mbedit span[style*="background-color"]:not([style*="color"]){color:#1a1a1a!important}
+/* 형광펜/배경색 텍스트 가독성 보정 */
+.mbedit [data-mb-hl-text="1"]{color:#1a1a1a!important}
+.mbedit span[style*="background-color"]:not([style*="color"]),
+.mbedit span[style*="background:"]:not([style*="color"]){color:#1a1a1a!important}
 /* ── 토글 블록 ── */
 .mb-toggle{margin:4px 0;border-radius:6px;border:1px solid transparent;position:relative}
 .mb-toggle:hover{border-color:var(--bdr2)}
@@ -6040,6 +6043,7 @@ class MBEditor {
     ce.contentEditable='true';ce.spellcheck=true;
     ce.className='mbedit';ce.setAttribute('data-ph',this.ph);
     this._buildTb();
+    this._normalizeHighlightText();
     // 툴바 버튼 클릭 직전(mousedown) 커서 위치 저장
     // — 버튼 click 시 포커스가 이동하기 전에 range를 잡아야 중첩 삽입이 가능
     this.tb.addEventListener('mousedown',()=>{
@@ -6145,7 +6149,7 @@ class MBEditor {
     return s;
   }
   _sep(){const d=document.createElement('span');d.className='mbt-sep';this.tb.appendChild(d);}
-  _exec(cmd,val){this.ce.focus();document.execCommand(cmd,false,val||null);this._change();this._syncBtns();}
+  _exec(cmd,val){this.ce.focus();this._restoreSavedRange();document.execCommand(cmd,false,val||null);this._normalizeHighlightText();this._change();this._syncBtns();}
   _setSize(size){
     this.ce.focus();
     document.execCommand('fontSize',false,'7');
@@ -6169,14 +6173,14 @@ class MBEditor {
       const s=document.createElement('div');
       s.style.cssText=`width:22px;height:22px;background:${c};border-radius:3px;cursor:pointer;border:1px solid rgba(255,255,255,.12)`;
       s.title=c;
-      s.onclick=()=>{this._exec(cmd,c);const b=document.getElementById(barId);if(b)b.style.background=c;pop.remove();};
+      s.onclick=()=>{this.ce.focus();this._restoreSavedRange();this._exec(cmd,c);const b=document.getElementById(barId);if(b)b.style.background=c;pop.remove();};
       g.appendChild(s);
     });
     const row=document.createElement('div');row.style.cssText='padding:4px 8px 8px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--bdr)';
     const ci=document.createElement('input');ci.type='color';ci.value='#ff0000';
     ci.style.cssText='width:30px;height:28px;border:1px solid var(--bdr);border-radius:4px;cursor:pointer;padding:1px;background:var(--surf2)';
     const lbl=document.createElement('span');lbl.textContent='직접 선택';lbl.style.cssText='font-size:11px;color:var(--tx3)';
-    ci.oninput=()=>{this._exec(cmd,ci.value);const b=document.getElementById(barId);if(b)b.style.background=ci.value;};
+    ci.oninput=()=>{this.ce.focus();this._restoreSavedRange();this._exec(cmd,ci.value);const b=document.getElementById(barId);if(b)b.style.background=ci.value;};
     row.append(ci,lbl);pop.append(g,row);
     const r=anchor.getBoundingClientRect();
     pop.style.cssText=`left:${Math.min(r.left,window.innerWidth-230)}px;top:${r.bottom+2}px`;
@@ -6200,7 +6204,9 @@ class MBEditor {
       if(isDark)b.style.color='var(--tx3)';
       b.onclick=()=>{
         this.ce.focus();
+        this._restoreSavedRange();
         document.execCommand('hiliteColor',false,color==='transparent'?'transparent':color);
+        this._normalizeHighlightText();
         const bar=document.getElementById(barId);if(bar&&color!=='transparent')bar.style.background=color;
         this._change();pop.remove();
       };
@@ -6211,7 +6217,7 @@ class MBEditor {
     const ci=document.createElement('input');ci.type='color';ci.value='#ffe066';
     ci.style.cssText='width:30px;height:28px;border:1px solid var(--bdr);border-radius:4px;cursor:pointer;padding:1px;background:var(--surf2)';
     const lbl=document.createElement('span');lbl.textContent='직접 선택';lbl.style.cssText='font-size:11px;color:var(--tx3)';
-    ci.oninput=()=>{this.ce.focus();document.execCommand('hiliteColor',false,ci.value);const b=document.getElementById(barId);if(b)b.style.background=ci.value;this._change();};
+    ci.oninput=()=>{this.ce.focus();this._restoreSavedRange();document.execCommand('hiliteColor',false,ci.value);this._normalizeHighlightText();const b=document.getElementById(barId);if(b)b.style.background=ci.value;this._change();};
     row.append(ci,lbl);
     pop.append(g,row);
     const r=anchor.getBoundingClientRect();
@@ -6219,6 +6225,35 @@ class MBEditor {
     document.body.appendChild(pop);
     setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener('click',h);}},100));
   }
+  _restoreSavedRange(){
+    const saved=this._savedRange;
+    if(!saved) return false;
+    try{
+      const sel=window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(saved);
+      return true;
+    }catch(e){return false;}
+  }
+  _normalizeHighlightText(root=this.ce){
+    if(!root) return;
+    root.querySelectorAll('[style]').forEach(el=>{
+      const bg=(el.style.backgroundColor||'').trim() || (el.style.background||'').trim();
+      const hasBg=!!bg && bg!=='transparent' && bg!=='rgba(0, 0, 0, 0)' && bg!=='rgba(0,0,0,0)';
+      const autoMarked=el.getAttribute('data-mb-hl-text')==='1';
+      if(hasBg){
+        if(!el.style.color){
+          el.style.color='#1a1a1a';
+          el.setAttribute('data-mb-hl-text','1');
+        }
+      }else if(autoMarked){
+        el.style.removeProperty('color');
+        el.removeAttribute('data-mb-hl-text');
+        if(!el.getAttribute('style')) el.removeAttribute('style');
+      }
+    });
+  }
+
   _closeAll(){document.getElementById('mb_pop')?.remove();document.querySelectorAll('.mbdlg').forEach(d=>d.remove());document.querySelector('.tbl-ctx')?.remove();}
 
   // ── 이미지/영상 크기 드래그 조절 ──
@@ -6547,7 +6582,7 @@ class MBEditor {
       } else {
         // 기존 acts가 title 뒤에 있으면 앞으로 이동
         const titleEl=hdr.querySelector('.mb-toggle-title');
-        if(titleEl&&titleEl.compareDocumentPosition(acts)&Node.DOCUMENT_POSITION_FOLLOWING===0){
+        if(titleEl && (titleEl.compareDocumentPosition(acts) & Node.DOCUMENT_POSITION_FOLLOWING)){
           hdr.insertBefore(acts,titleEl);
         }
         // contenteditable="false" 속성 제거
@@ -6861,7 +6896,7 @@ class MBEditor {
       try{const on=document.queryCommandState(cmd);this.tb.querySelectorAll(`[data-cmd="${cmd}"]`).forEach(b=>b.classList.toggle('on',on));}catch(e){}
     });
   }
-  _change(){clearTimeout(this._st);this._st=setTimeout(()=>this.cb(this.ce.innerHTML),400);}
+  _change(){this._normalizeHighlightText();clearTimeout(this._st);this._st=setTimeout(()=>this.cb(this.ce.innerHTML),400);}
   get html(){return this.ce.innerHTML;}
   set html(v){
     this.ce.innerHTML=v||'';
