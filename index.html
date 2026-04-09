@@ -2227,6 +2227,19 @@ input[type=number]{-moz-appearance:textfield}
     <!-- ── SETTINGS ── -->
     <div class="panel" id="psettings">
       <div class="ssec">
+        <div class="sstitle">🔒 비밀번호 변경</div>
+        <div class="srow"><span class="slabel">현재 비밀번호</span><input type="password" class="sinput" id="cpw" placeholder="현재 비밀번호"></div>
+        <div class="srow"><span class="slabel">새 비밀번호</span><input type="password" class="sinput" id="npw" placeholder="새 비밀번호 (4자 이상)"></div>
+        <div class="srow"><span class="slabel">비밀번호 확인</span><input type="password" class="sinput" id="npw2" placeholder="새 비밀번호 재입력"></div>
+        <div class="srow"><button class="btn" onclick="changePw()">변경하기</button><span id="pwmsg" style="font-size:12px;margin-left:4px"></span></div>
+      </div>
+      <div class="ssec">
+        <div class="sstitle">👥 클라이언트 관리 <span style="font-size:11px;color:var(--tx3);font-weight:400">(할당량 변경 → 트래커 즉시 반영)</span></div>
+        <div style="font-size:11px;color:var(--tx3);background:var(--surf2);padding:8px 12px;border-radius:6px;border-left:3px solid var(--ac);margin-bottom:10px;line-height:1.7">💡 여기서 추가/삭제한 클라이언트는 <b>보고서 탭</b>에 자동 반영됩니다.<br>텀블벅·집필·출판사 정산 등 다른 항목은 <b>출판 탭</b> 안에서 직접 관리해주세요.</div>
+        <div id="cleditor"></div>
+        <button class="btn btng" style="margin-top:4px" onclick="addClient()">＋ 클라이언트 추가</button>
+      </div>
+      <div class="ssec">
         <div class="sstitle">🎨 테마 (화면 색상)</div>
         
 <div class="theme-grid" id="theme-grid">
@@ -2450,19 +2463,6 @@ input[type=number]{-moz-appearance:textfield}
           </div>
         </div>
 </div>
-      </div>
-      <div class="ssec">
-        <div class="sstitle">🔒 비밀번호 변경</div>
-        <div class="srow"><span class="slabel">현재 비밀번호</span><input type="password" class="sinput" id="cpw" placeholder="현재 비밀번호"></div>
-        <div class="srow"><span class="slabel">새 비밀번호</span><input type="password" class="sinput" id="npw" placeholder="새 비밀번호 (4자 이상)"></div>
-        <div class="srow"><span class="slabel">비밀번호 확인</span><input type="password" class="sinput" id="npw2" placeholder="새 비밀번호 재입력"></div>
-        <div class="srow"><button class="btn" onclick="changePw()">변경하기</button><span id="pwmsg" style="font-size:12px;margin-left:4px"></span></div>
-      </div>
-      <div class="ssec">
-        <div class="sstitle">👥 클라이언트 관리 <span style="font-size:11px;color:var(--tx3);font-weight:400">(할당량 변경 → 트래커 즉시 반영)</span></div>
-        <div style="font-size:11px;color:var(--tx3);background:var(--surf2);padding:8px 12px;border-radius:6px;border-left:3px solid var(--ac);margin-bottom:10px;line-height:1.7">💡 여기서 추가/삭제한 클라이언트는 <b>보고서 탭</b>에 자동 반영됩니다.<br>텀블벅·집필·출판사 정산 등 다른 항목은 <b>출판 탭</b> 안에서 직접 관리해주세요.</div>
-        <div id="cleditor"></div>
-        <button class="btn btng" style="margin-top:4px" onclick="addClient()">＋ 클라이언트 추가</button>
       </div>
       <div class="ssec">
         <div class="sstitle">💾 Google Drive 동기화 <span style="font-size:11px;color:var(--tx3);font-weight:400">— 집/회사 어디서든 같은 데이터 사용</span></div>
