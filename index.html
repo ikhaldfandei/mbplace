@@ -5923,8 +5923,14 @@ async function restoreLastSession(){
     if(!raw)return;
     const sess=JSON.parse(raw);
     // 스케줄 월 먼저 복원 — switchTab() 안에서 saveLastSession()이 호출되기 전에 복원해야 함
-    if(sess.sy)S.sy=sess.sy;
-    if(sess.sm)S.sm=sess.sm;
+    // 단, 저장된 달이 오늘보다 과거면 오늘 날짜 사용 (3월 고정 버그 방지)
+    if(sess.sy && sess.sm){
+      const today=new Date();
+      const todayY=today.getFullYear(), todayM=today.getMonth()+1;
+      const isFuture=(sess.sy>todayY)||(sess.sy===todayY&&sess.sm>=todayM);
+      if(isFuture){ S.sy=sess.sy; S.sm=sess.sm; }
+      // 과거면 S.sy/S.sm은 이미 new Date()로 초기화된 오늘 날짜 유지
+    }
     // 탭 복원
     const tab=sess.tab||'notes';
     switchTab(tab);
@@ -11549,7 +11555,7 @@ async function gdPush(auto=false){
   if(!auto) gdBar('💾 Google Drive에 저장 중...','ing',0);
   gdLog('저장 중...');
   try{
-    const payload = JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,reports:S.reports,pub:S.pub,pubFiles:S.pubFiles,v:3,date:new Date().toISOString()});
+    const payload = JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,reports:S.reports,pub:S.pub,pubFiles:S.pubFiles,cusProjects:S.cusProjects,v:3,date:new Date().toISOString()});
     const blob = new Blob([payload], {type:'application/json'});
     const existing = await gdFindFile(token, GD_FNAME);
     const boundary = '-------mbhub_boundary';
@@ -11596,6 +11602,7 @@ async function gdPull(){
     if(d.reports)S.reports=d.reports;
     if(d.pub)S.pub=d.pub;
     if(d.pubFiles)S.pubFiles=d.pubFiles;
+    if(d.cusProjects)S.cusProjects=d.cusProjects;
     // pub 기본 폴더 초기화 (최초 1회)
     if(!S.pub||!S.pub.length){
       S.pub=[
