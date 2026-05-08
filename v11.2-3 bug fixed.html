@@ -7962,6 +7962,17 @@ function getWeeks(y,m){
   }
   return wks;
 }
+// 커스텀 탭 전용: 7일(월~일) 반환
+function getWeeks7(y,m){
+  const dim=new Date(y,m,0).getDate();const dow=new Date(y,m-1,1).getDay();const off=dow===0?-6:1-dow;
+  let mon=1+off;const wks=[];
+  while(mon<=dim){
+    const wk=[];let any=false;
+    for(let d=0;d<7;d++){const day=mon+d;wk.push(day>=1&&day<=dim?day:null);if(day>=1&&day<=dim)any=true;}
+    if(any)wks.push(wk);mon+=7;
+  }
+  return wks;
+}
 function mkey(y,m){return y+'-'+String(m).padStart(2,'0');}
 function getCell(y,m,wi,ch,di){return S.scheds[mkey(y,m)]?.cells?.['w'+wi+'-'+ch+'-'+di]||'';}
 function setCell(y,m,wi,ch,di,v){const k=mkey(y,m);if(!S.scheds[k])S.scheds[k]={cells:{}};S.scheds[k].cells['w'+wi+'-'+ch+'-'+di]=v;}
@@ -10903,20 +10914,24 @@ function renderCusSched(){
   hint.innerHTML='✏️ 셀에 <b>(태스크명)</b> 형식으로 입력하면 트래커에 자동 집계됩니다. 예: <span style="background:rgba(56,139,253,.15);padding:1px 5px;border-radius:3px">(기획) 변호사물자료집</span>';
   main.appendChild(hint);
 
-  const weeks=getWeeks(S.sy,S.sm);
+  const DY7=['월','화','수','목','금','토','일'];
+  const weeks=getWeeks7(S.sy,S.sm);
   const now=new Date(), itm=S.sy===now.getFullYear()&&S.sm===now.getMonth()+1, td=now.getDate();
 
   weeks.forEach((wk,wi)=>{
     const sec=document.createElement('div'); sec.className='weeksec';
     const hdr=document.createElement('div'); hdr.className='wkhdr';
+    hdr.style.gridTemplateColumns='88px repeat(7,1fr)';
     const wlbl=document.createElement('div'); wlbl.className='wkhdrcell';
     wlbl.style.cssText='display:flex;align-items:center;justify-content:space-between;cursor:default';
     const wt=document.createElement('span'); wt.textContent=(wi+1)+'주차'; wlbl.appendChild(wt);
     hdr.appendChild(wlbl);
     wk.forEach((d,di)=>{
       const isToday=itm&&d===td;
+      const isWeekend=di>=5;
       const cv=document.createElement('div'); cv.className='wkhdrcell'+(isToday?' today-hdr':'');
-      cv.innerHTML=DY[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
+      if(isWeekend) cv.style.color=di===5?'var(--ac)':'var(--rd)'; // 토=파랑, 일=빨강
+      cv.innerHTML=DY7[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
       hdr.appendChild(cv);
     });
     sec.appendChild(hdr);
@@ -10924,23 +10939,27 @@ function renderCusSched(){
     // 프로젝트 행
     (S.cusProjects.length?S.cusProjects:[{id:'empty',name:'(프로젝트를 추가하세요)',milestones:[]}]).forEach(proj=>{
       const row=document.createElement('div'); row.className='crow';
+      row.style.gridTemplateColumns='88px repeat(7,1fr)';
       const lbl=document.createElement('div'); lbl.className='clabel';
       lbl.style.color='var(--ac)';
       lbl.textContent=proj.name||'(이름 없음)'; row.appendChild(lbl);
       wk.forEach((d,di)=>{
+        const isWeekend=di>=5;
         if(d){
           const k=cusCellKey(proj.id,wi,di);
           const cell=document.createElement('div'); cell.className='scell';
           cell.contentEditable='true'; cell.spellcheck=false;
           cell.textContent=S.scheds[k]||'';
-          cell.style.cssText='white-space:pre-wrap;word-break:break-all;min-height:36px';
+          cell.style.cssText='white-space:pre-wrap;word-break:break-all;min-height:36px'+(isWeekend?';background:rgba(56,139,253,.04)':'');
           cell.oninput=()=>{
             S.scheds[k]=cell.textContent;
             dsave(); renderCusTrk();
           };
           row.appendChild(cell);
         } else {
-          const cell=document.createElement('div'); cell.className='scell off'; row.appendChild(cell);
+          const cell=document.createElement('div'); cell.className='scell off';
+          if(isWeekend) cell.style.background='rgba(56,139,253,.04)';
+          row.appendChild(cell);
         }
       });
       sec.appendChild(row);
