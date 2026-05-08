@@ -1032,7 +1032,7 @@ input[type=number]{-moz-appearance:textfield}
 
 /* ── 셀 일괄 선택 ── */
 .scell.multi-sel{outline:2px solid var(--ac)!important;outline-offset:-2px;background:rgba(56,139,253,0.10)!important}
-/* ── 반복 일정 / 주간 요약 모달 ── */
+/* ── 주간 업무 요약 모달 ── */
 .sched-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9998;display:flex;align-items:center;justify-content:center}
 .sched-modal{background:var(--surf);border-radius:12px;padding:20px 22px;width:360px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.4);overflow:hidden}
 .sched-modal-body{overflow-y:auto;flex:1}
@@ -2099,7 +2099,6 @@ input[type=number]{-moz-appearance:textfield}
 <div id="sched-deadlines" style="display:flex;align-items:flex-start;align-content:flex-start;gap:4px;flex-wrap:wrap;flex:1;padding:6px 10px;overflow:hidden"></div>
 <!-- 3그리드: 공통 버튼 (가로 배열) -->
 <div style="display:flex;flex-direction:row;align-items:center;gap:4px;padding:6px 8px;border-left:1px solid var(--bdr);flex-shrink:0">
-  <button class="icobtn" onclick="S.schedMode==='cus'?openRepeatFillCus():openRepeatFill()" title="반복 일정 자동 채우기">🔁</button>
   <button class="icobtn" onclick="S.schedMode==='cus'?exportSchedCusJpg():exportSchedJpg()" title="월간스케줄 JPG 내보내기">🖼</button>
 </div>
 </div>
@@ -10454,76 +10453,9 @@ function handleCellInput(cell, y, m, wi, ch, di){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  6. 반복 일정 자동 채우기
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function openRepeatFill(){
-  document.querySelector('.sched-modal-bg')?.remove();
-  const bg=document.createElement('div');bg.className='sched-modal-bg';
-  bg.onclick=e=>{if(e.target===bg)bg.remove();};
-
-  const box=document.createElement('div');box.className='sched-modal';
-  box.innerHTML=`
-    <div style="font-size:14px;font-weight:700;color:var(--tx)">🔁 반복 일정 자동 채우기</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">채널</div>
-        <select id="rf-ch" class="sinput" style="width:100%">
-          ${CH.filter(c=>c!=='월간보고서').map(c=>`<option value="${c}">${c}</option>`).join('')}
-        </select>
-      </div>
-      <div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">요일</div>
-        <div style="display:flex;gap:6px" id="rf-dow">
-          ${['월','화','수','목','금'].map((d,i)=>`<button type="button" data-di="${i}" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--bdr);cursor:pointer;font-size:12px;background:var(--surf2);color:var(--tx2)">${d}</button>`).join('')}
-        </div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">입력 내용</div>
-        <input id="rf-val" class="sinput" style="width:100%;box-sizing:border-box" placeholder="예: (동탄)블로그">
-      </div>
-    </div>
-    <div style="font-size:10px;color:var(--tx3)">💡 이미 내용 있는 셀은 뒤에 쉼표로 추가됩니다</div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btng" onclick="this.closest('.sched-modal-bg').remove()">취소</button>
-      <button class="btn" style="background:var(--ac)" onclick="doRepeatFill(this)">이번 달에 채우기</button>
-    </div>`;
-
-  // 요일 토글
-  box.querySelectorAll('#rf-dow button').forEach(btn=>{
-    btn.onclick=()=>{
-      const on=btn.dataset.on==='1';
-      btn.dataset.on=on?'0':'1';
-      btn.style.background=on?'var(--surf2)':'var(--ac)';
-      btn.style.color=on?'var(--tx2)':'#fff';
-    };
-  });
-  bg.appendChild(box);document.body.appendChild(bg);
-  box.querySelector('#rf-val').focus();
-}
-
-function doRepeatFill(btn){
-  const bg=btn.closest('.sched-modal-bg');
-  const ch=document.getElementById('rf-ch')?.value;
-  const val=document.getElementById('rf-val')?.value.trim();
-  if(!ch||!val){toast('채널과 입력 내용을 모두 입력해주세요.',true);return;}
-  const selDis=[...bg.querySelectorAll('#rf-dow button[data-on="1"]')].map(b=>parseInt(b.dataset.di));
-  if(!selDis.length){toast('요일을 하나 이상 선택해주세요.',true);return;}
-  const y=S.sy,m=S.sm;
-  const weeks=getWeeks(y,m);
-  let count=0;
-  weeks.forEach((wk,wi)=>{
-    wk.forEach((d,di)=>{
-      if(!d||!selDis.includes(di))return;
-      const cur=getCell(y,m,wi,ch,di)||'';
-      const merged=cur?cur+','+val:val;
-      setCell(y,m,wi,ch,di,merged);
-      count++;
-    });
-  });
-  dsave();renderSched();bg.remove();
-  toast(`${count}개 셀에 채웠습니다.`);
-}
-
+//  6. 주간 업무 요약
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  7. 주간 업무 요약
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -10840,132 +10772,6 @@ function setSchedMode(m){
   const deadlines=document.getElementById('sched-deadlines');
   if(deadlines) deadlines.style.visibility=m==='mkt'?'visible':'hidden';
   renderSched();
-}
-function openRepeatFillCus(){
-  if(!S.cusProjects.length){toast('먼저 트래커에 프로젝트를 추가하세요.',true);return;}
-  const bg=document.createElement('div');
-  bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;display:flex;align-items:center;justify-content:center';
-  const box=document.createElement('div');
-  box.style.cssText='background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:22px;width:360px;max-width:95vw;display:flex;flex-direction:column;gap:14px';
-  box.innerHTML=`
-    <div style="font-size:15px;font-weight:700;color:var(--tx)">🔁 반복 일정 자동 채우기</div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <label style="font-size:11px;color:var(--tx3);font-weight:600">프로젝트</label>
-      <select id="crf-proj" style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);padding:6px 8px;font-family:inherit;font-size:12px;outline:none">
-        ${S.cusProjects.map(p=>`<option value="${p.id}">${p.name||'(이름 없음)'}</option>`).join('')}
-      </select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px" id="crf-task-wrap">
-      <label style="font-size:11px;color:var(--tx3);font-weight:600">태스크 (마일스톤)</label>
-      <select id="crf-task" style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);padding:6px 8px;font-family:inherit;font-size:12px;outline:none"></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <label style="font-size:11px;color:var(--tx3);font-weight:600">추가 메모 <span style="font-weight:400;opacity:.6">(선택사항)</span></label>
-      <input id="crf-memo" type="text" placeholder="예: 변호사물자료집" style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);padding:6px 8px;font-family:inherit;font-size:12px;outline:none;width:100%">
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <label style="font-size:11px;color:var(--tx3);font-weight:600">반복 방식</label>
-      <div style="display:flex;gap:8px">
-        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--tx)">
-          <input type="radio" name="crf-mode" value="day" checked id="crf-mode-day"> 요일 반복
-        </label>
-        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--tx)">
-          <input type="radio" name="crf-mode" value="date" id="crf-mode-date"> 날짜 지정
-        </label>
-      </div>
-    </div>
-    <!-- 요일 선택 -->
-    <div id="crf-days-wrap" style="display:flex;flex-direction:column;gap:8px">
-      <label style="font-size:11px;color:var(--tx3);font-weight:600">요일 선택</label>
-      <div style="display:flex;gap:6px">
-        ${['월','화','수','목','금'].map((d,i)=>`<label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-size:11px;color:var(--tx2)"><input type="checkbox" value="${i}" class="crf-day-chk" style="accent-color:var(--ac)"> ${d}</label>`).join('')}
-      </div>
-    </div>
-    <!-- 날짜 지정 -->
-    <div id="crf-date-wrap" style="display:none;flex-direction:column;gap:8px">
-      <label style="font-size:11px;color:var(--tx3);font-weight:600">날짜 입력 <span style="font-weight:400;opacity:.6">(콤마로 구분, 예: 10, 25)</span></label>
-      <input id="crf-dates" type="text" placeholder="예: 10, 25" style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);padding:6px 8px;font-family:inherit;font-size:12px;outline:none;width:100%">
-    </div>
-    <div style="font-size:11px;color:var(--tx3);background:var(--surf2);border-radius:6px;padding:7px 10px" id="crf-preview">셀 입력 예시: —</div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn" onclick="this.closest('[style*=fixed]').remove()">취소</button>
-      <button class="btn" style="background:var(--ac);color:#fff" onclick="doCusRepeatFill(this)">이번 달에 채우기</button>
-    </div>`;
-  bg.appendChild(box); document.body.appendChild(bg);
-
-  // 태스크 목록 업데이트
-  function updateTasks(){
-    const pid=parseInt(document.getElementById('crf-proj').value);
-    const proj=S.cusProjects.find(p=>p.id===pid);
-    const sel=document.getElementById('crf-task');
-    sel.innerHTML='<option value="">직접 입력 (메모만 사용)</option>'+
-      (proj?.milestones||[]).map(ms=>`<option value="${ms.name}">${ms.name}</option>`).join('');
-    updatePreview();
-  }
-  function updatePreview(){
-    const task=document.getElementById('crf-task').value;
-    const memo=document.getElementById('crf-memo').value.trim();
-    let text=task?`(${task})`:'';
-    if(memo) text+=(text?' ':'')+memo;
-    document.getElementById('crf-preview').textContent='셀 입력 예시: '+(text||'(태스크 또는 메모를 입력하세요)');
-  }
-  // 반복 방식 전환
-  document.querySelectorAll('input[name="crf-mode"]').forEach(r=>{
-    r.onchange=()=>{
-      const isDay=document.getElementById('crf-mode-day').checked;
-      document.getElementById('crf-days-wrap').style.display=isDay?'flex':'none';
-      document.getElementById('crf-date-wrap').style.display=isDay?'none':'flex';
-    };
-  });
-  document.getElementById('crf-proj').onchange=updateTasks;
-  document.getElementById('crf-task').onchange=updatePreview;
-  document.getElementById('crf-memo').oninput=updatePreview;
-  updateTasks();
-}
-function doCusRepeatFill(btn){
-  const task=document.getElementById('crf-task').value;
-  const memo=document.getElementById('crf-memo').value.trim();
-  let text=task?`(${task})`:'';
-  if(memo) text+=(text?' ':'')+memo;
-  if(!text){toast('태스크 또는 메모를 입력하세요.',true);return;}
-
-  const pid=parseInt(document.getElementById('crf-proj').value);
-  const proj=S.cusProjects.find(p=>p.id===pid);
-  if(!proj){toast('프로젝트를 선택하세요.',true);return;}
-
-  const isDay=document.getElementById('crf-mode-day').checked;
-  const weeks=getWeeks(S.sy,S.sm);
-  let count=0;
-
-  if(isDay){
-    const checkedDays=[...document.querySelectorAll('.crf-day-chk:checked')].map(c=>parseInt(c.value));
-    if(!checkedDays.length){toast('요일을 하나 이상 선택하세요.',true);return;}
-    weeks.forEach((wk,wi)=>{
-      wk.forEach((d,di)=>{
-        if(!d||!checkedDays.includes(di)) return;
-        const k=cusCellKey(proj.id,wi,di);
-        const cur=S.scheds[k]||'';
-        S.scheds[k]=cur?(cur+'\n'+text):text;
-        count++;
-      });
-    });
-  } else {
-    const raw=document.getElementById('crf-dates').value;
-    const targetDays=raw.split(',').map(s=>parseInt(s.trim())).filter(n=>n>=1&&n<=31);
-    if(!targetDays.length){toast('날짜를 입력하세요. 예: 10, 25',true);return;}
-    weeks.forEach((wk,wi)=>{
-      wk.forEach((d,di)=>{
-        if(!d||!targetDays.includes(d)) return;
-        const k=cusCellKey(proj.id,wi,di);
-        const cur=S.scheds[k]||'';
-        S.scheds[k]=cur?(cur+'\n'+text):text;
-        count++;
-      });
-    });
-  }
-  dsave(); renderCusSched();
-  btn.closest('[style*=fixed]').remove();
-  toast(`✓ ${count}개 셀에 입력했습니다.`);
 }
 function exportSchedCusJpg(){ exportSchedJpg(); }
 
