@@ -735,6 +735,9 @@ body{background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .today-hdr{background:rgba(56,139,253,.18)!important;color:var(--ac)!important;font-weight:700!important;}
 .wkhdr{display:grid;grid-template-columns:72px repeat(5,1fr);background:var(--surf2);border-bottom:1px solid var(--bdr)}
 .wkhdrcell{padding:6px;font-size:11px;font-weight:600;color:var(--tx3);text-align:center;border-right:1px solid var(--bdr)}
+/* 커스텀 탭 주말 색상 — 테마 무관하게 항상 유지 */
+.cus-sat{color:#58a6ff!important}
+.cus-sun{color:#f85149!important}
 .wkhdrcell:first-child{text-align:left;color:var(--ac);padding-left:8px}
 .wkhdrcell:last-child{border-right:none}
 .wkdate{display:block;font-size:10px;color:var(--tx3);font-weight:400;margin-top:1px}
@@ -7962,14 +7965,16 @@ function getWeeks(y,m){
   }
   return wks;
 }
-// 커스텀 탭 전용: 7일(월~일) 반환
+// 커스텀 탭 전용: 7일(일~토) 반환 — 한국 달력 표준 순서
 function getWeeks7(y,m){
-  const dim=new Date(y,m,0).getDate();const dow=new Date(y,m-1,1).getDay();const off=dow===0?-6:1-dow;
-  let mon=1+off;const wks=[];
-  while(mon<=dim){
+  const dim=new Date(y,m,0).getDate();
+  const dow=new Date(y,m-1,1).getDay(); // 0=일,1=월...6=토
+  let sun=1-dow; // 해당 달 1일을 포함한 주의 일요일 날짜
+  const wks=[];
+  while(sun<=dim){
     const wk=[];let any=false;
-    for(let d=0;d<7;d++){const day=mon+d;wk.push(day>=1&&day<=dim?day:null);if(day>=1&&day<=dim)any=true;}
-    if(any)wks.push(wk);mon+=7;
+    for(let d=0;d<7;d++){const day=sun+d;wk.push(day>=1&&day<=dim?day:null);if(day>=1&&day<=dim)any=true;}
+    if(any)wks.push(wk);sun+=7;
   }
   return wks;
 }
@@ -10914,7 +10919,7 @@ function renderCusSched(){
   hint.innerHTML='✏️ 셀에 <b>(태스크명)</b> 형식으로 입력하면 트래커에 자동 집계됩니다. 예: <span style="background:rgba(56,139,253,.15);padding:1px 5px;border-radius:3px">(기획) 변호사물자료집</span>';
   main.appendChild(hint);
 
-  const DY7=['월','화','수','목','금','토','일'];
+  const DY7=['일','월','화','수','목','금','토']; // 일월화수목금토 순서
   const weeks=getWeeks7(S.sy,S.sm);
   const now=new Date(), itm=S.sy===now.getFullYear()&&S.sm===now.getMonth()+1, td=now.getDate();
 
@@ -10928,9 +10933,9 @@ function renderCusSched(){
     hdr.appendChild(wlbl);
     wk.forEach((d,di)=>{
       const isToday=itm&&d===td;
-      const isWeekend=di>=5;
-      const cv=document.createElement('div'); cv.className='wkhdrcell'+(isToday?' today-hdr':'');
-      if(isWeekend) cv.style.color=di===5?'var(--ac)':'var(--rd)'; // 토=파랑, 일=빨강
+      const isSun=di===0, isSat=di===6;
+      const cv=document.createElement('div');
+      cv.className='wkhdrcell'+(isToday?' today-hdr':'')+(isSat?' cus-sat':isSun?' cus-sun':'');
       cv.innerHTML=DY7[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
       hdr.appendChild(cv);
     });
@@ -10944,13 +10949,14 @@ function renderCusSched(){
       lbl.style.color='var(--ac)';
       lbl.textContent=proj.name||'(이름 없음)'; row.appendChild(lbl);
       wk.forEach((d,di)=>{
-        const isWeekend=di>=5;
+        const isSun=di===0, isSat=di===6;
+        const weekendBg=isSun?'rgba(248,81,73,.05)':isSat?'rgba(88,166,255,.05)':'';
         if(d){
           const k=cusCellKey(proj.id,wi,di);
           const cell=document.createElement('div'); cell.className='scell';
           cell.contentEditable='true'; cell.spellcheck=false;
           cell.textContent=S.scheds[k]||'';
-          cell.style.cssText='white-space:pre-wrap;word-break:break-all;min-height:36px'+(isWeekend?';background:rgba(56,139,253,.04)':'');
+          cell.style.cssText='white-space:pre-wrap;word-break:break-all;min-height:36px'+(weekendBg?`;background:${weekendBg}`:'');
           cell.oninput=()=>{
             S.scheds[k]=cell.textContent;
             dsave(); renderCusTrk();
@@ -10958,7 +10964,7 @@ function renderCusSched(){
           row.appendChild(cell);
         } else {
           const cell=document.createElement('div'); cell.className='scell off';
-          if(isWeekend) cell.style.background='rgba(56,139,253,.04)';
+          if(weekendBg) cell.style.background=weekendBg;
           row.appendChild(cell);
         }
       });
