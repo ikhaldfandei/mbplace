@@ -4,7 +4,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1.0" name="viewport"/>
-<title>마케팅 허브</title>
+<title>마이 허브</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❤️</text></svg>">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-overflow-scrolling:touch}
@@ -1915,7 +1916,7 @@ input[type=number]{-moz-appearance:textfield}
 <meta content="yes" name="mobile-web-app-capable"/>
 <meta content="yes" name="apple-mobile-web-app-capable"/>
 <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
-<meta content="마케팅 허브" name="apple-mobile-web-app-title"/>
+<meta content="마이 허브" name="apple-mobile-web-app-title"/>
 <script async="" defer="" src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
@@ -1923,7 +1924,7 @@ input[type=number]{-moz-appearance:textfield}
 <div id="lscreen">
 <div class="lcard">
 <div class="llogo">MB</div>
-<div class="ltitle">마케팅 허브</div>
+<div class="ltitle">마이 허브</div>
 <div class="lsub">업무 통합 관리 시스템</div>
 <input autocomplete="off" class="linput" id="pwinput" placeholder="비밀번호 입력" type="password"/>
 <button class="lbtn" onclick="doLogin()">로그인</button>
@@ -3036,7 +3037,7 @@ function sendNotification(title, body, icon){
 
 // 알림 테스트
 function testAlarm(){
-  sendNotification('🔔 마케팅 허브 알림 테스트','알림이 정상적으로 작동합니다!');
+  sendNotification('🔔 마이 허브 알림 테스트','알림이 정상적으로 작동합니다!');
 }
 
 // 알림 설정 저장
@@ -10840,8 +10841,132 @@ function setSchedMode(m){
   if(deadlines) deadlines.style.visibility=m==='mkt'?'visible':'hidden';
   renderSched();
 }
-// 커스텀 모드 전용 함수 (추후 구현, 우선 마케팅 함수 재사용)
-function openRepeatFillCus(){ openRepeatFill(); }
+function openRepeatFillCus(){
+  if(!S.cusProjects.length){toast('먼저 트래커에 프로젝트를 추가하세요.',true);return;}
+  const bg=document.createElement('div');
+  bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:3000;display:flex;align-items:center;justify-content:center';
+  const box=document.createElement('div');
+  box.style.cssText='background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:22px;width:360px;max-width:95vw;display:flex;flex-direction:column;gap:14px';
+  box.innerHTML=`
+    <div style="font-size:15px;font-weight:700;color:var(--tx)">🔁 반복 일정 자동 채우기</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label style="font-size:11px;color:var(--tx3);font-weight:600">프로젝트</label>
+      <select id="crf-proj" style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);padding:6px 8px;font-family:inherit;font-size:12px;outline:none">
+        ${S.cusProjects.map(p=>`<option value="${p.id}">${p.name||'(이름 없음)'}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px" id="crf-task-wrap">
+      <label style="font-size:11px;color:var(--tx3);font-weight:600">태스크 (마일스톤)</label>
+      <select id="crf-task" style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);padding:6px 8px;font-family:inherit;font-size:12px;outline:none"></select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label style="font-size:11px;color:var(--tx3);font-weight:600">추가 메모 <span style="font-weight:400;opacity:.6">(선택사항)</span></label>
+      <input id="crf-memo" type="text" placeholder="예: 변호사물자료집" style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);padding:6px 8px;font-family:inherit;font-size:12px;outline:none;width:100%">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label style="font-size:11px;color:var(--tx3);font-weight:600">반복 방식</label>
+      <div style="display:flex;gap:8px">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--tx)">
+          <input type="radio" name="crf-mode" value="day" checked id="crf-mode-day"> 요일 반복
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--tx)">
+          <input type="radio" name="crf-mode" value="date" id="crf-mode-date"> 날짜 지정
+        </label>
+      </div>
+    </div>
+    <!-- 요일 선택 -->
+    <div id="crf-days-wrap" style="display:flex;flex-direction:column;gap:8px">
+      <label style="font-size:11px;color:var(--tx3);font-weight:600">요일 선택</label>
+      <div style="display:flex;gap:6px">
+        ${['월','화','수','목','금'].map((d,i)=>`<label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-size:11px;color:var(--tx2)"><input type="checkbox" value="${i}" class="crf-day-chk" style="accent-color:var(--ac)"> ${d}</label>`).join('')}
+      </div>
+    </div>
+    <!-- 날짜 지정 -->
+    <div id="crf-date-wrap" style="display:none;flex-direction:column;gap:8px">
+      <label style="font-size:11px;color:var(--tx3);font-weight:600">날짜 입력 <span style="font-weight:400;opacity:.6">(콤마로 구분, 예: 10, 25)</span></label>
+      <input id="crf-dates" type="text" placeholder="예: 10, 25" style="background:var(--surf2);border:1px solid var(--bdr);border-radius:6px;color:var(--tx);padding:6px 8px;font-family:inherit;font-size:12px;outline:none;width:100%">
+    </div>
+    <div style="font-size:11px;color:var(--tx3);background:var(--surf2);border-radius:6px;padding:7px 10px" id="crf-preview">셀 입력 예시: —</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="this.closest('[style*=fixed]').remove()">취소</button>
+      <button class="btn" style="background:var(--ac);color:#fff" onclick="doCusRepeatFill(this)">이번 달에 채우기</button>
+    </div>`;
+  bg.appendChild(box); document.body.appendChild(bg);
+
+  // 태스크 목록 업데이트
+  function updateTasks(){
+    const pid=parseInt(document.getElementById('crf-proj').value);
+    const proj=S.cusProjects.find(p=>p.id===pid);
+    const sel=document.getElementById('crf-task');
+    sel.innerHTML='<option value="">직접 입력 (메모만 사용)</option>'+
+      (proj?.milestones||[]).map(ms=>`<option value="${ms.name}">${ms.name}</option>`).join('');
+    updatePreview();
+  }
+  function updatePreview(){
+    const task=document.getElementById('crf-task').value;
+    const memo=document.getElementById('crf-memo').value.trim();
+    let text=task?`(${task})`:'';
+    if(memo) text+=(text?' ':'')+memo;
+    document.getElementById('crf-preview').textContent='셀 입력 예시: '+(text||'(태스크 또는 메모를 입력하세요)');
+  }
+  // 반복 방식 전환
+  document.querySelectorAll('input[name="crf-mode"]').forEach(r=>{
+    r.onchange=()=>{
+      const isDay=document.getElementById('crf-mode-day').checked;
+      document.getElementById('crf-days-wrap').style.display=isDay?'flex':'none';
+      document.getElementById('crf-date-wrap').style.display=isDay?'none':'flex';
+    };
+  });
+  document.getElementById('crf-proj').onchange=updateTasks;
+  document.getElementById('crf-task').onchange=updatePreview;
+  document.getElementById('crf-memo').oninput=updatePreview;
+  updateTasks();
+}
+function doCusRepeatFill(btn){
+  const task=document.getElementById('crf-task').value;
+  const memo=document.getElementById('crf-memo').value.trim();
+  let text=task?`(${task})`:'';
+  if(memo) text+=(text?' ':'')+memo;
+  if(!text){toast('태스크 또는 메모를 입력하세요.',true);return;}
+
+  const pid=parseInt(document.getElementById('crf-proj').value);
+  const proj=S.cusProjects.find(p=>p.id===pid);
+  if(!proj){toast('프로젝트를 선택하세요.',true);return;}
+
+  const isDay=document.getElementById('crf-mode-day').checked;
+  const weeks=getWeeks(S.sy,S.sm);
+  let count=0;
+
+  if(isDay){
+    const checkedDays=[...document.querySelectorAll('.crf-day-chk:checked')].map(c=>parseInt(c.value));
+    if(!checkedDays.length){toast('요일을 하나 이상 선택하세요.',true);return;}
+    weeks.forEach((wk,wi)=>{
+      wk.forEach((d,di)=>{
+        if(!d||!checkedDays.includes(di)) return;
+        const k=cusCellKey(proj.id,wi,di);
+        const cur=S.scheds[k]||'';
+        S.scheds[k]=cur?(cur+'\n'+text):text;
+        count++;
+      });
+    });
+  } else {
+    const raw=document.getElementById('crf-dates').value;
+    const targetDays=raw.split(',').map(s=>parseInt(s.trim())).filter(n=>n>=1&&n<=31);
+    if(!targetDays.length){toast('날짜를 입력하세요. 예: 10, 25',true);return;}
+    weeks.forEach((wk,wi)=>{
+      wk.forEach((d,di)=>{
+        if(!d||!targetDays.includes(d)) return;
+        const k=cusCellKey(proj.id,wi,di);
+        const cur=S.scheds[k]||'';
+        S.scheds[k]=cur?(cur+'\n'+text):text;
+        count++;
+      });
+    });
+  }
+  dsave(); renderCusSched();
+  btn.closest('[style*=fixed]').remove();
+  toast(`✓ ${count}개 셀에 입력했습니다.`);
+}
 function exportSchedCusJpg(){ exportSchedJpg(); }
 
 // 커스텀 셀 키: sy-sm-projId-wi-di
@@ -10945,7 +11070,8 @@ function renderCusTrk(){
       const qi=document.createElement('input');
       qi.type='number'; qi.min=0; qi.value=target; qi.title='목표 횟수 (0=제한없음)';
       qi.style.cssText='width:30px;background:var(--surf2);border:1px solid var(--bdr);border-radius:3px;color:var(--tx);text-align:center;padding:1px 2px;font-size:10px;font-family:inherit;outline:none';
-      qi.oninput=()=>{ ms.q=parseInt(qi.value)||0; renderCusTrk(); dsave(); };
+      qi.oninput=()=>{ ms.q=parseInt(qi.value)||0; dsave(); };
+      qi.onblur=()=>renderCusTrk();
       const delMs=document.createElement('button');
       delMs.className='icobtn'; delMs.textContent='✕'; delMs.style.fontSize='10px';
       delMs.onclick=()=>{ proj.milestones=proj.milestones.filter(x=>x.id!==ms.id); dsave(); renderCusTrk(); };
@@ -11107,8 +11233,9 @@ function initResize(){
   const h=document.getElementById('rhandle');const tk=document.getElementById('tracker');
   if(!h||!tk)return;
   let sx,sw,on=false;
-  h.addEventListener('mousedown',e=>{e.preventDefault();on=true;sx=e.clientX;sw=tk.offsetWidth;h.classList.add('ra');document.body.style.cursor='col-resize';document.body.style.userSelect='none';});
-  document.addEventListener('mousemove',e=>{if(!on)return;const nw=Math.max(180,Math.min(520,sw+(sx-e.clientX)));tk.style.width=nw+'px';});
+  function getActiveTrk(){ return document.getElementById('cus-tracker')?.style.display!=='none'?document.getElementById('cus-tracker'):tk; }
+  h.addEventListener('mousedown',e=>{e.preventDefault();on=true;sx=e.clientX;const atk=getActiveTrk();sw=atk.offsetWidth;h.classList.add('ra');document.body.style.cursor='col-resize';document.body.style.userSelect='none';});
+  document.addEventListener('mousemove',e=>{if(!on)return;const nw=Math.max(180,Math.min(520,sw+(sx-e.clientX)));const atk=getActiveTrk();atk.style.width=nw+'px';tk.style.width=nw+'px';document.getElementById('cus-tracker').style.width=nw+'px';});
   document.addEventListener('mouseup',()=>{if(!on)return;on=false;h.classList.remove('ra');document.body.style.cursor='';document.body.style.userSelect='';});
   // 모바일: 세로 드래그로 트래커 높이 조절
   h.addEventListener('touchstart',e=>{e.preventDefault();on=true;sx=e.touches[0].clientY;sw=tk.offsetHeight||200;h.classList.add('ra');},{passive:false});
