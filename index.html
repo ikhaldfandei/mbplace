@@ -2854,6 +2854,7 @@ async function load(){
       if(d2.clients)S.clients=d2.clients;
       if(d2.scheds)S.scheds=d2.scheds;
       if(d2.work)S.work=d2.work;
+      if(d2.cusProjects)S.cusProjects=d2.cusProjects;
     }
     // 구버전 flat work 배열 마이그레이션
     if(Array.isArray(S.work)&&S.work.length>0&&!('t' in S.work[0])){
@@ -2867,6 +2868,7 @@ async function load(){
     if(!Array.isArray(S.clients))S.clients=clone(DEF_CLIENTS);
     if(typeof S.scheds!=='object'||Array.isArray(S.scheds))S.scheds={};
     if(!Array.isArray(S.work))S.work=makeDefWork();
+    syncCusIdCounters();
     _loaded=true;
     console.log('[MBHub] IDB 로드 완료 — 노트:'+S.notes.length+', 클라이언트:'+S.clients.length+', 업무노트:'+S.work.length);
   }catch(e){
@@ -2884,13 +2886,15 @@ async function migrateFromLocalStorage(){
     const clients=safeGet('mb_c');
     const scheds=safeGet('mb_s');
     const work=safeGet('mb_w');
-    if(notes||clients||scheds||work){
+    const cusProjects=safeGet('mb_cus_projects');
+    if(notes||clients||scheds||work||cusProjects){
       console.log('[MBHub] localStorage → IndexedDB 마이그레이션 실행');
       const obj={};
       if(notes)obj.notes=notes;
       if(clients)obj.clients=clients;
       if(scheds)obj.scheds=scheds;
       if(work)obj.work=work;
+      if(cusProjects)obj.cusProjects=cusProjects;
       obj.ts=new Date().toISOString();
       await IDB.setAll(obj);
       console.log('[MBHub] 마이그레이션 완료');
@@ -2906,10 +2910,13 @@ function loadFromLocalStorage(){
   S.clients= safeGet('mb_c') || clone(DEF_CLIENTS);
   S.scheds = safeGet('mb_s') || {};
   S.work   = safeGet('mb_w') || makeDefWork();
+  S.cusProjects = safeGet('mb_cus_projects') || [];
   if(!Array.isArray(S.notes))S.notes=makeDefNotes();
   if(!Array.isArray(S.clients))S.clients=clone(DEF_CLIENTS);
   if(typeof S.scheds!=='object'||Array.isArray(S.scheds))S.scheds={};
   if(!Array.isArray(S.work))S.work=makeDefWork();
+  if(!Array.isArray(S.cusProjects))S.cusProjects=[];
+  syncCusIdCounters();
   _loaded=true;
   console.warn('[MBHub] localStorage 폴백 사용 중 (IDB 실패)');
 }
@@ -3555,7 +3562,7 @@ function editTabName(btnEl, t){
 //  출판 탭 (PUB)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _pubSel = null;
-let _ep2Source = null; // 'work' | 'notes' | 'sched'  // 현재 선택된 노드 id
+let _ep2Source = null; // 'work' | 'notes' | 'sched' | 'cusSched'  // 현재 선택된 노드 id
 let _pubDragId = null, _pubDropPos = null;
 
 // 헬퍼: 자식 노드
@@ -10779,6 +10786,60 @@ function renderDeadlineBar(){
 // ─── 커스텀 스케줄 ───────────────────────────────
 let _cusPid=1000, _cusMid=2000;
 
+function _cusKeyMatch(key){
+  return String(key).match(/^cus_(\d{4})_(\d{1,2})_([^_]+)_(\d+)_(\d+)$/);
+}
+function syncCusIdCounters(){
+  try{
+    let maxPid=999,maxMid=1999;
+    if(Array.isArray(S.cusProjects)){
+      S.cusProjects.forEach(p=>{
+        const pid=parseInt(p&&p.id,10);
+        if(Number.isFinite(pid))maxPid=Math.max(maxPid,pid);
+        if(Array.isArray(p&&p.milestones)){
+          p.milestones.forEach(ms=>{
+            const mid=parseInt(ms&&ms.id,10);
+            if(Number.isFinite(mid))maxMid=Math.max(maxMid,mid);
+          });
+        }
+      });
+    }
+    Object.keys(S.scheds||{}).forEach(k=>{
+      const m=_cusKeyMatch(k);
+      if(m){const pid=parseInt(m[3],10);if(Number.isFinite(pid))maxPid=Math.max(maxPid,pid);}
+    });
+    _cusPid=Math.max(1000,maxPid+1);
+    _cusMid=Math.max(2000,maxMid+1);
+  }catch(e){console.warn('[Creator Desk] 커스텀 ID 카운터 동기화 실패:',e);}
+}
+function nextCusProjectId(){
+  syncCusIdCounters();
+  const used=new Set();
+  if(Array.isArray(S.cusProjects)){
+    S.cusProjects.forEach(p=>{if(p&&p.id!==undefined&&p.id!==null)used.add(String(p.id));});
+  }
+  Object.keys(S.scheds||{}).forEach(k=>{const m=_cusKeyMatch(k);if(m)used.add(String(m[3]));});
+  let id=Math.max(1000,parseInt(_cusPid,10)||1000);
+  while(used.has(String(id)))id++;
+  _cusPid=id+1;
+  return id;
+}
+function nextCusMilestoneId(){
+  syncCusIdCounters();
+  const used=new Set();
+  if(Array.isArray(S.cusProjects)){
+    S.cusProjects.forEach(p=>{
+      if(Array.isArray(p&&p.milestones)){
+        p.milestones.forEach(ms=>{if(ms&&ms.id!==undefined&&ms.id!==null)used.add(String(ms.id));});
+      }
+    });
+  }
+  let id=Math.max(2000,parseInt(_cusMid,10)||2000);
+  while(used.has(String(id)))id++;
+  _cusMid=id+1;
+  return id;
+}
+
 function setSchedMode(m){
   S.schedMode=m;
   const mktBtn=document.getElementById('seg-mkt');
@@ -10807,16 +10868,164 @@ function cusParseTags(text){
   return tags;
 }
 
+function cusMonthKey(y=S.sy,m=S.sm){
+  return String(y)+'-'+String(m).padStart(2,'0');
+}
+function cusGetTarget(ms,y=S.sy,m=S.sm){
+  if(!ms) return 0;
+  const key=cusMonthKey(y,m);
+  if(ms.qByMonth && typeof ms.qByMonth==='object' && !Array.isArray(ms.qByMonth) && Object.prototype.hasOwnProperty.call(ms.qByMonth,key)){
+    const n=parseInt(ms.qByMonth[key],10);
+    return Number.isFinite(n) && n>=0 ? n : 0;
+  }
+  const legacy=parseInt(ms.q,10);
+  return Number.isFinite(legacy) && legacy>=0 ? legacy : 0;
+}
+function cusSetTarget(ms,val,y=S.sy,m=S.sm){
+  if(!ms) return 0;
+  let n=parseInt(val,10);
+  if(!Number.isFinite(n) || n<0) n=0;
+  if(!ms.qByMonth || typeof ms.qByMonth!=='object' || Array.isArray(ms.qByMonth)) ms.qByMonth={};
+  ms.qByMonth[cusMonthKey(y,m)]=n;
+  return n;
+}
+
+// 커스텀 삭제 UX: 실제 데이터는 바로 지우지 않고 숨김 처리한다.
+function cusActiveProjects(){
+  return (Array.isArray(S.cusProjects)?S.cusProjects:[]).filter(p=>p&&!p._hidden);
+}
+function cusHiddenProjects(){
+  return (Array.isArray(S.cusProjects)?S.cusProjects:[]).filter(p=>p&&p._hidden);
+}
+function cusActiveMilestones(proj){
+  return (proj&&Array.isArray(proj.milestones)?proj.milestones:[]).filter(ms=>ms&&!ms._hidden);
+}
+function cusHiddenMilestones(proj){
+  return (proj&&Array.isArray(proj.milestones)?proj.milestones:[]).filter(ms=>ms&&ms._hidden);
+}
+function cusScheduleKeyCount(projId){
+  let n=0;
+  Object.keys(S.scheds||{}).forEach(k=>{const m=_cusKeyMatch(k);if(m&&String(m[3])===String(projId))n++;});
+  return n;
+}
+function cusHideProject(proj){
+  if(!proj)return;
+  const cellCount=cusScheduleKeyCount(proj.id);
+  const name=proj.name||'프로젝트';
+  const msg=`"${name}" 항목을 숨기시겠습니까?
+
+입력해둔 커스텀 스케줄 데이터 ${cellCount}개는 삭제하지 않고 보존합니다.
+필요하면 트래커 하단의 숨긴 항목에서 복원할 수 있습니다.`;
+  if(!confirm(msg))return;
+  proj._hidden=true;
+  proj._hiddenAt=new Date().toISOString();
+  dsave();renderSched();
+}
+function copyCusScheduleKeys(oldId,newId){
+  if(oldId===undefined||oldId===null||newId===undefined||newId===null)return;
+  Object.keys(S.scheds||{}).forEach(k=>{
+    const m=_cusKeyMatch(k);
+    if(!m||String(m[3])!==String(oldId))return;
+    const nk=cusCellKeyFor(parseInt(m[1],10),parseInt(m[2],10),newId,m[4],m[5]);
+    if(!(nk in S.scheds)) S.scheds[nk]=S.scheds[k];
+  });
+}
+function cusRestoreProject(proj){
+  if(!proj)return;
+  // 복원 시 현재 활성 프로젝트와 ID 충돌 체크
+  const activeIds=new Set(cusActiveProjects().filter(p=>p!==proj).map(p=>String(p.id)));
+  if(activeIds.has(String(proj.id))){
+    const oldId=proj.id;
+    proj.id=nextCusProjectId();
+    copyCusScheduleKeys(oldId,proj.id);
+  }
+  proj._hidden=false;
+  delete proj._hiddenAt;
+  dsave();renderSched();
+}
+function cusHideMilestone(proj,ms){
+  if(!proj||!ms)return;
+  const name=ms.name||'태스크';
+  const msg=`"${name}" 태스크를 숨기시겠습니까?
+
+스케줄 셀에 입력된 텍스트는 삭제하지 않습니다.
+필요하면 이 프로젝트의 숨긴 태스크에서 복원할 수 있습니다.`;
+  if(!confirm(msg))return;
+  ms._hidden=true;
+  ms._hiddenAt=new Date().toISOString();
+  dsave();renderCusTrk();
+}
+function cusRestoreMilestone(proj,ms){
+  if(!proj||!ms)return;
+  const activeIds=new Set(cusActiveMilestones(proj).filter(x=>x!==ms).map(x=>String(x.id)));
+  if(activeIds.has(String(ms.id))) ms.id=nextCusMilestoneId();
+  ms._hidden=false;
+  delete ms._hiddenAt;
+  dsave();renderCusTrk();
+}
+function cusRenderHiddenMilestones(wrap,proj){
+  const hidden=cusHiddenMilestones(proj);
+  if(!hidden.length)return;
+  const box=document.createElement('div');
+  box.style.cssText='padding:5px 8px;background:rgba(248,81,73,.05);border-top:1px solid var(--bdr2);display:flex;flex-direction:column;gap:4px';
+  const title=document.createElement('div');
+  title.style.cssText='font-size:10px;color:var(--tx3);font-weight:700';
+  title.textContent='숨긴 태스크';
+  box.appendChild(title);
+  hidden.forEach(ms=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:6px;font-size:10px;color:var(--tx3)';
+    const name=document.createElement('span');
+    name.style.cssText='flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    name.textContent=ms.name||'(이름 없음)';
+    const btn=document.createElement('button');
+    btn.className='fcbtn';btn.style.cssText='flex:0 0 auto;padding:2px 7px;font-size:10px';
+    btn.textContent='복원';
+    btn.onclick=()=>cusRestoreMilestone(proj,ms);
+    row.append(name,btn);box.appendChild(row);
+  });
+  wrap.appendChild(box);
+}
+function cusRenderHiddenProjects(body){
+  const hidden=cusHiddenProjects();
+  if(!hidden.length)return;
+  const box=document.createElement('div');
+  box.style.cssText='border:1px dashed var(--bdr);border-radius:6px;margin-top:10px;padding:8px;background:var(--surf2)';
+  const title=document.createElement('div');
+  title.style.cssText='font-size:10px;color:var(--tx3);font-weight:700;margin-bottom:6px';
+  title.textContent=`숨긴 프로젝트 ${hidden.length}개`;
+  box.appendChild(title);
+  hidden.forEach(proj=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px;color:var(--tx2)';
+    const name=document.createElement('span');
+    name.style.cssText='flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    name.textContent=proj.name||'(이름 없음)';
+    const info=document.createElement('span');
+    info.style.cssText='font-size:10px;color:var(--tx3);flex-shrink:0';
+    const cellCount=cusScheduleKeyCount(proj.id);
+    info.textContent=cellCount?`${cellCount}칸 보존`:'';
+    const btn=document.createElement('button');
+    btn.className='fcbtn';btn.style.cssText='flex:0 0 auto;padding:2px 7px;font-size:10px';
+    btn.textContent='복원';
+    btn.onclick=()=>cusRestoreProject(proj);
+    row.append(name,info,btn);box.appendChild(row);
+  });
+  body.appendChild(box);
+}
+
 // 프로젝트의 마일스톤별 배분 횟수
 function cusCountAssigned(proj){
   const counts={};
-  proj.milestones.forEach(ms=>{ counts[ms.id]=0; });
-  Object.keys(S.scheds).forEach(sk=>{
+  const milestones=cusActiveMilestones(proj);
+  milestones.forEach(ms=>{ counts[ms.id]=0; });
+  Object.keys(S.scheds||{}).forEach(sk=>{
     if(!sk.startsWith('cus_'+S.sy+'_'+S.sm+'_'+proj.id+'_')) return;
     const v=S.scheds[sk]||'';
     const tags=cusParseTags(v);
-    proj.milestones.forEach(ms=>{
-      const nm=ms.name.toLowerCase();
+    milestones.forEach(ms=>{
+      const nm=String(ms.name||'').toLowerCase();
+      if(!nm)return;
       tags.forEach(t=>{ if(t===nm) counts[ms.id]++; });
     });
   });
@@ -10824,7 +11033,7 @@ function cusCountAssigned(proj){
 }
 
 function addCusProject(){
-  S.cusProjects.push({id:_cusPid++,name:'',milestones:[]});
+  S.cusProjects.push({id:nextCusProjectId(),name:'',milestones:[]});
   dsave(); renderCusTrk();
   setTimeout(()=>{
     const inputs=document.querySelectorAll('#cus-trkbody .cus-pname');
@@ -10836,11 +11045,13 @@ function renderCusTrk(){
   const body=document.getElementById('cus-trkbody');
   if(!body) return;
   body.innerHTML='';
-  if(!S.cusProjects.length){
+  const activeProjects=cusActiveProjects();
+  if(!activeProjects.length){
     body.innerHTML='<div style="font-size:11px;color:var(--tx3);padding:8px;text-align:center;line-height:1.6">＋ 버튼으로<br>프로젝트를 추가하세요</div>';
+    cusRenderHiddenProjects(body);
     return;
   }
-  S.cusProjects.forEach(proj=>{
+  activeProjects.forEach(proj=>{
     const counts=cusCountAssigned(proj);
     const wrap=document.createElement('div');
     wrap.style.cssText='border:1px solid var(--bdr);border-radius:6px;margin-bottom:8px;overflow:hidden';
@@ -10859,7 +11070,7 @@ function renderCusTrk(){
     const addMs=document.createElement('button');
     addMs.className='icobtn'; addMs.textContent='＋'; addMs.title='태스크 추가';
     addMs.onclick=()=>{
-      proj.milestones.push({id:_cusMid++,name:'',q:1});
+      proj.milestones.push({id:nextCusMilestoneId(),name:'',q:1,qByMonth:{[cusMonthKey()]:1}});
       dsave(); renderCusTrk();
       setTimeout(()=>{
         const rows=wrap.querySelectorAll('.cus-msname');
@@ -10868,16 +11079,12 @@ function renderCusTrk(){
     };
     const delP=document.createElement('button');
     delP.className='icobtn'; delP.textContent='✕'; delP.title='프로젝트 삭제';
-    delP.onclick=()=>{
-      if(!confirm(`"${proj.name||'프로젝트'}" 삭제하시겠습니까?`)) return;
-      S.cusProjects=S.cusProjects.filter(p=>p.id!==proj.id);
-      dsave(); renderSched();
-    };
+    delP.onclick=()=>cusHideProject(proj);
     hd.append(ni,addMs,delP); wrap.appendChild(hd);
 
     // 마일스톤 행들
-    proj.milestones.forEach(ms=>{
-      const done=counts[ms.id]||0, target=ms.q||0;
+    cusActiveMilestones(proj).forEach(ms=>{
+      const done=counts[ms.id]||0, target=cusGetTarget(ms);
       const isDone=target>0&&done>=target, isPart=target>0&&done>0&&done<target;
       const icon=isDone?'✅':isPart?'🔶':'⬜';
       const row=document.createElement('div');
@@ -10896,18 +11103,21 @@ function renderCusTrk(){
       cntEl.style.cssText='font-size:10px;min-width:30px;text-align:right;font-weight:700;color:'+(isDone?'var(--gn)':isPart?'var(--yw)':'var(--tx3)');
       cntEl.textContent=target===0?done+'회':`${done}/${target}`;
       const qi=document.createElement('input');
-      qi.type='number'; qi.min=0; qi.value=target; qi.title='목표 횟수 (0=제한없음)';
+      qi.type='number'; qi.min=0; qi.value=target; qi.title='이번 달 목표 횟수 (0=제한없음)';
       qi.style.cssText='width:30px;background:var(--surf2);border:1px solid var(--bdr);border-radius:3px;color:var(--tx);text-align:center;padding:1px 2px;font-size:10px;font-family:inherit;outline:none';
-      qi.oninput=()=>{ ms.q=parseInt(qi.value)||0; dsave(); };
+      qi.oninput=()=>{ cusSetTarget(ms,qi.value); dsave(); };
       qi.onblur=()=>renderCusTrk();
       const delMs=document.createElement('button');
       delMs.className='icobtn'; delMs.textContent='✕'; delMs.style.fontSize='10px';
-      delMs.onclick=()=>{ proj.milestones=proj.milestones.filter(x=>x.id!==ms.id); dsave(); renderCusTrk(); };
+      delMs.title='태스크 숨기기';
+      delMs.onclick=()=>cusHideMilestone(proj,ms);
       row.append(chk,msNi,cntEl,qi,delMs); wrap.appendChild(row);
     });
+    cusRenderHiddenMilestones(wrap,proj);
 
     body.appendChild(wrap);
   });
+  cusRenderHiddenProjects(body);
 }
 
 function renderCusSched(){
@@ -10942,7 +11152,8 @@ function renderCusSched(){
     sec.appendChild(hdr);
 
     // 프로젝트 행
-    (S.cusProjects.length?S.cusProjects:[{id:'empty',name:'(프로젝트를 추가하세요)',milestones:[]}]).forEach(proj=>{
+    const activeProjects=cusActiveProjects();
+    (activeProjects.length?activeProjects:[{id:'empty',name:'(프로젝트를 추가하세요)',milestones:[]}]).forEach(proj=>{
       const row=document.createElement('div'); row.className='crow';
       row.style.gridTemplateColumns='88px repeat(7,1fr)';
       const lbl=document.createElement('div'); lbl.className='clabel';
@@ -11393,7 +11604,8 @@ function loadPwLock(){
     :'비활성화 — 비밀번호 입력 없이 바로 접속';
 }
 function exportData(){
-  const d={notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,v:3,date:new Date().toISOString()};
+  syncCusIdCounters();
+  const d={notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,reports:S.reports,pub:S.pub,pubFiles:S.pubFiles,cusProjects:S.cusProjects,v:3,date:new Date().toISOString()};
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
   a.download='마케팅허브_백업_'+new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').replace(/-$/,'')+'.json';
   a.click();toast('백업 파일이 다운로드되었습니다.');
@@ -11407,6 +11619,8 @@ function importData(){
         const d=JSON.parse(ev.target.result);
         if(!confirm('기존 데이터를 덮어씁니다. 계속하시겠습니까?'))return;
         if(d.notes)S.notes=d.notes;if(d.clients)S.clients=d.clients;if(d.scheds)S.scheds=d.scheds;if(d.work)S.work=d.work;
+        if(d.reports)S.reports=d.reports;if(d.pub)S.pub=d.pub;if(d.pubFiles)S.pubFiles=d.pubFiles;if(d.cusProjects)S.cusProjects=d.cusProjects;
+        syncCusIdCounters();
         await save();
         _gdDirty=false; clearTimeout(_gdAutoT);
         renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
@@ -11418,7 +11632,7 @@ function importData(){
 }
 async function resetAll(){
   if(!confirm('⚠️ 모든 데이터가 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.'))return;
-  S.notes=makeDefNotes();S.clients=JSON.parse(JSON.stringify(DEF_CLIENTS));S.scheds={};S.work=makeDefWork();
+  S.notes=makeDefNotes();S.clients=JSON.parse(JSON.stringify(DEF_CLIENTS));S.scheds={};S.work=makeDefWork();S.cusProjects=[];syncCusIdCounters();
   S.p1=null;S.p2=null;S.wsel=null;S.fmCl=null;
   await save();
   renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
@@ -11580,6 +11794,7 @@ async function gdPush(auto=false){
   if(!auto) gdBar('💾 Google Drive에 저장 중...','ing',0);
   gdLog('저장 중...');
   try{
+    syncCusIdCounters();
     const payload = JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,reports:S.reports,pub:S.pub,pubFiles:S.pubFiles,cusProjects:S.cusProjects,v:3,date:new Date().toISOString()});
     const blob = new Blob([payload], {type:'application/json'});
     const existing = await gdFindFile(token, GD_FNAME);
@@ -11636,6 +11851,7 @@ async function gdPull(){
         {id:'pubf3',t:'F',n:'집필',p:null,o:2,open:true,driveName:'마케팅허브_집필',driveId:null},
       ];
     }
+    syncCusIdCounters();
     await save();
     _gdDirty=false; clearTimeout(_gdAutoT);
     renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
@@ -11745,13 +11961,14 @@ function srchGoWork(id){closeSearch();switchTab('work');setTimeout(()=>selectWor
 function ep2Refresh(){
   if(_ep2Source==='work'&&S.p2){
     xPanelLoadWork(S.p2);
-  } else if(_ep2Source==='sched'){
+  } else if(_ep2Source==='sched'||_ep2Source==='cusSched'){
     // 현재 제목에서 연/월 추출
     const t=document.getElementById('et2');
     const match=t?.textContent.match(/(\d{4})년 (\d{1,2})월/);
     const y=match?parseInt(match[1]):S.sy;
     const m=match?parseInt(match[2]):S.sm;
-    xPanelLoadSched(y,m);
+    if(_ep2Source==='cusSched') xPanelLoadCusSched(y,m);
+    else xPanelLoadSched(y,m);
   }
 }
 
@@ -11788,7 +12005,8 @@ function toggleXPanel(e){
   if(nm>12){nm=1;ny++;}
   _months.push({y:ny,m:nm});
   _months.forEach(({y,m})=>{
-    html+=`<div class="srch-item" style="padding:5px 8px" onclick="xPanelLoadSched(${y},${m})">📅 ${y}년 ${m}월 스케줄</div>`;
+    html+=`<div class="srch-item" style="padding:5px 8px" onclick="xPanelLoadSched(${y},${m})">📅 ${y}년 ${m}월 마케팅 스케줄</div>`;
+    html+=`<div class="srch-item" style="padding:5px 8px" onclick="xPanelLoadCusSched(${y},${m})">🗓️ ${y}년 ${m}월 커스텀 스케줄</div>`;
   });
   html+='</div>';
   menu.innerHTML=html;menu.style.display='block';
@@ -11812,12 +12030,16 @@ function xPanelLoadWork(id){
   const rbtn=document.getElementById('ep2-refresh-btn');if(rbtn)rbtn.style.display='';
   renderWorkBar();
 }
+function xPanelEscape(v){
+  return String(v ?? '').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
 function xPanelLoadSched(y, m){
   closeXMenu();
   if(!S.p2on){S.p2on=true;document.getElementById('ep2').style.display='flex';document.getElementById('splitbtn').textContent='단일 보기';}
   const ty=y||S.sy, tm=m||S.sm;
   const t=document.getElementById('et2');const ew=document.getElementById('ew2');const ee=document.getElementById('ee2');
-  t.textContent=`📅 ${ty}년 ${tm}월 스케줄`;t.className='etitle';
+  t.textContent=`📅 ${ty}년 ${tm}월 마케팅 스케줄`;t.className='etitle';
   ee.style.display='none';ew.classList.remove('hidden');
   _ep2Source='sched';S.p2=null;
   const wks=getWeeks(ty,tm);
@@ -11838,8 +12060,8 @@ function xPanelLoadSched(y, m){
       schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;color:var(--tx3);white-space:nowrap">${ch}</td>`;
       wk.forEach((d,di)=>{
         const isT=isTM&&d===todayD;
-        const val=d?getCell(ty,tm,wi,ch,di):'';
-        schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;min-width:50px;background:${isT?'rgba(56,139,253,.07)':'transparent'}">${val}</td>`;
+        const val=d?xPanelEscape(getCell(ty,tm,wi,ch,di)):'';
+        schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;min-width:50px;background:${isT?'rgba(56,139,253,.07)':'transparent'};white-space:pre-wrap;word-break:break-word">${val}</td>`;
       });
       schedHtml+='</tr>';
     });
@@ -11850,6 +12072,53 @@ function xPanelLoadSched(y, m){
   const ed2=document.getElementById('eq2');if(ed2)ed2.contentEditable='false';
   const badge=document.getElementById('readonly-badge2');if(badge){badge.textContent='스케줄';badge.classList.add('on');}
   // 새로고침 버튼 표시
+  const rbtn=document.getElementById('ep2-refresh-btn');if(rbtn)rbtn.style.display='';
+}
+
+function xPanelLoadCusSched(y, m){
+  closeXMenu();
+  if(!S.p2on){S.p2on=true;document.getElementById('ep2').style.display='flex';document.getElementById('splitbtn').textContent='단일 보기';}
+  const ty=y||S.sy, tm=m||S.sm;
+  const t=document.getElementById('et2');const ew=document.getElementById('ew2');const ee=document.getElementById('ee2');
+  t.textContent=`🗓️ ${ty}년 ${tm}월 커스텀 스케줄`;t.className='etitle';
+  ee.style.display='none';ew.classList.remove('hidden');
+  _ep2Source='cusSched';S.p2=null;
+  const DY7=['일','월','화','수','목','금','토'];
+  const wks=getWeeks7(ty,tm);
+  const now=new Date();const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
+  const isTM=(ty===todayY&&tm===todayM);
+  const activeProjects=typeof cusActiveProjects==='function'?cusActiveProjects():(Array.isArray(S.cusProjects)?S.cusProjects:[]);
+  const projects=activeProjects.length?activeProjects:[{id:'empty',name:'(프로젝트 없음)',milestones:[]}];
+  let schedHtml='<div style="padding:8px;font-size:11px;overflow:auto">';
+  wks.forEach((wk,wi)=>{
+    schedHtml+=`<div style="margin-bottom:8px"><div style="font-weight:700;color:var(--tx3);font-size:10px;margin-bottom:4px">${wi+1}주차</div>`;
+    schedHtml+='<table style="width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed">';
+    schedHtml+='<tr><th style="border:1px solid var(--bdr);padding:2px 4px;background:var(--surf2);color:var(--tx3);width:74px">프로젝트</th>';
+    wk.forEach((d,di)=>{
+      const isT=isTM&&d===todayD;
+      const dayColor=di===0?'#f85149':di===6?'#58a6ff':(isT?'var(--ac)':'var(--tx3)');
+      schedHtml+=`<th style="border:1px solid var(--bdr);padding:2px 4px;background:${isT?'rgba(56,139,253,.2)':'var(--surf2)'};color:${dayColor};">${DY7[di]}${d?` ${d}일`:''}</th>`;
+    });
+    schedHtml+='</tr>';
+    projects.forEach(proj=>{
+      schedHtml+='<tr>';
+      schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;color:var(--ac);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600">${xPanelEscape(proj.name||'(이름 없음)')}</td>`;
+      wk.forEach((d,di)=>{
+        const isT=isTM&&d===todayD;
+        const weekendBg=di===0?'rgba(248,81,73,.05)':di===6?'rgba(88,166,255,.05)':'';
+        const bg=isT?'rgba(56,139,253,.07)':weekendBg||'transparent';
+        const k=d?`cus_${ty}_${tm}_${proj.id}_${wi}_${di}`:'';
+        const val=d?xPanelEscape(S.scheds[k]||''):'';
+        schedHtml+=`<td style="border:1px solid var(--bdr);padding:2px 4px;min-width:50px;background:${bg};white-space:pre-wrap;word-break:break-word;vertical-align:top">${val}</td>`;
+      });
+      schedHtml+='</tr>';
+    });
+    schedHtml+='</table></div>';
+  });
+  schedHtml+='</div>';
+  if(EDITORS.e2){EDITORS.e2.html=schedHtml;updateWC('wc2','');}
+  const ed2=document.getElementById('eq2');if(ed2)ed2.contentEditable='false';
+  const badge=document.getElementById('readonly-badge2');if(badge){badge.textContent='커스텀 스케줄';badge.classList.add('on');}
   const rbtn=document.getElementById('ep2-refresh-btn');if(rbtn)rbtn.style.display='';
 }
 
