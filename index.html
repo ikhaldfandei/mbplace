@@ -2458,6 +2458,8 @@ input[type=number]{-moz-appearance:textfield}
 <button class="btn btng" onclick="addCusProjectFromSettings()" style="margin-top:4px">＋ 프로젝트 추가</button>
 </div>
 
+<div class="ssec">
+<div class="sstitle">👥 클라이언트 관리 <span style="font-size:11px;color:var(--tx3);font-weight:400">(할당량 변경 → 트래커 즉시 반영)</span></div>
 <div style="font-size:11px;color:var(--tx3);background:var(--surf2);padding:8px 12px;border-radius:6px;border-left:3px solid var(--ac);margin-bottom:10px;line-height:1.7">💡 여기서 추가/삭제한 클라이언트는 <b>보고서 탭</b>에 자동 반영됩니다.<br/>텀블벅·집필·출판사 정산 등 다른 항목은 <b>출판 탭</b> 안에서 직접 관리해주세요.</div>
 <div id="cleditor"></div>
 <button class="btn btng" onclick="addClient()" style="margin-top:4px">＋ 클라이언트 추가</button>
@@ -11159,6 +11161,22 @@ function _migrateCusScheduleToProjectCells(){
   }catch(e){ console.warn('[MBHub] cus 마이그레이션 오류:',e); }
 }
 // ─── 커스텀 스케줄 끝 ─────────────────────────────
+
+function setSchedMode(m){
+  S.schedMode=m;
+  const mktBtn=document.getElementById('seg-mkt');
+  const cusBtn=document.getElementById('seg-cus');
+  if(mktBtn){mktBtn.style.background=m==='mkt'?'rgba(56,139,253,.18)':'none';mktBtn.style.color=m==='mkt'?'var(--ac)':'var(--tx3)';}
+  if(cusBtn){cusBtn.style.background=m==='cus'?'rgba(56,139,253,.18)':'none';cusBtn.style.color=m==='cus'?'var(--ac)':'var(--tx3)';}
+  const trk=document.getElementById('tracker');
+  const cusTrk=document.getElementById('cus-tracker');
+  if(trk) trk.style.display=m==='mkt'?'':'none';
+  if(cusTrk) cusTrk.style.display=m==='cus'?'flex':'none';
+  const deadlines=document.getElementById('sched-deadlines');
+  if(deadlines) deadlines.style.visibility=m==='mkt'?'visible':'hidden';
+  renderSched();
+}
+function exportSchedCusJpg(){ exportSchedJpg('커스텀'); }
 
 function chMonth(d){S.sm+=d;if(S.sm>12){S.sm=1;S.sy++;}if(S.sm<1){S.sm=12;S.sy--;}renderSched();}
 
