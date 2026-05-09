@@ -2128,11 +2128,8 @@ input[type=number]{-moz-appearance:textfield}
 <!-- 커스텀 스케줄 마일스톤 트래커 -->
 <div class="tracker" id="cus-tracker" style="display:none;overflow-y:auto;flex-direction:column">
 <div class="trktitle" style="display:flex;align-items:center;justify-content:space-between">
-  <span>📋 마일스톤 트래커</span>
-  <div style="display:flex;gap:2px">
-  <button class="icobtn" onclick="repairCusSchedule()" title="스케줄 데이터 자동 복구 (셀 내용이 틀린 프로젝트 행에 있을 때 사용)" style="color:var(--yw);font-size:11px;font-weight:700">🔧</button>
-  <button class="icobtn" onclick="addCusProject()" title="프로젝트 추가">＋</button>
-  </div>
+  <span>📋 프로젝트 트래커</span>
+  <button class="icobtn" onclick="syncCusTrk()" title="설정탭 변경사항 반영">🔄</button>
 </div>
 <div id="cus-trkbody" style="flex:1;overflow-y:auto;padding-bottom:8px"></div>
 </div>
@@ -2455,7 +2452,12 @@ input[type=number]{-moz-appearance:textfield}
 <div class="srow"><button class="btn" onclick="changePw()">변경하기</button><span id="pwmsg" style="font-size:12px;margin-left:4px"></span></div>
 </div>
 <div class="ssec">
-<div class="sstitle">👥 클라이언트 관리 <span style="font-size:11px;color:var(--tx3);font-weight:400">(할당량 변경 → 트래커 즉시 반영)</span></div>
+<div class="sstitle">🗓 커스텀 프로젝트 관리 <span style="font-size:11px;color:var(--tx3);font-weight:400">(커스텀 스케줄 탭에 바로 반영)</span></div>
+<div style="font-size:11px;color:var(--tx3);background:var(--surf2);padding:8px 12px;border-radius:6px;border-left:3px solid var(--ac);margin-bottom:10px;line-height:1.7">💡 프로젝트를 추가하고, 각 프로젝트 안에 태스크를 추가하세요.<br>커스텀 스케줄 탭에서 셀에 <b>(태스크명)</b> 형식으로 입력하면 트래커에 자동 집계됩니다.</div>
+<div id="cus-proj-editor"></div>
+<button class="btn btng" onclick="addCusProjectFromSettings()" style="margin-top:4px">＋ 프로젝트 추가</button>
+</div>
+
 <div style="font-size:11px;color:var(--tx3);background:var(--surf2);padding:8px 12px;border-radius:6px;border-left:3px solid var(--ac);margin-bottom:10px;line-height:1.7">💡 여기서 추가/삭제한 클라이언트는 <b>보고서 탭</b>에 자동 반영됩니다.<br/>텀블벅·집필·출판사 정산 등 다른 항목은 <b>출판 탭</b> 안에서 직접 관리해주세요.</div>
 <div id="cleditor"></div>
 <button class="btn btng" onclick="addClient()" style="margin-top:4px">＋ 클라이언트 추가</button>
@@ -2871,7 +2873,6 @@ async function load(){
     if(!Array.isArray(S.clients))S.clients=clone(DEF_CLIENTS);
     if(typeof S.scheds!=='object'||Array.isArray(S.scheds))S.scheds={};
     if(!Array.isArray(S.work))S.work=makeDefWork();
-    syncCusIdCounters();
     _migrateCusScheduleToProjectCells();
     _loaded=true;
     console.log('[MBHub] IDB 로드 완료 — 노트:'+S.notes.length+', 클라이언트:'+S.clients.length+', 업무노트:'+S.work.length);
@@ -2920,7 +2921,6 @@ function loadFromLocalStorage(){
   if(typeof S.scheds!=='object'||Array.isArray(S.scheds))S.scheds={};
   if(!Array.isArray(S.work))S.work=makeDefWork();
   if(!Array.isArray(S.cusProjects))S.cusProjects=[];
-  syncCusIdCounters();
   _migrateCusScheduleToProjectCells();
   _loaded=true;
   console.warn('[MBHub] localStorage 폴백 사용 중 (IDB 실패)');
@@ -5986,7 +5986,7 @@ function switchTab(t){
     document.getElementById('p'+x).classList.toggle('on',x===t);
     document.getElementById('tb-'+x).classList.toggle('on',x===t);
   });
-  if(t==='settings'){renderClients();loadTheme();updateStorageInfo();gdRefreshUI();renderAppStats();loadEditorDefaults();loadClockoutSettings();loadPwLock();}
+  if(t==='settings'){renderClients();renderCusProjectSettings();loadTheme();updateStorageInfo();gdRefreshUI();renderAppStats();loadEditorDefaults();loadClockoutSettings();loadPwLock();}
   if(t==='pub'){renderPubTree();setTimeout(bindPubGridDrop,100);}
   saveLastSession();
   if(t==='sched'){updateTracker();setSchedMode(S.schedMode||'mkt');}
@@ -10789,400 +10789,281 @@ function renderDeadlineBar(){
 }
 
 // ─── 커스텀 스케줄 ───────────────────────────────
-let _cusPid=1000, _cusMid=2000;
+// 저장 구조: S.scheds[mkey(y,m)].cells["cus-"+proj.id+"-"+wi+"-"+di]
+// 마케팅 탭과 동일한 방식. proj.id = 생성 시 부여한 uid, 절대 변경/재사용 없음.
 
-function _cusKeyMatch(key){
-  return String(key).match(/^cus_(\d{4})_(\d{1,2})_([^_]+)_(\d+)_(\d+)$/);
-}
-function syncCusIdCounters(){
-  try{
-    let maxPid=999,maxMid=1999;
-    if(Array.isArray(S.cusProjects)){
-      S.cusProjects.forEach(p=>{
-        const pid=parseInt(p&&p.id,10);
-        if(Number.isFinite(pid))maxPid=Math.max(maxPid,pid);
-        if(Array.isArray(p&&p.milestones)){
-          p.milestones.forEach(ms=>{
-            const mid=parseInt(ms&&ms.id,10);
-            if(Number.isFinite(mid))maxMid=Math.max(maxMid,mid);
-          });
-        }
-      });
-    }
-    Object.keys(S.scheds||{}).forEach(k=>{
-      const m=_cusKeyMatch(k);
-      if(m){const pid=parseInt(m[3],10);if(Number.isFinite(pid))maxPid=Math.max(maxPid,pid);}
-    });
-    _cusPid=Math.max(1000,maxPid+1);
-    _cusMid=Math.max(2000,maxMid+1);
-  }catch(e){console.warn('[Creator Desk] 커스텀 ID 카운터 동기화 실패:',e);}
-}
-function nextCusProjectId(){
-  syncCusIdCounters();
-  const used=new Set();
-  if(Array.isArray(S.cusProjects)){
-    S.cusProjects.forEach(p=>{if(p&&p.id!==undefined&&p.id!==null)used.add(String(p.id));});
-  }
-  Object.keys(S.scheds||{}).forEach(k=>{const m=_cusKeyMatch(k);if(m)used.add(String(m[3]));});
-  let id=Math.max(1000,parseInt(_cusPid,10)||1000);
-  while(used.has(String(id)))id++;
-  _cusPid=id+1;
-  return id;
-}
-function nextCusMilestoneId(){
-  syncCusIdCounters();
-  const used=new Set();
-  if(Array.isArray(S.cusProjects)){
-    S.cusProjects.forEach(p=>{
-      if(Array.isArray(p&&p.milestones)){
-        p.milestones.forEach(ms=>{if(ms&&ms.id!==undefined&&ms.id!==null)used.add(String(ms.id));});
-      }
-    });
-  }
-  let id=Math.max(2000,parseInt(_cusMid,10)||2000);
-  while(used.has(String(id)))id++;
-  _cusMid=id+1;
-  return id;
-}
-
-function setSchedMode(m){
-  S.schedMode=m;
-  const mktBtn=document.getElementById('seg-mkt');
-  const cusBtn=document.getElementById('seg-cus');
-  if(mktBtn){mktBtn.style.background=m==='mkt'?'rgba(56,139,253,.18)':'none';mktBtn.style.color=m==='mkt'?'var(--ac)':'var(--tx3)';}
-  if(cusBtn){cusBtn.style.background=m==='cus'?'rgba(56,139,253,.18)':'none';cusBtn.style.color=m==='cus'?'var(--ac)':'var(--tx3)';}
-  // 트래커 패널 전환
-  const trk=document.getElementById('tracker');
-  const cusTrk=document.getElementById('cus-tracker');
-  if(trk) trk.style.display=m==='mkt'?'':'none';
-  if(cusTrk) cusTrk.style.display=m==='cus'?'flex':'none';
-  // 마감일 바: 마케팅 전용 — visibility로 공간 유지하면서 숨김 (display:none하면 3그리드가 왼쪽으로 붙음)
-  const deadlines=document.getElementById('sched-deadlines');
-  if(deadlines) deadlines.style.visibility=m==='mkt'?'visible':'hidden';
-  renderSched();
-}
-function exportSchedCusJpg(){ exportSchedJpg(); }
-
-// 커스텀 셀 키: sy-sm-projId-wi-di
-function cusCellKey(projId,wi,di){ return `cus_${S.sy}_${S.sm}_${projId}_${wi}_${di}`; }
-
-// 셀 텍스트에서 (태스크명) 패턴 카운트
 function cusParseTags(text){
-  const tags=[], re=/\(([^)]+)\)/g; let m;
+  const tags=[],re=/\(([^)]+)\)/g;let m;
   while((m=re.exec(text))!==null) tags.push(m[1].trim().toLowerCase());
   return tags;
 }
 
-function cusMonthKey(y=S.sy,m=S.sm){
-  return String(y)+'-'+String(m).padStart(2,'0');
-}
-function cusGetTarget(ms,y=S.sy,m=S.sm){
-  if(!ms) return 0;
-  const key=cusMonthKey(y,m);
-  if(ms.qByMonth && typeof ms.qByMonth==='object' && !Array.isArray(ms.qByMonth) && Object.prototype.hasOwnProperty.call(ms.qByMonth,key)){
-    const n=parseInt(ms.qByMonth[key],10);
-    return Number.isFinite(n) && n>=0 ? n : 0;
-  }
-  const legacy=parseInt(ms.q,10);
-  return Number.isFinite(legacy) && legacy>=0 ? legacy : 0;
-}
-function cusSetTarget(ms,val,y=S.sy,m=S.sm){
-  if(!ms) return 0;
-  let n=parseInt(val,10);
-  if(!Number.isFinite(n) || n<0) n=0;
-  if(!ms.qByMonth || typeof ms.qByMonth!=='object' || Array.isArray(ms.qByMonth)) ms.qByMonth={};
-  ms.qByMonth[cusMonthKey(y,m)]=n;
-  return n;
-}
+// 셀 키 생성 (마케팅 탭과 동일하게 S.scheds[mkey].cells 안에 저장)
+function cusCellKey(projId,wi,di){ return 'cus-'+projId+'-'+wi+'-'+di; }
 
-// 커스텀 삭제 UX: 실제 데이터는 바로 지우지 않고 숨김 처리한다.
-function cusActiveProjects(){
-  return (Array.isArray(S.cusProjects)?S.cusProjects:[]).filter(p=>p&&!p._hidden);
-}
-function cusHiddenProjects(){
-  return [];
-}
-function cusActiveMilestones(proj){
-  return (proj&&Array.isArray(proj.milestones)?proj.milestones:[]).filter(ms=>ms&&!ms._hidden);
-}
-function cusHiddenMilestones(proj){
-  return [];
-}
-function cusScheduleKeyCount(projId){
-  let n=0;
-  Object.keys(S.scheds||{}).forEach(k=>{const m=_cusKeyMatch(k);if(m&&String(m[3])===String(projId))n++;});
-  return n;
-}
-function cusHideProject(proj){
-  if(!proj)return;
-  if(!confirm(`"${proj.name||'프로젝트'}" 항목을 삭제하시겠습니까?`))return;
-  Object.keys(S.scheds||{}).forEach(k=>{
-    const m=_cusKeyMatch(k);
-    if(m&&String(m[3])===String(proj.id)) delete S.scheds[k];
-  });
-  S.cusProjects=S.cusProjects.filter(p=>p!==proj);
-  dsave();renderSched();
-}
-function copyCusScheduleKeys(oldId,newId){
-  if(oldId===undefined||oldId===null||newId===undefined||newId===null)return;
-  Object.keys(S.scheds||{}).forEach(k=>{
-    const m=_cusKeyMatch(k);
-    if(!m||String(m[3])!==String(oldId))return;
-    const nk=cusCellKeyFor(parseInt(m[1],10),parseInt(m[2],10),newId,m[4],m[5]);
-    if(!(nk in S.scheds)) S.scheds[nk]=S.scheds[k];
-  });
-}
-function cusRestoreProject(proj){
-  if(!proj)return;
-  // 복원 시 현재 활성 프로젝트와 ID 충돌 체크
-  const activeIds=new Set(cusActiveProjects().filter(p=>p!==proj).map(p=>String(p.id)));
-  if(activeIds.has(String(proj.id))){
-    const oldId=proj.id;
-    proj.id=nextCusProjectId();
-    copyCusScheduleKeys(oldId,proj.id);
-  }
-  proj._hidden=false;
-  delete proj._hiddenAt;
-  dsave();renderSched();
-}
-function cusHideMilestone(proj,ms){
-  if(!proj||!ms)return;
-  if(!confirm(`"${ms.name||'태스크'}" 태스크를 삭제하시겠습니까?`))return;
-  proj.milestones=proj.milestones.filter(x=>x!==ms);
-  dsave();renderCusTrk();
-}
-function cusRestoreMilestone(proj,ms){
-  if(!proj||!ms)return;
-  const activeIds=new Set(cusActiveMilestones(proj).filter(x=>x!==ms).map(x=>String(x.id)));
-  if(activeIds.has(String(ms.id))) ms.id=nextCusMilestoneId();
-  ms._hidden=false;
-  delete ms._hiddenAt;
-  dsave();renderCusTrk();
-}
-function cusRenderHiddenMilestones(wrap,proj){
-  const hidden=cusHiddenMilestones(proj);
-  if(!hidden.length)return;
-  const box=document.createElement('div');
-  box.style.cssText='padding:5px 8px;background:rgba(248,81,73,.05);border-top:1px solid var(--bdr2);display:flex;flex-direction:column;gap:4px';
-  const title=document.createElement('div');
-  title.style.cssText='font-size:10px;color:var(--tx3);font-weight:700';
-  title.textContent='숨긴 태스크';
-  box.appendChild(title);
-  hidden.forEach(ms=>{
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:6px;font-size:10px;color:var(--tx3)';
-    const name=document.createElement('span');
-    name.style.cssText='flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-    name.textContent=ms.name||'(이름 없음)';
-    const btn=document.createElement('button');
-    btn.className='fcbtn';btn.style.cssText='flex:0 0 auto;padding:2px 7px;font-size:10px';
-    btn.textContent='복원';
-    btn.onclick=()=>cusRestoreMilestone(proj,ms);
-    row.append(name,btn);box.appendChild(row);
-  });
-  wrap.appendChild(box);
-}
-function cusRenderHiddenProjects(body){
-  const hidden=cusHiddenProjects();
-  if(!hidden.length)return;
-  const box=document.createElement('div');
-  box.style.cssText='border:1px dashed var(--bdr);border-radius:6px;margin-top:10px;padding:8px;background:var(--surf2)';
-  const title=document.createElement('div');
-  title.style.cssText='font-size:10px;color:var(--tx3);font-weight:700;margin-bottom:6px';
-  title.textContent=`숨긴 프로젝트 ${hidden.length}개`;
-  box.appendChild(title);
-  hidden.forEach(proj=>{
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px;color:var(--tx2)';
-    const name=document.createElement('span');
-    name.style.cssText='flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-    name.textContent=proj.name||'(이름 없음)';
-    const info=document.createElement('span');
-    info.style.cssText='font-size:10px;color:var(--tx3);flex-shrink:0';
-    const cellCount=cusScheduleKeyCount(proj.id);
-    info.textContent=cellCount?`${cellCount}칸 보존`:'';
-    const btn=document.createElement('button');
-    btn.className='fcbtn';btn.style.cssText='flex:0 0 auto;padding:2px 7px;font-size:10px';
-    btn.textContent='복원';
-    btn.onclick=()=>cusRestoreProject(proj);
-    row.append(name,info,btn);box.appendChild(row);
-  });
-  body.appendChild(box);
-}
-
-// 프로젝트의 마일스톤별 배분 횟수
-function cusLocalKey(y,m,wi,di){ return y+'_'+m+'_'+wi+'_'+di; }
-
-// 셀 데이터를 proj.cells 에서 직접 읽기 (ID 충돌 불가)
+// 셀 읽기
 function cusGetCell(proj,y,m,wi,di){
-  if(!proj.cells) proj.cells={};
-  return proj.cells[cusLocalKey(y,m,wi,di)]||'';
+  const k=mkey(y,m);
+  if(!S.scheds[k]||!S.scheds[k].cells) return '';
+  return S.scheds[k].cells[cusCellKey(proj.id,wi,di)]||'';
 }
+// 셀 쓰기
 function cusSetCell(proj,y,m,wi,di,val){
-  if(!proj.cells) proj.cells={};
-  if(val) proj.cells[cusLocalKey(y,m,wi,di)]=val;
-  else delete proj.cells[cusLocalKey(y,m,wi,di)];
+  const k=mkey(y,m);
+  if(!S.scheds[k]) S.scheds[k]={cells:{}};
+  if(!S.scheds[k].cells) S.scheds[k].cells={};
+  if(val) S.scheds[k].cells[cusCellKey(proj.id,wi,di)]=val;
+  else delete S.scheds[k].cells[cusCellKey(proj.id,wi,di)];
 }
 
+// 월별 목표 읽기/쓰기
+function cusGetGoal(task,y,m){
+  if(!task) return 0;
+  const key=mkey(y,m);
+  if(task.goalByMonth&&task.goalByMonth[key]!==undefined) return parseInt(task.goalByMonth[key])||0;
+  return parseInt(task.goal)||0;
+}
+function cusSetGoal(task,val,y,m){
+  if(!task) return;
+  if(!task.goalByMonth) task.goalByMonth={};
+  task.goalByMonth[mkey(y,m)]=parseInt(val)||0;
+}
+
+// 프로젝트별 태스크 달성 횟수 집계
 function cusCountAssigned(proj){
   const counts={};
-  const milestones=cusActiveMilestones(proj);
-  milestones.forEach(ms=>{ counts[ms.id]=0; });
-  const prefix=S.sy+'_'+S.sm+'_';
-  Object.entries(proj.cells||{}).forEach(([k,v])=>{
-    if(!k.startsWith(prefix)) return;
+  (proj.tasks||[]).forEach(t=>{ counts[t.id]=0; });
+  const k=mkey(S.sy,S.sm);
+  const cells=(S.scheds[k]&&S.scheds[k].cells)||{};
+  const prefix='cus-'+proj.id+'-';
+  Object.entries(cells).forEach(([ck,v])=>{
+    if(!ck.startsWith(prefix)) return;
     const tags=cusParseTags(String(v||''));
-    milestones.forEach(ms=>{
-      const nm=String(ms.name||'').toLowerCase();
-      if(!nm)return;
-      tags.forEach(t=>{ if(t===nm) counts[ms.id]++; });
+    (proj.tasks||[]).forEach(task=>{
+      const nm=String(task.name||'').toLowerCase().trim();
+      if(!nm) return;
+      tags.forEach(t=>{ if(t===nm) counts[task.id]++; });
     });
   });
   return counts;
 }
 
-// 구버전 S.scheds[cus_*] 키 → proj.cells 마이그레이션 (최초 1회)
-function _migrateCusScheduleToProjectCells(){
-  try{
-    const projects = Array.isArray(S.cusProjects)?S.cusProjects:[];
-    if(!projects.length) return;
-    const projMap={};
-    projects.forEach(p=>{ if(p&&p.id!=null) projMap[String(p.id)]=p; });
-    let migrated=0;
-    Object.keys(S.scheds||{}).forEach(k=>{
-      const m=_cusKeyMatch(k);
-      if(!m) return;
-      const proj=projMap[String(m[3])];
-      const val=S.scheds[k];
-      if(!proj||!val||!String(val).trim()){ delete S.scheds[k]; return; }
-      if(!proj.cells) proj.cells={};
-      const lk=m[1]+'_'+m[2]+'_'+m[4]+'_'+m[5];
-      if(!proj.cells[lk]) proj.cells[lk]=val;
-      delete S.scheds[k];
-      migrated++;
+// ── 설정탭: 커스텀 프로젝트 관리 렌더링 ──
+function renderCusProjectSettings(){
+  const c=document.getElementById('cus-proj-editor');
+  if(!c) return;
+  c.innerHTML='';
+  (S.cusProjects||[]).forEach((proj,pi)=>{
+    const card=document.createElement('div');
+    card.className='cccard';
+
+    // 프로젝트 헤더 행
+    const hdr=document.createElement('div');
+    hdr.className='ccrow';
+    const colorInp=document.createElement('input');
+    colorInp.type='color'; colorInp.value=proj.color||'#388bfd';
+    colorInp.onchange=()=>{ proj.color=colorInp.value; dsave(); renderSched(); };
+    const nameInp=document.createElement('input');
+    nameInp.className='ccinput'; nameInp.value=proj.name; nameInp.placeholder='프로젝트명';
+    nameInp.style.cssText='flex:1;max-width:200px';
+    nameInp.oninput=()=>{ proj.name=nameInp.value; dsave(); };
+    nameInp.onblur=()=>{ renderSched(); renderCusTrk(); };
+    const delBtn=document.createElement('button');
+    delBtn.className='btn btnr'; delBtn.style.cssText='padding:4px 8px;font-size:11px';
+    delBtn.textContent='삭제';
+    delBtn.onclick=()=>{
+      if(!confirm(`"${proj.name||'프로젝트'}" 항목과 해당 스케줄 데이터를 모두 삭제합니까?`)) return;
+      // 해당 프로젝트의 모든 셀 삭제
+      Object.keys(S.scheds||{}).forEach(mk=>{
+        if(!S.scheds[mk]||!S.scheds[mk].cells) return;
+        const prefix='cus-'+proj.id+'-';
+        Object.keys(S.scheds[mk].cells).forEach(ck=>{
+          if(ck.startsWith(prefix)) delete S.scheds[mk].cells[ck];
+        });
+      });
+      S.cusProjects.splice(pi,1);
+      dsave(); renderCusProjectSettings(); renderSched(); renderCusTrk();
+    };
+    hdr.append(colorInp,nameInp,delBtn);
+    card.appendChild(hdr);
+
+    // 태스크 목록
+    const taskLabel=document.createElement('div');
+    taskLabel.style.cssText='font-size:10px;color:var(--tx3);font-weight:700;margin:8px 0 4px';
+    taskLabel.textContent='태스크 (셀에 (태스크명) 형식으로 입력 시 집계)';
+    card.appendChild(taskLabel);
+
+    (proj.tasks||[]).forEach((task,ti)=>{
+      const trow=document.createElement('div');
+      trow.className='ccrow';
+      trow.style.cssText='align-items:center;gap:6px;margin-bottom:4px';
+      const tnInp=document.createElement('input');
+      tnInp.className='ccinput'; tnInp.value=task.name; tnInp.placeholder='태스크명';
+      tnInp.style.cssText='flex:1;max-width:160px';
+      tnInp.oninput=()=>{ task.name=tnInp.value; dsave(); };
+      tnInp.onblur=()=>{ renderCusTrk(); };
+      const goalLbl=document.createElement('span');
+      goalLbl.style.cssText='font-size:11px;color:var(--tx3);white-space:nowrap';
+      goalLbl.textContent='기본 목표';
+      const goalInp=document.createElement('input');
+      goalInp.type='number'; goalInp.min='0'; goalInp.value=task.goal||0;
+      goalInp.style.cssText='width:46px;background:var(--surf);border:1px solid var(--bdr);border-radius:4px;color:var(--tx);font-size:12px;padding:2px 4px;text-align:center;font-family:inherit;outline:none';
+      goalInp.oninput=()=>{ task.goal=parseInt(goalInp.value)||0; dsave(); };
+      goalInp.onblur=()=>{ renderCusTrk(); };
+      const tdelBtn=document.createElement('button');
+      tdelBtn.className='btn btnr'; tdelBtn.style.cssText='padding:2px 7px;font-size:10px';
+      tdelBtn.textContent='삭제';
+      tdelBtn.onclick=()=>{
+        proj.tasks.splice(ti,1);
+        dsave(); renderCusProjectSettings(); renderCusTrk();
+      };
+      trow.append(tnInp,goalLbl,goalInp,tdelBtn);
+      card.appendChild(trow);
     });
-    if(migrated>0) console.log('[MBHub] 커스텀 스케줄 마이그레이션:',migrated,'개');
-  }catch(e){ console.warn('[MBHub] 마이그레이션 오류:',e); }
+
+    const addTaskBtn=document.createElement('button');
+    addTaskBtn.className='btn btng';
+    addTaskBtn.style.cssText='font-size:11px;padding:3px 10px;margin-top:2px';
+    addTaskBtn.textContent='＋ 태스크 추가';
+    addTaskBtn.onclick=()=>{
+      if(!proj.tasks) proj.tasks=[];
+      proj.tasks.push({id:uid(),name:'',goal:0,goalByMonth:{}});
+      dsave(); renderCusProjectSettings();
+      // 새 태스크 입력창 포커스
+      setTimeout(()=>{
+        const rows=card.querySelectorAll('.ccrow .ccinput');
+        if(rows.length) rows[rows.length-1].focus();
+      },50);
+    };
+    card.appendChild(addTaskBtn);
+    c.appendChild(card);
+  });
 }
 
-function repairCusSchedule(){
-  _migrateCusScheduleToProjectCells();
-  dsave(); renderSched();
-  toast('✅ 스케줄 데이터 복구 완료');
-}
-
-function addCusProject(){
-  S.cusProjects.push({id:nextCusProjectId(),name:'',milestones:[]});
-  dsave(); renderCusTrk();
+function addCusProjectFromSettings(){
+  if(!S.cusProjects) S.cusProjects=[];
+  S.cusProjects.push({
+    id:uid(),
+    name:'',
+    color:'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'),
+    tasks:[]
+  });
+  dsave(); renderCusProjectSettings(); renderSched(); renderCusTrk();
   setTimeout(()=>{
-    const inputs=document.querySelectorAll('#cus-trkbody .cus-pname');
+    const inputs=document.querySelectorAll('#cus-proj-editor .cccard .ccinput');
     if(inputs.length) inputs[inputs.length-1].focus();
   },60);
 }
 
+// 🔄 버튼: 설정탭 변경사항 트래커에 반영
+function syncCusTrk(){ renderCusTrk(); toast('트래커가 설정탭 기준으로 업데이트됐습니다.'); }
+
+// ── 트래커 렌더링: 프로젝트별 분리된 표 ──
 function renderCusTrk(){
   const body=document.getElementById('cus-trkbody');
   if(!body) return;
   body.innerHTML='';
-  const activeProjects=cusActiveProjects();
-  if(!activeProjects.length){
-    body.innerHTML='<div style="font-size:11px;color:var(--tx3);padding:8px;text-align:center;line-height:1.6">＋ 버튼으로<br>프로젝트를 추가하세요</div>';
-    cusRenderHiddenProjects(body);
+  const projects=(S.cusProjects||[]);
+  if(!projects.length){
+    body.innerHTML='<div style="font-size:11px;color:var(--tx3);padding:8px;text-align:center;line-height:1.7">설정 탭에서<br>커스텀 프로젝트를 추가하세요</div>';
     return;
   }
-  activeProjects.forEach(proj=>{
+  projects.forEach(proj=>{
     const counts=cusCountAssigned(proj);
+    const tasks=(proj.tasks||[]);
+
     const wrap=document.createElement('div');
     wrap.style.cssText='border:1px solid var(--bdr);border-radius:6px;margin-bottom:8px;overflow:hidden';
 
     // 프로젝트 헤더
     const hd=document.createElement('div');
-    hd.style.cssText='display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--surf2);border-bottom:1px solid var(--bdr)';
-    const ni=document.createElement('input');
-    ni.className='cus-pname';
-    ni.value=proj.name; ni.placeholder='프로젝트명';
-    ni.style.cssText='flex:1;background:none;border:none;outline:none;font-size:12px;font-weight:700;color:var(--tx);font-family:inherit;cursor:pointer;padding:2px 3px;border-radius:3px';
-    ni.onfocus=()=>ni.style.background='rgba(56,139,253,.1)';
-    ni.onblur=()=>ni.style.background='none';
-    ni.oninput=()=>{ proj.name=ni.value; dsave(); };
-    ni.onblur=()=>{ renderSched(); };
-    const addMs=document.createElement('button');
-    addMs.className='icobtn'; addMs.textContent='＋'; addMs.title='태스크 추가';
-    addMs.onclick=()=>{
-      proj.milestones.push({id:nextCusMilestoneId(),name:'',q:1,qByMonth:{[cusMonthKey()]:1}});
-      dsave(); renderCusTrk();
-      setTimeout(()=>{
-        const rows=wrap.querySelectorAll('.cus-msname');
-        if(rows.length) rows[rows.length-1].focus();
-      },50);
-    };
-    const delP=document.createElement('button');
-    delP.className='icobtn'; delP.textContent='✕'; delP.title='프로젝트 삭제';
-    delP.onclick=()=>cusHideProject(proj);
-    hd.append(ni,addMs,delP); wrap.appendChild(hd);
+    hd.style.cssText='padding:4px 8px;background:var(--surf2);border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:6px';
+    const dot=document.createElement('span');
+    dot.style.cssText=`display:inline-block;width:10px;height:10px;border-radius:50%;background:${proj.color||'var(--ac)'};flex-shrink:0`;
+    const nm=document.createElement('span');
+    nm.style.cssText='font-size:12px;font-weight:700;color:var(--tx);flex:1';
+    nm.textContent=proj.name||'(이름 없음)';
+    hd.append(dot,nm);
+    wrap.appendChild(hd);
 
-    // 마일스톤 행들
-    cusActiveMilestones(proj).forEach(ms=>{
-      const done=counts[ms.id]||0, target=cusGetTarget(ms);
-      const isDone=target>0&&done>=target, isPart=target>0&&done>0&&done<target;
-      const icon=isDone?'✅':isPart?'🔶':'⬜';
-      const row=document.createElement('div');
-      row.style.cssText='display:flex;align-items:center;gap:4px;padding:3px 8px;border-bottom:1px solid var(--bdr2)';
-      const chk=document.createElement('span');
-      chk.textContent=icon; chk.style.cssText='font-size:13px;flex-shrink:0;min-width:18px';
-      const msNi=document.createElement('input');
-      msNi.className='cus-msname';
-      msNi.value=ms.name; msNi.placeholder='태스크명';
-      msNi.style.cssText='flex:1;background:none;border:none;outline:none;font-size:11px;color:var(--tx2);font-family:inherit;padding:2px 3px;border-radius:3px;cursor:pointer';
-      msNi.onfocus=()=>msNi.style.background='rgba(56,139,253,.1)';
-      msNi.onblur=()=>msNi.style.background='none';
-      msNi.oninput=()=>{ ms.name=msNi.value; dsave(); }; // IME 버그 방지: 재렌더링은 blur에서
-      msNi.onblur=()=>renderCusTrk(); // blur 시에만 DOM 재생성 → IME 조합 안전
-      const cntEl=document.createElement('span');
-      cntEl.style.cssText='font-size:10px;min-width:30px;text-align:right;font-weight:700;color:'+(isDone?'var(--gn)':isPart?'var(--yw)':'var(--tx3)');
-      cntEl.textContent=target===0?done+'회':`${done}/${target}`;
-      const qi=document.createElement('input');
-      qi.type='number'; qi.min=0; qi.value=target; qi.title='이번 달 목표 횟수 (0=제한없음)';
-      qi.style.cssText='width:30px;background:var(--surf2);border:1px solid var(--bdr);border-radius:3px;color:var(--tx);text-align:center;padding:1px 2px;font-size:10px;font-family:inherit;outline:none';
-      qi.oninput=()=>{ cusSetTarget(ms,qi.value); dsave(); };
-      qi.onblur=()=>renderCusTrk();
-      const delMs=document.createElement('button');
-      delMs.className='icobtn'; delMs.textContent='✕'; delMs.style.fontSize='10px';
-      delMs.title='태스크 숨기기';
-      delMs.onclick=()=>cusHideMilestone(proj,ms);
-      row.append(chk,msNi,cntEl,qi,delMs); wrap.appendChild(row);
-    });
-    cusRenderHiddenMilestones(wrap,proj);
-
+    if(!tasks.length){
+      const empty=document.createElement('div');
+      empty.style.cssText='font-size:11px;color:var(--tx3);padding:6px 10px';
+      empty.textContent='태스크 없음 — 설정탭에서 추가하세요';
+      wrap.appendChild(empty);
+    } else {
+      const tbl=document.createElement('table');
+      tbl.className='trktbl';
+      tbl.innerHTML='<thead><tr><th class="trkch">태스크</th><th>완료</th><th>목표</th><th>잔여</th></tr></thead>';
+      const tbody=document.createElement('tbody');
+      tasks.forEach(task=>{
+        const done=counts[task.id]||0;
+        const goal=cusGetGoal(task,S.sy,S.sm);
+        const rem=goal===0?null:goal-done;
+        const cls=rem===null?'na':rem<=0?'g':rem<=2?'y':'';
+        const tr=document.createElement('tr');
+        // 태스크명
+        const tdName=document.createElement('td');
+        tdName.className='trkch'; tdName.textContent=task.name||'';
+        // 완료
+        const tdDone=document.createElement('td');
+        tdDone.className='trkn'; tdDone.textContent=done;
+        // 목표 (이달만 수정 가능)
+        const tdGoal=document.createElement('td');
+        const qi=document.createElement('input');
+        qi.type='number'; qi.min='0'; qi.value=goal;
+        qi.className='trkedinput';
+        qi.oninput=()=>{ cusSetGoal(task,qi.value,S.sy,S.sm); dsave(); };
+        qi.onblur=()=>renderCusTrk();
+        tdGoal.appendChild(qi);
+        // 잔여
+        const tdRem=document.createElement('td');
+        tdRem.className='trkn '+(rem===null?'na':rem<=0?'g':rem<=2?'y':'');
+        tdRem.textContent=rem===null?'—':rem;
+        tr.append(tdName,tdDone,tdGoal,tdRem);
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody);
+      wrap.appendChild(tbl);
+    }
     body.appendChild(wrap);
   });
-  cusRenderHiddenProjects(body);
 }
 
+// ── 커스텀 스케줄 렌더링 ──
 function renderCusSched(){
   const main=document.getElementById('schedmain');
   if(!main) return;
   main.innerHTML='';
   const hint=document.createElement('div');
   hint.style.cssText='background:rgba(56,139,253,.08);border:1px solid rgba(56,139,253,.2);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--ac);margin-bottom:8px;line-height:1.7';
-  hint.innerHTML='✏️ 셀에 <b>(태스크명)</b> 형식으로 입력하면 트래커에 자동 집계됩니다. 예: <span style="background:rgba(56,139,253,.15);padding:1px 5px;border-radius:3px">(기획) 변호사물자료집</span>';
+  hint.innerHTML='✏️ 셀에 <b>(태스크명)</b> 형식으로 입력하면 트래커에 자동 집계됩니다.';
   main.appendChild(hint);
 
-  const DY7=['일','월','화','수','목','금','토']; // 일월화수목금토 순서
+  const DY7=['일','월','화','수','목','금','토'];
   const weeks=getWeeks7(S.sy,S.sm);
-  const now=new Date(), itm=S.sy===now.getFullYear()&&S.sm===now.getMonth()+1, td=now.getDate();
+  const projects=S.cusProjects||[];
+  const now=new Date(),itm=S.sy===now.getFullYear()&&S.sm===now.getMonth()+1,td=now.getDate();
+
+  if(!projects.length){
+    const empty=document.createElement('div');
+    empty.style.cssText='border:1px dashed var(--bdr);border-radius:8px;padding:28px 16px;text-align:center;color:var(--tx3);font-size:12px;line-height:1.8;background:var(--surf)';
+    empty.innerHTML='커스텀 프로젝트가 없습니다.<br><b>설정 탭 → 커스텀 프로젝트 관리</b>에서 먼저 추가하세요.';
+    main.appendChild(empty);
+    renderCusTrk();
+    return;
+  }
 
   weeks.forEach((wk,wi)=>{
     const sec=document.createElement('div'); sec.className='weeksec';
     const hdr=document.createElement('div'); hdr.className='wkhdr';
     hdr.style.gridTemplateColumns='88px repeat(7,1fr)';
     const wlbl=document.createElement('div'); wlbl.className='wkhdrcell';
-    wlbl.style.cssText='display:flex;align-items:center;justify-content:space-between;cursor:default';
-    const wt=document.createElement('span'); wt.textContent=(wi+1)+'주차'; wlbl.appendChild(wt);
+    wlbl.textContent=(wi+1)+'주차';
     hdr.appendChild(wlbl);
     wk.forEach((d,di)=>{
       const isToday=itm&&d===td;
-      const isSun=di===0, isSat=di===6;
+      const isSun=di===0,isSat=di===6;
       const cv=document.createElement('div');
       cv.className='wkhdrcell'+(isToday?' today-hdr':'')+(isSat?' cus-sat':isSun?' cus-sun':'');
       cv.innerHTML=DY7[di]+(d?`<span class="wkdate">${d}일`+(isToday?' ●':'')+'</span>':'');
@@ -11190,27 +11071,29 @@ function renderCusSched(){
     });
     sec.appendChild(hdr);
 
-    // 프로젝트 행
-    const activeProjects=cusActiveProjects();
-    (activeProjects.length?activeProjects:[{name:'(프로젝트를 추가하세요)',milestones:[],cells:{}}]).forEach(proj=>{
-      if(!proj.cells) proj.cells={};
+    projects.forEach(proj=>{
       const row=document.createElement('div'); row.className='crow';
       row.style.gridTemplateColumns='88px repeat(7,1fr)';
       const lbl=document.createElement('div'); lbl.className='clabel';
-      lbl.style.color='var(--ac)';
-      lbl.textContent=proj.name||'(이름 없음)'; row.appendChild(lbl);
+      lbl.style.color=proj.color||'var(--ac)';
+      lbl.textContent=proj.name||'(이름 없음)';
+      row.appendChild(lbl);
       wk.forEach((d,di)=>{
-        const isSun=di===0, isSat=di===6;
+        const isSun=di===0,isSat=di===6;
         const weekendBg=isSun?'rgba(248,81,73,.05)':isSat?'rgba(88,166,255,.05)':'';
         if(d){
           const cell=document.createElement('div'); cell.className='scell';
           cell.contentEditable='true'; cell.spellcheck=false;
           cell.textContent=cusGetCell(proj,S.sy,S.sm,wi,di);
-          cell.style.cssText='white-space:pre-wrap;word-break:break-all;min-height:36px'+(weekendBg?`;background:${weekendBg}`:'');
+          if(weekendBg) cell.style.background=weekendBg;
+          cell.style.whiteSpace='pre-wrap'; cell.style.wordBreak='break-all'; cell.style.minHeight='36px';
+          // oninput: 데이터만 저장 (DOM 재생성 안 함 → IME 안전)
           cell.oninput=()=>{
             cusSetCell(proj,S.sy,S.sm,wi,di,cell.textContent);
-            dsave(); renderCusTrk();
+            dsave();
           };
+          // blur: 트래커 갱신
+          cell.onblur=()=>renderCusTrk();
           row.appendChild(cell);
         } else {
           const cell=document.createElement('div'); cell.className='scell off';
@@ -11223,6 +11106,57 @@ function renderCusSched(){
     main.appendChild(sec);
   });
   renderCusTrk();
+}
+
+// ── 구버전 데이터 마이그레이션 (최초 1회) ──
+function _migrateCusScheduleToProjectCells(){
+  try{
+    const projects=Array.isArray(S.cusProjects)?S.cusProjects:[];
+    if(!projects.length) return;
+    // milestones → tasks 필드명 통일
+    projects.forEach(proj=>{
+      if(proj.milestones&&!proj.tasks){
+        proj.tasks=proj.milestones.map(ms=>({
+          id:ms.id||uid(),
+          name:ms.name||'',
+          goal:parseInt(ms.q)||0,
+          goalByMonth:ms.qByMonth||{}
+        }));
+        delete proj.milestones;
+      }
+      if(!proj.tasks) proj.tasks=[];
+      if(!proj.id) proj.id=uid();
+      // proj.cells → S.scheds 마이그레이션
+      if(proj.cells){
+        Object.entries(proj.cells).forEach(([lk,val])=>{
+          const parts=lk.split('_');
+          if(parts.length<4||!val) return;
+          const mk=mkey(parseInt(parts[0]),parseInt(parts[1]));
+          if(!S.scheds[mk]) S.scheds[mk]={cells:{}};
+          if(!S.scheds[mk].cells) S.scheds[mk].cells={};
+          const ck=cusCellKey(proj.id,parts[2],parts[3]);
+          if(!S.scheds[mk].cells[ck]) S.scheds[mk].cells[ck]=val;
+        });
+        delete proj.cells;
+      }
+    });
+    // 구버전 cus_Y_M_ID_wi_di 글로벌 키
+    const projMap={};
+    projects.forEach(p=>{ if(p&&p.id) projMap[String(p.id)]=p; });
+    Object.keys(S.scheds||{}).forEach(k=>{
+      const m=String(k).match(/^cus_(\d{4})_(\d{1,2})_([^_]+)_(\d+)_(\d+)$/);
+      if(!m) return;
+      const proj=projMap[String(m[3])];
+      const val=S.scheds[k];
+      delete S.scheds[k];
+      if(!proj||!val||!String(val).trim()) return;
+      const mk=mkey(parseInt(m[1]),parseInt(m[2]));
+      if(!S.scheds[mk]) S.scheds[mk]={cells:{}};
+      if(!S.scheds[mk].cells) S.scheds[mk].cells={};
+      const ck=cusCellKey(proj.id,m[4],m[5]);
+      if(!S.scheds[mk].cells[ck]) S.scheds[mk].cells[ck]=val;
+    });
+  }catch(e){ console.warn('[MBHub] cus 마이그레이션 오류:',e); }
 }
 // ─── 커스텀 스케줄 끝 ─────────────────────────────
 
@@ -11643,7 +11577,6 @@ function loadPwLock(){
     :'비활성화 — 비밀번호 입력 없이 바로 접속';
 }
 function exportData(){
-  syncCusIdCounters();
   const d={notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,reports:S.reports,pub:S.pub,pubFiles:S.pubFiles,cusProjects:S.cusProjects,v:3,date:new Date().toISOString()};
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
   a.download='마케팅허브_백업_'+new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').replace(/-$/,'')+'.json';
@@ -11659,8 +11592,7 @@ function importData(){
         if(!confirm('기존 데이터를 덮어씁니다. 계속하시겠습니까?'))return;
         if(d.notes)S.notes=d.notes;if(d.clients)S.clients=d.clients;if(d.scheds)S.scheds=d.scheds;if(d.work)S.work=d.work;
         if(d.reports)S.reports=d.reports;if(d.pub)S.pub=d.pub;if(d.pubFiles)S.pubFiles=d.pubFiles;if(d.cusProjects)S.cusProjects=d.cusProjects;
-        syncCusIdCounters();
-        await save();
+            await save();
         _gdDirty=false; clearTimeout(_gdAutoT);
         renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
     if(typeof renderPubTree==='function')renderPubTree();
@@ -11671,7 +11603,7 @@ function importData(){
 }
 async function resetAll(){
   if(!confirm('⚠️ 모든 데이터가 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.'))return;
-  S.notes=makeDefNotes();S.clients=JSON.parse(JSON.stringify(DEF_CLIENTS));S.scheds={};S.work=makeDefWork();S.cusProjects=[];syncCusIdCounters();
+  S.notes=makeDefNotes();S.clients=JSON.parse(JSON.stringify(DEF_CLIENTS));S.scheds={};S.work=makeDefWork();S.cusProjects=[];
   S.p1=null;S.p2=null;S.wsel=null;S.fmCl=null;
   await save();
   renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
@@ -11833,7 +11765,6 @@ async function gdPush(auto=false){
   if(!auto) gdBar('💾 Google Drive에 저장 중...','ing',0);
   gdLog('저장 중...');
   try{
-    syncCusIdCounters();
     const payload = JSON.stringify({notes:S.notes,clients:S.clients,scheds:S.scheds,work:S.work,reports:S.reports,pub:S.pub,pubFiles:S.pubFiles,cusProjects:S.cusProjects,v:3,date:new Date().toISOString()});
     const blob = new Blob([payload], {type:'application/json'});
     const existing = await gdFindFile(token, GD_FNAME);
@@ -11890,7 +11821,6 @@ async function gdPull(){
         {id:'pubf3',t:'F',n:'집필',p:null,o:2,open:true,driveName:'마케팅허브_집필',driveId:null},
       ];
     }
-    syncCusIdCounters();
     await save();
     _gdDirty=false; clearTimeout(_gdAutoT);
     renderNoteTree();renderWorkBar();renderSched();renderClients();renderFmClients();
@@ -12126,8 +12056,7 @@ function xPanelLoadCusSched(y, m){
   const wks=getWeeks7(ty,tm);
   const now=new Date();const todayY=now.getFullYear(),todayM=now.getMonth()+1,todayD=now.getDate();
   const isTM=(ty===todayY&&tm===todayM);
-  const activeProjects=typeof cusActiveProjects==='function'?cusActiveProjects():(Array.isArray(S.cusProjects)?S.cusProjects:[]);
-  const projects=activeProjects.length?activeProjects:[{id:'empty',name:'(프로젝트 없음)',milestones:[]}];
+  const projects=(S.cusProjects||[]);
   let schedHtml='<div style="padding:8px;font-size:11px;overflow:auto">';
   wks.forEach((wk,wi)=>{
     schedHtml+=`<div style="margin-bottom:8px"><div style="font-weight:700;color:var(--tx3);font-size:10px;margin-bottom:4px">${wi+1}주차</div>`;
